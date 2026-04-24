@@ -22,7 +22,6 @@ app.use((req, res, next) => {
 // =========================
 app.use('/api', (req, res, next) => {
   const token = req.headers.authorization;
-
   const cleanToken = token?.replace("Bearer ", "");
 
   if (cleanToken !== "d7e10ab7-a425-4e84-874b-ce5d2961fe2a") {
@@ -42,10 +41,8 @@ const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
 const USER = "HUEMERSON";
 const PASS = "654321";
 
-let cookie = "";
-
 // =========================
-// 🔐 LOGIN SANKHYA
+// 🔐 LOGIN (RETORNA COOKIE)
 // =========================
 async function login() {
   console.log("🔐 Login Sankhya...");
@@ -58,51 +55,48 @@ async function login() {
     }
   };
 
-  const res = await fetch(`${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  const res = await fetch(
+    `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
 
   const rawCookie = res.headers.get("set-cookie") || "";
-  cookie = rawCookie.split(";")[0];
+  const cookie = rawCookie.split(";")[0];
 
-  console.log("✅ Logado no Sankhya");
+  console.log("🍪 COOKIE GERADO:", cookie);
+
+  return cookie;
 }
 
 // =========================
-// HEALTH
+// HEALTH CHECK
 // =========================
 app.get('/api/health', (req, res) => {
   res.json({ status: "OK" });
 });
 
 // =========================
-// 🚀 CONSULTA (VIEW + FILTRO)
+// 🚀 CONSULTA
 // =========================
 app.post('/api/notas', async (req, res) => {
   try {
 
-    if (!cookie) {
-      await login();
-    }
+    // 🔐 LOGIN SEM COOKIE GLOBAL
+    const cookie = await login();
 
     const { cpf } = req.body;
-
     const documento = (cpf || "").replace(/\D/g, '');
 
     console.log("🔎 Documento:", documento);
 
-    // =========================
-    // 🔐 VALIDAÇÃO
-    // =========================
     if (!/^\d{11,14}$/.test(documento)) {
       return res.status(400).json({ erro: "CPF/CNPJ inválido" });
     }
 
-    // =========================
-    // 🔥 CHAMADA DA VIEW
-    // =========================
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
@@ -114,35 +108,39 @@ app.post('/api/notas', async (req, res) => {
 
     console.log("📤 Chamando loadView...");
 
-    const response = await fetch(`${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Cookie": cookie
-      },
-      body: JSON.stringify(payload)
-    });
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
 
     const text = await response.text();
 
-    console.log("📥 Retorno bruto recebido");
+    console.log("📥 Resposta recebida");
 
     if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro no Sankhya");
+      throw new Error("Erro na comunicação com Sankhya");
     }
 
     const json = JSON.parse(text);
 
-    console.log("📦 JSON parseado");
+    // 🔥 TRATAMENTO DE ERRO SANKHYA
+    if (json?.tsError) {
+      console.log("❌ ERRO SANKHYA:", json.tsError);
+      return res.json({ rows: [] });
+    }
 
-    // =========================
-    // 🔥 NORMALIZAÇÃO + FILTRO
-    // =========================
     let rows = [];
 
-    if (json?.responseBody?.records?.record) {
+    const registros = json?.responseBody?.records?.record;
 
-      const registros = json.responseBody.records.record;
+    if (registros) {
       const lista = Array.isArray(registros) ? registros : [registros];
 
       rows = lista
@@ -154,7 +152,7 @@ app.post('/api/notas', async (req, res) => {
           VLRNOTA: r.VLRNOTA?.$ || "",
           CODPARC: r.CODPARC?.$ || "",
           NOMEPARC: r.NOMEPARC?.$ || "",
-          CGC_CPF: (r.CGC_CPF?.$ || "").replace(/\D/g, ''),
+          CGC_CPF: (r.CGC_CPF?.$ || "").replace(/\D/g, ""),
           ENTREGAR: r.ENTREGAR?.$ || "",
           RECEBIDO: r.RECEBIDO?.$ || "",
           ST_ENTREGAS: r.ST_ENTREGAS?.$ || ""
@@ -162,27 +160,19 @@ app.post('/api/notas', async (req, res) => {
         .filter(r => r.CGC_CPF === documento);
     }
 
-    console.log(`📊 Registros filtrados: ${rows.length}`);
+    console.log(`📊 Registros encontrados: ${rows.length}`);
 
-    // =========================
-    // 🚀 RESPOSTA FINAL
-    // =========================
     res.json({ rows });
 
   } catch (err) {
-
     console.error("❌ Erro:", err);
-
-    res.status(500).json({
-      erro: err.message
-    });
+    res.status(500).json({ erro: err.message });
   }
 });
 
 // =========================
 // START
 // =========================
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-  await login();
 });
