@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-const PORT = 5050;
+const PORT = process.env.PORT || 5050;
 
 // =========================
 // 🌐 LOG GLOBAL
