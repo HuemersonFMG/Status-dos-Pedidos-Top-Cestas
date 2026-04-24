@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-const PORT = 5050;
+const PORT = process.env.PORT || 5050;
 
 // =========================
 // 🌐 LOG GLOBAL
@@ -18,26 +18,34 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// 🔗 URL SANKHYA
+// 🔐 AUTH API
 // =========================
-const SERVICE_URL = "http://topcesta.fwc.cloud:8180/mge/service.sbr";
+app.use('/api', (req, res, next) => {
+  const token = req.headers.authorization;
+  const cleanToken = token?.replace("Bearer ", "");
+
+  if (cleanToken !== "d7e10ab7-a425-4e84-874b-ce5d2961fe2a") {
+    console.log("❌ Token inválido:", token);
+    return res.status(401).json({ erro: "Não autorizado" });
+  }
+
+  next();
+});
 
 // =========================
-// 🔐 USUÁRIO
+// 🔗 CONFIG SANKHYA
 // =========================
+const BASE_URL = "http://topcesta.fwc.cloud:8180";
+const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
+
 const USER = "HUEMERSON";
 const PASS = "654321";
 
 // =========================
-// 🍪 COOKIE
-// =========================
-let cookie = "";
-
-// =========================
-// 🔐 LOGIN
+// 🔐 LOGIN (RETORNA COOKIE)
 // =========================
 async function login() {
-  console.log("🔐 Fazendo login no Sankhya...");
+  console.log("🔐 Login Sankhya...");
 
   const payload = {
     serviceName: "MobileLoginSP.login",
@@ -47,156 +55,152 @@ async function login() {
     }
   };
 
-  const res = await fetch(`${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  const res = await fetch(
+    `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
 
   const rawCookie = res.headers.get("set-cookie") || "";
-  cookie = rawCookie.split(";")[0];
+  const cookie = rawCookie.split(";")[0];
 
-  console.log("✅ Login realizado");
+  console.log("🍪 COOKIE GERADO:", cookie);
+
+  return cookie;
 }
 
 // =========================
-// 🩺 HEALTH CHECK
+// HEALTH CHECK
 // =========================
 app.get('/api/health', (req, res) => {
   res.json({ status: "OK" });
 });
 
 // =========================
-// 🔍 CONSULTA COM FILTRO
+// 🚀 CONSULTA
 // =========================
 app.post('/api/notas', async (req, res) => {
   try {
 
-    if (!cookie) {
-      await login();
+    const cookie = await login();
+
+    // 🔥 NOVO PADRÃO
+    const { tipo, valor } = req.body;
+
+    const filtro = (valor || "").trim();
+
+    console.log("🔎 Filtro recebido:", tipo, filtro);
+
+    // =========================
+    // 🔐 VALIDAÇÃO
+    // =========================
+    if (!tipo || !filtro) {
+      return res.status(400).json({ erro: "Filtro inválido" });
+    }
+
+    if (tipo === "cpf" && !/^\d{11,14}$/.test(filtro.replace(/\D/g, ''))) {
+      return res.status(400).json({ erro: "CPF/CNPJ inválido" });
     }
 
     // =========================
-    // 📥 RECEBE CPF/CNPJ
-    // =========================
-    const { cpf } = req.body;
-
-    const documento = (cpf || "").replace(/\D/g, '');
-
-    console.log("🔎 Documento recebido:", documento);
-
-    if (!documento) {
-      return res.status(400).json({
-        erro: true,
-        message: "CPF/CNPJ não informado"
-      });
-    }
-
-    // 🔐 valida se é só número
-    if (!/^\d+$/.test(documento)) {
-      return res.status(400).json({
-        erro: true,
-        message: "Documento inválido"
-      });
-    }
-
-    // =========================
-    // 📤 PAYLOAD SANKHYA
+    // 🔥 CHAMADA DA VIEW
     // =========================
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
         query: {
-          viewName: "VW_NOTAS_FUSION",
-          fields: {
-            field: {
-              $: "*"
-            }
-          },
-          where: {
-            $: `CGC_CPF = '${documento}'`
-          }
+          viewName: "VW_NOTAS_FUSION"
         }
       }
     };
 
-    console.log("📤 Consultando Sankhya com filtro...");
+    console.log("📤 Chamando loadView...");
 
-    const response = await fetch(`${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Cookie": cookie
-      },
-      body: JSON.stringify(payload)
-    });
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
 
     const text = await response.text();
 
-    console.log("📥 Retorno bruto:");
-    console.log(text);
+    console.log("📥 Resposta recebida");
 
-    // =========================
-    // ❌ ERRO HTML (sessão expirada, etc)
-    // =========================
-    if (!response.ok || text.trim().startsWith("<")) {
-      throw new Error(`Resposta inválida do Sankhya (status ${response.status})`);
+    if (!response.ok || text.startsWith("<")) {
+      throw new Error("Erro na comunicação com Sankhya");
     }
 
     const json = JSON.parse(text);
 
-    console.log("📦 JSON parseado:");
-    console.log(JSON.stringify(json, null, 2));
-
-    // =========================
-    // ❌ ERRO DO SANKHYA
-    // =========================
-    if (json.status === "0") {
-      throw new Error(json.statusMessage || "Erro retornado pelo Sankhya");
+    if (json?.tsError) {
+      console.log("❌ ERRO SANKHYA:", json.tsError);
+      return res.json({ rows: [] });
     }
 
-    // =========================
-    // 🔄 NORMALIZA RETORNO
-    // =========================
     let rows = [];
 
-    if (json?.responseBody?.rows) {
-      rows = json.responseBody.rows;
-    }
-    else if (json?.responseBody?.data) {
-      rows = json.responseBody.data;
-    }
-    else if (Array.isArray(json)) {
-      rows = json;
-    }
-    else if (json?.responseBody) {
-      rows = Object.values(json.responseBody);
+    const registros = json?.responseBody?.records?.record;
+
+    if (registros) {
+
+      const lista = Array.isArray(registros) ? registros : [registros];
+
+      rows = lista
+        .map(r => ({
+          NUNOTA: r.NUNOTA?.$ || "",
+          NUMNOTA: r.NUMNOTA?.$ || "",
+          TOP: r.TOP?.$ || "",
+          DTNEG: r.DTNEG?.$ || "",
+          VLRNOTA: r.VLRNOTA?.$ || "",
+          CODPARC: r.CODPARC?.$ || "",
+          NOMEPARC: r.NOMEPARC?.$ || "",
+          CGC_CPF: (r.CGC_CPF?.$ || "").replace(/\D/g, ""),
+          ENTREGAR: r.ENTREGAR?.$ || "",
+          RECEBIDO: r.RECEBIDO?.$ || "",
+          ST_ENTREGAS: r.ST_ENTREGAS?.$ || ""
+        }))
+        .filter(r => {
+
+          if (tipo === "cpf") {
+            return r.CGC_CPF === filtro.replace(/\D/g, '');
+          }
+
+          if (tipo === "pedido") {
+            return String(r.NUMNOTA) === filtro;
+          }
+
+          if (tipo === "nome") {
+            return (r.NOMEPARC || "")
+              .toLowerCase()
+              .includes(filtro.toLowerCase());
+          }
+
+          return true;
+        });
     }
 
     console.log(`📊 Registros encontrados: ${rows.length}`);
 
-    // =========================
-    // 📤 RESPOSTA FINAL
-    // =========================
-    res.json({
-      rows: rows
-    });
+    res.json({ rows });
 
   } catch (err) {
-
-    console.error("❌ Erro na API:", err.message);
-
-    res.status(500).json({
-      erro: true,
-      message: err.message
-    });
+    console.error("❌ Erro:", err);
+    res.status(500).json({ erro: err.message });
   }
 });
 
 // =========================
-// 🚀 START SERVIDOR
+// START
 // =========================
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-  await login();
 });

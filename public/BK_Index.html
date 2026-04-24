@@ -15,69 +15,82 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>ERP Sankhya - Consulta</title>
+<title>TC | ST Entregas</title>
+
+<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+<link rel="stylesheet" href="Styles/Styles.css">
 
 <style>
-body {
-  font-family: Arial;
-  background: #f4f6f8;
-  padding: 20px;
+/* 🔥 IMAGEM PEQUENA */
+.foto-thumb {
+  max-width: 120px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+.foto-thumb:hover {
+  transform: scale(1.05);
 }
 
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+/* 🔥 POPUP */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 999;
+  padding-top: 50px;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.8);
 }
 
-input {
-  padding: 10px;
-  width: 300px;
+.modal img {
+  display: block;
+  margin: auto;
+  max-width: 90%;
+  max-height: 90%;
 }
 
-button {
-  padding: 10px 15px;
-  margin-left: 10px;
+.modal span {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  font-size: 40px;
+  color: white;
   cursor: pointer;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-}
-
-th {
-  background: #eee;
-}
-
-.status {
-  margin-top: 10px;
-  font-weight: bold;
-}
-
-.erro {
-  color: red;
-}
-
-.ok {
-  color: green;
+/* 🔥 LINHA FOTO */
+.linha-foto td {
+  text-align: center;
+  background: #fafafa;
 }
 </style>
+
 </head>
 
 <body>
 
-<div class="card">
-  <h2>🔍 Consulta CPF / CNPJ</h2>
+<header>
+<a href='https://topalimentos3.lojavirtualnuvem.com.br/produtos/' target="_blank">
+<img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+alt="LogoTopCestas">
+</a>
+<h1>Status pedidos.</h1>
+</header>
 
-  <input type="text" id="cpf" placeholder="Digite CPF ou CNPJ">
+<div class="card">
+  <h2>🔍 Consulta</h2>
+
+  <!-- 🔥 TIPO DE BUSCA -->
+  <select id="tipo">
+    <option value="cpf">CPF / CNPJ</option>
+    <option value="pedido">Número do Pedido</option>
+    <option value="nome">Nome do Parceiro</option>
+  </select>
+
+  <input type="text" id="valor" placeholder="Digite o valor">
 
   <button onclick="consultar()">Buscar</button>
 
@@ -90,53 +103,78 @@ th {
       <tr>
         <th>NUNOTA</th>
         <th>NUMNOTA</th>
+        <th>TOP</th>
         <th>DTNEG</th>
         <th>VLRNOTA</th>
         <th>CODPARC</th>
         <th>NOMEPARC</th>
         <th>CGC_CPF</th>
+        <th>ENTREGAR</th>
+        <th>RECEBIDO</th>
+        <th>STATUS</th>
       </tr>
     </thead>
 
     <tbody id="tbody">
-      <tr><td colspan="7">Nenhum dado carregado</td></tr>
+      <tr><td colspan="11">Nenhum dado carregado</td></tr>
     </tbody>
   </table>
 </div>
 
+<!-- 🔥 MODAL -->
+<div id="modal" class="modal">
+  <span onclick="fecharModal()">&times;</span>
+  <img id="imgModal">
+</div>
+
 <script>
 
-// =========================
-// INIT DEBUG
-// =========================
 console.log("🚀 SCRIPT CARREGADO");
 
 // =========================
-// UTIL
+// FORMATAÇÃO
 // =========================
-function limparStatus(status) {
-  status.classList.remove("erro", "ok");
-}
-
-function formatarMoeda(valor) {
-  if (!valor) return "";
-  return Number(valor).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
+function formatarValor(v) {
+  if (!v) return "";
+  return Number(v).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
   });
 }
 
-// pega valor do record[]
-function getValue(record, index) {
-  const val = record[index];
-  if (!val) return "";
+function formatarData(d) {
+  if (!d) return "";
+  return d.split(" ")[0];
+}
 
-  // caso venha { $: valor }
-  if (typeof val === "object" && val.$ !== undefined) {
-    return val.$;
-  }
+// =========================
+// IMAGEM (COM FALLBACK)
+// =========================
+function getImagem(nunota) {
 
-  return val;
+  const url1 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
+  const url2 = `http://topcesta.fwc.cloud:8180/mge/OUTRA_TABELA@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
+
+  return `
+    <img
+      class="foto-thumb"
+      src="${url1}"
+      onclick="abrirModal('${url1}')"
+      onerror="this.onerror=null; this.src='${url2}'"
+    />
+  `;
+}
+
+// =========================
+// MODAL
+// =========================
+function abrirModal(src) {
+  document.getElementById('modal').style.display = "block";
+  document.getElementById('imgModal').src = src;
+}
+
+function fecharModal() {
+  document.getElementById('modal').style.display = "none";
 }
 
 // =========================
@@ -146,63 +184,85 @@ async function consultar() {
 
   console.log("🔥 BOTÃO CLICADO");
 
-  const cpf = document.getElementById('cpf').value.trim();
+  const tipo = document.getElementById('tipo').value;
+  const valor = document.getElementById('valor').value;
 
-  if (!cpf) {
-    alert("Digite CPF ou CNPJ");
+  if (!valor) {
+    alert("Digite um valor");
     return;
   }
 
   const status = document.getElementById('status');
   const tbody = document.getElementById('tbody');
 
-  limparStatus(status);
   status.innerHTML = "⏳ Consultando...";
+  status.className = "status";
   tbody.innerHTML = "";
 
   try {
 
     const res = await fetch('/api/notas', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cpf })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer d7e10ab7-a425-4e84-874b-ce5d2961fe2a'
+      },
+      body: JSON.stringify({ tipo, valor })
     });
 
+    if (res.status === 401) {
+      throw new Error("Não autorizado");
+    }
+
     const data = await res.json();
+    const linhas = data.rows || [];
 
-    console.log("📦 Retorno API:", data);
-
-    const linhas = data.rows;
-
-    if (!linhas || linhas.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7">Nenhum dado encontrado</td></tr>`;
+    if (!linhas.length) {
+      tbody.innerHTML = `<tr><td colspan="11">Nenhum dado encontrado</td></tr>`;
       status.innerHTML = "⚠️ Nenhum resultado";
       status.classList.add("erro");
       return;
     }
 
-    // =========================
-    // 🔥 RENDERIZAÇÃO CORRETA
-    // =========================
     linhas.forEach(l => {
 
-      console.log("🔎 Linha:", l);
+      const corStatus =
+        l.ST_ENTREGAS === 'ENTREGUE' ? 'green' :
+        l.ST_ENTREGAS === 'ENTREGANDO' ? 'orange' :
+        'gray';
 
+      // 🔥 LINHA PRINCIPAL
       const tr = document.createElement('tr');
 
-      const record = l.record || [];
-
       tr.innerHTML = `
-        <td>${getValue(record, 0)}</td>
-        <td>${getValue(record, 1)}</td>
-        <td>${getValue(record, 2)}</td>
-        <td>${formatarMoeda(getValue(record, 3))}</td>
-        <td>${getValue(record, 4)}</td>
-        <td>${getValue(record, 5)}</td>
-        <td>${getValue(record, 6)}</td>
+        <td>${l.NUNOTA}</td>
+        <td>${l.NUMNOTA}</td>
+        <td>${l.TOP}</td>
+        <td>${formatarData(l.DTNEG)}</td>
+        <td>${formatarValor(l.VLRNOTA)}</td>
+        <td>${l.CODPARC}</td>
+        <td>${l.NOMEPARC}</td>
+        <td>${l.CGC_CPF}</td>
+        <td>${l.ENTREGAR}</td>
+        <td>${l.RECEBIDO}</td>
+        <td style="font-weight:bold; color:${corStatus}">
+          ${l.ST_ENTREGAS}
+        </td>
       `;
 
       tbody.appendChild(tr);
+
+      // 🔥 LINHA DA FOTO (ABAIXO)
+      const trFoto = document.createElement('tr');
+      trFoto.className = "linha-foto";
+
+      trFoto.innerHTML = `
+        <td colspan="11">
+          ${getImagem(l.NUNOTA)}
+        </td>
+      `;
+
+      tbody.appendChild(trFoto);
     });
 
     status.innerHTML = `✅ ${linhas.length} registro(s) encontrado(s)`;
@@ -215,13 +275,18 @@ async function consultar() {
     status.innerHTML = "❌ Erro na consulta";
     status.classList.add("erro");
 
-    tbody.innerHTML = `<tr><td colspan="7">Erro ao consultar API</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11">Erro ao consultar API</td></tr>`;
   }
 }
 
 </script>
 
 </body>
+
+<footer>
+  <p>&copy; Top Cestas de alimentos - 2026</p>
+</footer>
+
 </html>
 
 
