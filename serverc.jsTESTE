@@ -1,0 +1,171 @@
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+const PORT = 3000;
+
+// =========================
+// 🔥 LOG GLOBAL (CAPTURA TODAS REQUISIÇÕES)
+// =========================
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.url}`);
+  next();
+});
+
+// =========================
+// CONFIG SANKHYA
+// =========================
+const BASE_URL = "http://topcesta.fwc.cloud:8180/mge/service.sbr";
+
+
+
+const USER = "SEU_USUARIO";
+const PASS = "SUA_SENHA";
+
+
+let cookie = "";
+// =========================
+// LOGIN SANKHYA
+// =========================
+async function login() {
+  console.log("🔐 Fazendo login no Sankhya...");
+
+  const payload = {
+    serviceName: "MobileLoginSP.login",
+    requestBody: {
+      NOMUSU: { $: USER },
+      INTERNO: { $: PASS }
+    }
+  };
+
+  const res = await fetch(`${BASE_URL}?serviceName=MobileLoginSP.login&outputType=json`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+
+  cookie = res.headers.get("set-cookie");
+
+  if (!cookie) {
+    throw new Error("❌ Não recebeu cookie do login");
+  }
+
+  console.log("✅ Login realizado com sucesso!");
+}
+
+// =========================
+// HEALTH CHECK
+// =========================
+app.get('/api/health', (req, res) => {
+  console.log("❤️ Health check chamado");
+  res.json({ status: "OK" });
+});
+
+// =========================
+// CONSULTA NOTAS (LOADVIEW)
+// =========================
+app.post('/api/notas', async (req, res) => {
+
+  console.log("📥 REQUISIÇÃO RECEBIDA EM /api/notas");
+  console.log("📦 Body recebido:", req.body);
+
+  try {
+
+    if (!cookie) {
+      await login();
+    }
+
+    const { cpf } = req.body;
+
+    const documento = (cpf || "").replace(/\D/g, '');
+
+    if (!documento) {
+      return res.status(400).json({ erro: "CPF/CNPJ inválido" });
+    }
+
+    console.log("🔎 Documento normalizado:", documento);
+
+    // =========================
+    // PAYLOAD LOADVIEW
+    // =========================
+    const payload = {
+      serviceName: "CRUDServiceProvider.loadView",
+      requestBody: {
+        query: {
+          viewName: "VW_NOTAS_FUSION",
+          where: `
+            (
+              CGC_CPF = '${documento}'
+              OR CGC_CPF LIKE '%${documento}%'
+            )
+            AND ROWNUM <= 50
+          `
+        }
+      }
+    };
+
+    console.log("📤 Enviando para Sankhya:");
+    console.log(JSON.stringify(payload, null, 2));
+
+    // =========================
+    // CHAMADA SANKHYA
+    // =========================
+    const response = await fetch(
+      `${BASE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const text = await response.text();
+
+    console.log("📥 Resposta Sankhya:");
+    console.log(text);
+
+    let data;
+
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      return res.status(500).json({
+        erro: "Erro ao converter resposta",
+        raw: text
+      });
+    }
+
+    if (data.status !== "0") {
+      console.log("⚠️ Erro Sankhya:", data.statusMessage);
+      return res.status(400).json(data);
+    }
+
+    res.json(data);
+
+  } catch (err) {
+    console.error("❌ ERRO GERAL:", err.message);
+    res.status(500).json({ erro: err.message });
+  }
+});
+
+// =========================
+// START
+// =========================
+app.listen(PORT, async () => {
+  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+
+  try {
+    await login();
+  } catch (err) {
+    console.error("❌ Falha no login:", err.message);
+  }
+});

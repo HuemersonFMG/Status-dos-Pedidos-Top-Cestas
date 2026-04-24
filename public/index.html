@@ -1,0 +1,210 @@
+<!--
+// =========================
+// BACKEND - server.js (mantido igual ao anterior)
+// =========================
+
+// =========================
+// FRONTEND - public/index.html (VERSÃO CORRIGIDA COMPLETA)
+// =========================
+
+“Content-Type”: “application/json;charset=ISO-8859-1”
+-->
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TC | ST Entregas</title>
+<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+<link rel="stylesheet" href="Styles/Styles.css">
+
+</head>
+
+<body>
+<header>
+  <!-- LOGO TOP -->
+  <a href='https://topalimentos3.lojavirtualnuvem.com.br/produtos/' target="_blank">
+    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+         alt="LogoTopCestas">
+</a>
+
+<h1>Status pedidos.</h1>
+</header>
+
+<div class="card">
+  <h2>🔍 Consulta CPF / CNPJ</h2>
+
+  <input type="text" id="cpf" placeholder="Digite CPF ou CNPJ">
+
+  <button onclick="consultar()">Buscar</button>
+
+  <div class="status" id="status"></div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>NUNOTA</th>
+        <th>NUMNOTA</th>
+        <th>TOP</th>
+        <th>DTNEG</th>
+        <th>VLRNOTA</th>
+        <th>CODPARC</th>
+        <th>NOMEPARC</th>
+        <th>CGC_CPF</th>
+        <th>ENTREGAR</th>
+        <th>RECEBIDO</th>
+        <th>STATUS</th>
+      </tr>
+    </thead>
+
+    <tbody id="tbody">
+      <tr><td colspan="11">Nenhum dado carregado</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+
+console.log("🚀 SCRIPT CARREGADO");
+
+// =========================
+// FORMATAÇÃO (OPCIONAL)
+// =========================
+function formatarValor(v) {
+  if (!v) return "";
+  return Number(v).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
+}
+
+function formatarData(d) {
+  if (!d) return "";
+  return d.split(" ")[0];
+}
+
+// =========================
+// CONSULTA
+// =========================
+async function consultar() {
+
+  console.log("🔥 BOTÃO CLICADO");
+
+  const cpf = document.getElementById('cpf').value;
+
+  if (!cpf) {
+    alert("Digite CPF ou CNPJ");
+    return;
+  }
+
+  const status = document.getElementById('status');
+  const tbody = document.getElementById('tbody');
+
+  status.innerHTML = "⏳ Consultando...";
+  status.className = "status";
+  tbody.innerHTML = "";
+
+  try {
+
+    console.log("📤 Enviando requisição para /api/notas");
+
+    const res = await fetch('/api/notas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer d7e10ab7-a425-4e84-874b-ce5d2961fe2a'
+      },
+      body: JSON.stringify({ cpf })
+    });
+
+    console.log("📡 Status HTTP:", res.status);
+
+    if (res.status === 401) {
+      throw new Error("Não autorizado (token inválido)");
+    }
+
+    const data = await res.json();
+
+    console.log("📦 Retorno API:", data);
+
+    const linhas = data.rows || [];
+
+    if (!linhas.length) {
+      tbody.innerHTML = `<tr><td colspan="11">Nenhum dado encontrado</td></tr>`;
+      status.innerHTML = "⚠️ Nenhum resultado";
+      status.classList.add("erro");
+      return;
+    }
+
+    linhas.forEach(l => {
+
+      console.log("🔎 Linha:", l);
+
+      const tr = document.createElement('tr');
+
+      // 🎨 STATUS COLORIDO
+      const corStatus =
+        l.ST_ENTREGAS === 'ENTREGUE' ? 'green' :
+        l.ST_ENTREGAS === 'ENTREGANDO' ? 'orange' :
+        'gray';
+
+      tr.innerHTML = `
+        <td>${l.NUNOTA}</td>
+        <td>${l.NUMNOTA}</td>
+        <td>${l.TOP}</td>
+        <td>${formatarData(l.DTNEG)}</td>
+        <td>${formatarValor(l.VLRNOTA)}</td>
+        <td>${l.CODPARC}</td>
+        <td>${l.NOMEPARC}</td>
+        <td>${l.CGC_CPF}</td>
+        <td>${l.ENTREGAR}</td>
+        <td>${l.RECEBIDO}</td>
+        <td style="font-weight:bold; color:${corStatus}">
+          ${l.ST_ENTREGAS}
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    status.innerHTML = `✅ ${linhas.length} registro(s) encontrado(s)`;
+    status.classList.add("ok");
+
+  } catch (err) {
+
+    console.error("❌ ERRO:", err);
+
+    status.innerHTML = "❌ Erro na consulta";
+    status.classList.add("erro");
+
+    tbody.innerHTML = `<tr><td colspan="11">Erro ao consultar API</td></tr>`;
+  }
+}
+
+</script>
+
+</body>
+<footer>
+  <p>&copy; Top Cestas de alimentos - 2026</p>
+</footer>
+
+</html>
+
+
+
+<!--
+// =========================
+// COMO USAR
+// =========================
+
+/*
+1. Reinicie o servidor (npm start)
+2. Acesse: http://localhost:5050
+  cnpj teste: 14140218000156
+3. Cole o token
+4. Clique em "Buscar Notas"
+*/
+-->
