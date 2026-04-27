@@ -42,7 +42,7 @@ const USER = "HUEMERSON";
 const PASS = "654321";
 
 // =========================
-// 🔐 LOGIN (RETORNA COOKIE)
+// 🔐 LOGIN STATELESS
 // =========================
 async function login() {
   console.log("🔐 Login Sankhya...");
@@ -55,7 +55,7 @@ async function login() {
     }
   };
 
-  const res = await fetch(
+  const response = await fetch(
     `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
     {
       method: "POST",
@@ -64,16 +64,26 @@ async function login() {
     }
   );
 
-  const rawCookie = res.headers.get("set-cookie") || "";
+  const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  console.log("🍪 COOKIE GERADO:", cookie);
+  console.log("🍪 COOKIE:", cookie);
 
   return cookie;
 }
 
 // =========================
-// HEALTH CHECK
+// NORMALIZAR TEXTO
+// =========================
+function normalizar(txt) {
+  return (txt || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+// =========================
+// HEALTH
 // =========================
 app.get('/api/health', (req, res) => {
   res.json({ status: "OK" });
@@ -85,29 +95,18 @@ app.get('/api/health', (req, res) => {
 app.post('/api/notas', async (req, res) => {
   try {
 
-    const cookie = await login();
-
-    // 🔥 NOVO PADRÃO
     const { tipo, valor } = req.body;
-
     const filtro = (valor || "").trim();
 
-    console.log("🔎 Filtro recebido:", tipo, filtro);
+    console.log("🔎 Tipo:", tipo);
+    console.log("🔎 Valor:", filtro);
 
-    // =========================
-    // 🔐 VALIDAÇÃO
-    // =========================
-    if (!tipo || !filtro) {
-      return res.status(400).json({ erro: "Filtro inválido" });
+    if (!filtro) {
+      return res.status(400).json({ erro: "Valor não informado" });
     }
 
-    if (tipo === "cpf" && !/^\d{11,14}$/.test(filtro.replace(/\D/g, ''))) {
-      return res.status(400).json({ erro: "CPF/CNPJ inválido" });
-    }
+    const cookie = await login();
 
-    // =========================
-    // 🔥 CHAMADA DA VIEW
-    // =========================
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
@@ -117,7 +116,7 @@ app.post('/api/notas', async (req, res) => {
       }
     };
 
-    console.log("📤 Chamando loadView...");
+    console.log("📤 Chamando Sankhya...");
 
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
@@ -132,8 +131,6 @@ app.post('/api/notas', async (req, res) => {
     );
 
     const text = await response.text();
-
-    console.log("📥 Resposta recebida");
 
     if (!response.ok || text.startsWith("<")) {
       throw new Error("Erro na comunicação com Sankhya");
@@ -170,18 +167,20 @@ app.post('/api/notas', async (req, res) => {
         }))
         .filter(r => {
 
+          // CPF/CNPJ
           if (tipo === "cpf") {
-            return r.CGC_CPF === filtro.replace(/\D/g, '');
+            return r.CGC_CPF === filtro.replace(/\D/g, "");
           }
 
+          // 🔥 PEDIDO (AGORA CORRETO)
           if (tipo === "pedido") {
-            return String(r.NUMNOTA) === filtro;
+            return String(r.NUNOTA).includes(String(filtro));
           }
 
+          // NOME (LIKE)
           if (tipo === "nome") {
-            return (r.NOMEPARC || "")
-              .toLowerCase()
-              .includes(filtro.toLowerCase());
+            return normalizar(r.NOMEPARC)
+              .includes(normalizar(filtro));
           }
 
           return true;

@@ -17,164 +17,154 @@
 <meta charset="UTF-8">
 <title>TC | ST Entregas</title>
 
-<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
 <link rel="stylesheet" href="Styles/Styles.css">
 
 <style>
-/* 🔥 IMAGEM PEQUENA */
-.foto-thumb {
-  max-width: 120px;
+
+/* =========================
+IMAGEM THUMB
+========================= */
+.img-thumb {
+  width: 120px;
   cursor: pointer;
-  border-radius: 6px;
-  transition: 0.2s;
-}
-.foto-thumb:hover {
-  transform: scale(1.05);
+  border-radius: 8px;
 }
 
-/* 🔥 POPUP */
+/* =========================
+MODAL
+========================= */
 .modal {
   display: none;
   position: fixed;
-  z-index: 999;
-  padding-top: 50px;
-  left: 0;
-  top: 0;
+  z-index: 9999;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+}
+
+.modal-box {
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.8);
+  position: relative;
 }
 
-.modal img {
-  display: block;
-  margin: auto;
-  max-width: 90%;
-  max-height: 90%;
-}
-
-.modal span {
+.modal-img {
   position: absolute;
-  top: 20px;
-  right: 40px;
-  font-size: 40px;
+  top: 50%;
+  left: 50%;
+  max-width: 90%;
+  max-height: 70vh;
+  transform: translate(-50%, -50%);
+}
+
+/* CONTROLES SEMPRE NA FRENTE */
+.controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  background: rgba(0,0,0,0.8);
+  padding: 10px;
+  border-radius: 10px;
   color: white;
+  display: flex;
+  gap: 10px;
+}
+
+/* BOTÃO FECHAR */
+.close {
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  color: white;
+  font-size: 28px;
   cursor: pointer;
+  z-index: 99999;
 }
 
-/* 🔥 LINHA FOTO */
-.linha-foto td {
-  text-align: center;
-  background: #fafafa;
-}
 </style>
-
 </head>
 
 <body>
 
 <header>
-<a href='https://topalimentos3.lojavirtualnuvem.com.br/produtos/' target="_blank">
-<img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-alt="LogoTopCestas">
-</a>
-<h1>Status pedidos.</h1>
+  <a href="https://topalimentos3.lojavirtualnuvem.com.br/produtos/" target="_blank">
+    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png">
+  </a>
+  <h1>Status pedidos</h1>
 </header>
 
 <div class="card">
+
   <h2>🔍 Consulta</h2>
 
-  <!-- 🔥 TIPO DE BUSCA -->
   <select id="tipo">
-    <option value="cpf">CPF / CNPJ</option>
-    <option value="pedido">Número do Pedido</option>
-    <option value="nome">Nome do Parceiro</option>
+    <option value="cpf">CPF/CNPJ</option>
+    <option value="pedido">Nº Pedido</option>
+    <option value="nome">Nome</option>
   </select>
 
   <input type="text" id="valor" placeholder="Digite o valor">
 
   <button onclick="consultar()">Buscar</button>
 
-  <div class="status" id="status"></div>
+  <div id="status"></div>
+
 </div>
 
 <div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>NUNOTA</th>
-        <th>NUMNOTA</th>
-        <th>TOP</th>
-        <th>DTNEG</th>
-        <th>VLRNOTA</th>
-        <th>CODPARC</th>
-        <th>NOMEPARC</th>
-        <th>CGC_CPF</th>
-        <th>ENTREGAR</th>
-        <th>RECEBIDO</th>
-        <th>STATUS</th>
-      </tr>
-    </thead>
+<table>
+<thead>
+<tr>
+<th>Nº Pedido</th>
+<th>Nº NFe</th>
+<th>TOP</th>
+<th>DATA</th>
+<th>VALOR</th>
+<th>PARCEIRO</th>
+<th>STATUS</th>
+</tr>
+</thead>
 
-    <tbody id="tbody">
-      <tr><td colspan="11">Nenhum dado carregado</td></tr>
-    </tbody>
-  </table>
+<tbody id="tbody">
+<tr><td colspan="7">Nenhum dado</td></tr>
+</tbody>
+</table>
 </div>
 
-<!-- 🔥 MODAL -->
+<!-- MODAL -->
 <div id="modal" class="modal">
-  <span onclick="fecharModal()">&times;</span>
-  <img id="imgModal">
+  <div class="modal-box">
+
+    <span class="close" onclick="fecharModal()">✖</span>
+
+    <img id="imgModal" class="modal-img">
+
+    <div class="controls">
+      🔄 <input type="range" min="0" max="3" id="rotate">
+      🔍 <input type="range" min="0" max="200" id="zoom">
+      ↔️ <input type="range" min="-200" max="200" id="moveX">
+      ↕️ <input type="range" min="-200" max="200" id="moveY">
+    </div>
+
+  </div>
 </div>
 
 <script>
 
-console.log("🚀 SCRIPT CARREGADO");
-
 // =========================
-// FORMATAÇÃO
+// FORMATOS
 // =========================
 function formatarValor(v) {
-  if (!v) return "";
-  return Number(v).toLocaleString('pt-BR', {
+  return Number(v || 0).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   });
 }
 
 function formatarData(d) {
-  if (!d) return "";
-  return d.split(" ")[0];
-}
-
-// =========================
-// IMAGEM (COM FALLBACK)
-// =========================
-function getImagem(nunota) {
-
-  const url1 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
-  const url2 = `http://topcesta.fwc.cloud:8180/mge/OUTRA_TABELA@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
-
-  return `
-    <img
-      class="foto-thumb"
-      src="${url1}"
-      onclick="abrirModal('${url1}')"
-      onerror="this.onerror=null; this.src='${url2}'"
-    />
-  `;
-}
-
-// =========================
-// MODAL
-// =========================
-function abrirModal(src) {
-  document.getElementById('modal').style.display = "block";
-  document.getElementById('imgModal').src = src;
-}
-
-function fecharModal() {
-  document.getElementById('modal').style.display = "none";
+  return d ? d.split(" ")[0] : "";
 }
 
 // =========================
@@ -182,22 +172,19 @@ function fecharModal() {
 // =========================
 async function consultar() {
 
-  console.log("🔥 BOTÃO CLICADO");
-
   const tipo = document.getElementById('tipo').value;
-  const valor = document.getElementById('valor').value;
-
-  if (!valor) {
-    alert("Digite um valor");
-    return;
-  }
+  let valor = document.getElementById('valor').value.trim();
 
   const status = document.getElementById('status');
   const tbody = document.getElementById('tbody');
 
   status.innerHTML = "⏳ Consultando...";
-  status.className = "status";
   tbody.innerHTML = "";
+
+  // 🔥 TRATAMENTO ESPECÍFICO POR TIPO
+  if (tipo === "cpf") {
+    valor = valor.replace(/\D/g, '');
+  }
 
   try {
 
@@ -210,83 +197,118 @@ async function consultar() {
       body: JSON.stringify({ tipo, valor })
     });
 
-    if (res.status === 401) {
-      throw new Error("Não autorizado");
-    }
-
     const data = await res.json();
     const linhas = data.rows || [];
 
     if (!linhas.length) {
-      tbody.innerHTML = `<tr><td colspan="11">Nenhum dado encontrado</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado</td></tr>`;
       status.innerHTML = "⚠️ Nenhum resultado";
-      status.classList.add("erro");
       return;
     }
 
     linhas.forEach(l => {
 
-      const corStatus =
+      const cor =
         l.ST_ENTREGAS === 'ENTREGUE' ? 'green' :
         l.ST_ENTREGAS === 'ENTREGANDO' ? 'orange' :
         'gray';
 
-      // 🔥 LINHA PRINCIPAL
+      // 🔥 GARANTIA: USAR NUNOTA (PEDIDO)
+      const pedido = l.NUNOTA || "";
+
       const tr = document.createElement('tr');
 
       tr.innerHTML = `
-        <td>${l.NUNOTA}</td>
-        <td>${l.NUMNOTA}</td>
+        <td><strong>${pedido}</strong></td>
+        <td>${l.NUMNOTA || ""}</td>
         <td>${l.TOP}</td>
         <td>${formatarData(l.DTNEG)}</td>
         <td>${formatarValor(l.VLRNOTA)}</td>
-        <td>${l.CODPARC}</td>
         <td>${l.NOMEPARC}</td>
-        <td>${l.CGC_CPF}</td>
-        <td>${l.ENTREGAR}</td>
-        <td>${l.RECEBIDO}</td>
-        <td style="font-weight:bold; color:${corStatus}">
-          ${l.ST_ENTREGAS}
-        </td>
+        <td style="color:${cor};font-weight:bold">${l.ST_ENTREGAS}</td>
       `;
 
       tbody.appendChild(tr);
 
-      // 🔥 LINHA DA FOTO (ABAIXO)
-      const trFoto = document.createElement('tr');
-      trFoto.className = "linha-foto";
+      // IMAGEM
+      const img1 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${pedido}@SEQ=1.dbimage`;
+      const img2 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO2@FOTO@NUNOTA=${pedido}@SEQ=1.dbimage`;
 
-      trFoto.innerHTML = `
-        <td colspan="11">
-          ${getImagem(l.NUNOTA)}
+      const trImg = document.createElement('tr');
+
+      trImg.innerHTML = `
+        <td colspan="7" style="text-align:center">
+          <img src="${img1}"
+               class="img-thumb"
+               onerror="this.src='${img2}'"
+               onclick="abrirModal(this.src)">
         </td>
       `;
 
-      tbody.appendChild(trFoto);
+      tbody.appendChild(trImg);
+
     });
 
-    status.innerHTML = `✅ ${linhas.length} registro(s) encontrado(s)`;
-    status.classList.add("ok");
+    status.innerHTML = `✅ ${linhas.length} registros`;
 
   } catch (err) {
-
-    console.error("❌ ERRO:", err);
-
+    console.error(err);
     status.innerHTML = "❌ Erro na consulta";
-    status.classList.add("erro");
-
-    tbody.innerHTML = `<tr><td colspan="11">Erro ao consultar API</td></tr>`;
   }
+}
+
+// =========================
+// MODAL
+// =========================
+const modal = document.getElementById('modal');
+const img = document.getElementById('imgModal');
+
+let r = 0, z = 1, x = 0, y = 0;
+
+function abrirModal(src) {
+  modal.style.display = "block";
+  img.src = src;
+
+  r = 0; z = 1; x = 0; y = 0;
+  atualizar();
+}
+
+function fecharModal() {
+  modal.style.display = "none";
+}
+
+document.getElementById('rotate').oninput = e => {
+  r = e.target.value * 90;
+  atualizar();
+};
+
+document.getElementById('zoom').oninput = e => {
+  z = 1 + (e.target.value / 100);
+  atualizar();
+};
+
+document.getElementById('moveX').oninput = e => {
+  x = e.target.value;
+  atualizar();
+};
+
+document.getElementById('moveY').oninput = e => {
+  y = e.target.value;
+  atualizar();
+};
+
+function atualizar() {
+  img.style.transform =
+    `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) rotate(${r}deg) scale(${z})`;
 }
 
 </script>
 
-</body>
-
 <footer>
-  <p>&copy; Top Cestas de alimentos - 2026</p>
+<p>&copy; Top Cestas - 2026</p>
 </footer>
 
+</body>
 </html>
 
 
@@ -302,5 +324,8 @@ async function consultar() {
   cnpj teste: 14140218000156
 3. Cole o token
 4. Clique em "Buscar Notas"
+
+link do blender: https://dashboard.render.com/
+
 */
 -->

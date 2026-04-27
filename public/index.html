@@ -15,301 +15,120 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>TC | ST Entregas</title>
-
-<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
-<link rel="stylesheet" href="Styles/Styles.css">
+<title>Status do Pedido</title>
 
 <style>
-
-/* =========================
-IMAGEM THUMB
-========================= */
-.img-thumb {
-  width: 120px;
-  cursor: pointer;
-  border-radius: 8px;
+body {
+  font-family: Arial;
+  text-align: center;
+  padding: 20px;
 }
 
-/* =========================
-MODAL
-========================= */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  inset: 0;
-  background: rgba(0,0,0,0.9);
-}
-
-.modal-box {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.modal-img {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  max-width: 90%;
-  max-height: 70vh;
-  transform: translate(-50%, -50%);
-}
-
-/* CONTROLES SEMPRE NA FRENTE */
-.controls {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 99999;
-  background: rgba(0,0,0,0.8);
-  padding: 10px;
+.card {
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 500px;
   border-radius: 10px;
-  color: white;
-  display: flex;
-  gap: 10px;
 }
 
-/* BOTÃO FECHAR */
-.close {
-  position: fixed;
-  top: 20px;
-  right: 30px;
-  color: white;
-  font-size: 28px;
+.status {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+img {
+  max-width: 100%;
+  margin-top: 15px;
   cursor: pointer;
-  z-index: 99999;
 }
 
+/* POPUP */
+.popup {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.8);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.popup img {
+  max-width: 90%;
+  max-height: 90%;
+}
 </style>
 </head>
 
 <body>
 
-<header>
-  <a href="https://topalimentos3.lojavirtualnuvem.com.br/produtos/" target="_blank">
-    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png">
-  </a>
-  <h1>Status pedidos</h1>
-</header>
+<h2>📦 Status do Pedido</h2>
 
-<div class="card">
+<div id="conteudo"></div>
 
-  <h2>🔍 Consulta</h2>
-
-  <select id="tipo">
-    <option value="cpf">CPF/CNPJ</option>
-    <option value="pedido">Nº Pedido</option>
-    <option value="nome">Nome</option>
-  </select>
-
-  <input type="text" id="valor" placeholder="Digite o valor">
-
-  <button onclick="consultar()">Buscar</button>
-
-  <div id="status"></div>
-
-</div>
-
-<div class="card">
-<table>
-<thead>
-<tr>
-<th>Nº Pedido</th>
-<th>Nº NFe</th>
-<th>TOP</th>
-<th>DATA</th>
-<th>VALOR</th>
-<th>PARCEIRO</th>
-<th>STATUS</th>
-</tr>
-</thead>
-
-<tbody id="tbody">
-<tr><td colspan="7">Nenhum dado</td></tr>
-</tbody>
-</table>
-</div>
-
-<!-- MODAL -->
-<div id="modal" class="modal">
-  <div class="modal-box">
-
-    <span class="close" onclick="fecharModal()">✖</span>
-
-    <img id="imgModal" class="modal-img">
-
-    <div class="controls">
-      🔄 <input type="range" min="0" max="3" id="rotate">
-      🔍 <input type="range" min="0" max="200" id="zoom">
-      ↔️ <input type="range" min="-200" max="200" id="moveX">
-      ↕️ <input type="range" min="-200" max="200" id="moveY">
-    </div>
-
-  </div>
+<div class="popup" id="popup" onclick="fechar()">
+  <img id="imgPopup">
 </div>
 
 <script>
 
-// =========================
-// FORMATOS
-// =========================
-function formatarValor(v) {
-  return Number(v || 0).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  });
+function getParam(nome) {
+  return new URLSearchParams(window.location.search).get(nome);
 }
 
-function formatarData(d) {
-  return d ? d.split(" ")[0] : "";
-}
+async function carregar() {
 
-// =========================
-// CONSULTA
-// =========================
-async function consultar() {
+  const nunota = getParam('nunota');
+  const token = getParam('token');
 
-  const tipo = document.getElementById('tipo').value;
-  let valor = document.getElementById('valor').value.trim();
-
-  const status = document.getElementById('status');
-  const tbody = document.getElementById('tbody');
-
-  status.innerHTML = "⏳ Consultando...";
-  tbody.innerHTML = "";
-
-  // 🔥 TRATAMENTO ESPECÍFICO POR TIPO
-  if (tipo === "cpf") {
-    valor = valor.replace(/\D/g, '');
+  if (!nunota || !token) {
+    document.body.innerHTML = "Link inválido";
+    return;
   }
 
-  try {
+  const res = await fetch(`/api/pedido?nunota=${nunota}&token=${token}`);
+  const data = await res.json();
 
-    const res = await fetch('/api/notas', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer d7e10ab7-a425-4e84-874b-ce5d2961fe2a'
-      },
-      body: JSON.stringify({ tipo, valor })
-    });
-
-    const data = await res.json();
-    const linhas = data.rows || [];
-
-    if (!linhas.length) {
-      tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado</td></tr>`;
-      status.innerHTML = "⚠️ Nenhum resultado";
-      return;
-    }
-
-    linhas.forEach(l => {
-
-      const cor =
-        l.ST_ENTREGAS === 'ENTREGUE' ? 'green' :
-        l.ST_ENTREGAS === 'ENTREGANDO' ? 'orange' :
-        'gray';
-
-      // 🔥 GARANTIA: USAR NUNOTA (PEDIDO)
-      const pedido = l.NUNOTA || "";
-
-      const tr = document.createElement('tr');
-
-      tr.innerHTML = `
-        <td><strong>${pedido}</strong></td>
-        <td>${l.NUMNOTA || ""}</td>
-        <td>${l.TOP}</td>
-        <td>${formatarData(l.DTNEG)}</td>
-        <td>${formatarValor(l.VLRNOTA)}</td>
-        <td>${l.NOMEPARC}</td>
-        <td style="color:${cor};font-weight:bold">${l.ST_ENTREGAS}</td>
-      `;
-
-      tbody.appendChild(tr);
-
-      // IMAGEM
-      const img1 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${pedido}@SEQ=1.dbimage`;
-      const img2 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO2@FOTO@NUNOTA=${pedido}@SEQ=1.dbimage`;
-
-      const trImg = document.createElement('tr');
-
-      trImg.innerHTML = `
-        <td colspan="7" style="text-align:center">
-          <img src="${img1}"
-               class="img-thumb"
-               onerror="this.src='${img2}'"
-               onclick="abrirModal(this.src)">
-        </td>
-      `;
-
-      tbody.appendChild(trImg);
-
-    });
-
-    status.innerHTML = `✅ ${linhas.length} registros`;
-
-  } catch (err) {
-    console.error(err);
-    status.innerHTML = "❌ Erro na consulta";
+  if (!data.rows || !data.rows.length) {
+    document.body.innerHTML = "Pedido não encontrado";
+    return;
   }
+
+  const p = data.rows[0];
+
+  const div = document.getElementById('conteudo');
+
+  div.innerHTML = `
+    <div class="card">
+      <p><b>Pedido:</b> ${p.NUNOTA}</p>
+      <p><b>Cliente:</b> ${p.NOMEPARC}</p>
+      <p class="status">${p.ST_ENTREGAS}</p>
+
+      <img src="http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage"
+           onclick="abrir(this.src)">
+    </div>
+  `;
 }
 
-// =========================
-// MODAL
-// =========================
-const modal = document.getElementById('modal');
-const img = document.getElementById('imgModal');
-
-let r = 0, z = 1, x = 0, y = 0;
-
-function abrirModal(src) {
-  modal.style.display = "block";
-  img.src = src;
-
-  r = 0; z = 1; x = 0; y = 0;
-  atualizar();
+function abrir(src) {
+  document.getElementById('popup').style.display = "flex";
+  document.getElementById('imgPopup').src = src;
 }
 
-function fecharModal() {
-  modal.style.display = "none";
+function fechar() {
+  document.getElementById('popup').style.display = "none";
 }
 
-document.getElementById('rotate').oninput = e => {
-  r = e.target.value * 90;
-  atualizar();
-};
-
-document.getElementById('zoom').oninput = e => {
-  z = 1 + (e.target.value / 100);
-  atualizar();
-};
-
-document.getElementById('moveX').oninput = e => {
-  x = e.target.value;
-  atualizar();
-};
-
-document.getElementById('moveY').oninput = e => {
-  y = e.target.value;
-  atualizar();
-};
-
-function atualizar() {
-  img.style.transform =
-    `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) rotate(${r}deg) scale(${z})`;
-}
+carregar();
 
 </script>
 
-<footer>
-<p>&copy; Top Cestas - 2026</p>
-</footer>
-
 </body>
 </html>
+
 
 
 
@@ -321,8 +140,14 @@ function atualizar() {
 /*
 1. Reinicie o servidor (npm start)
 2. Acesse: http://localhost:5050
+
+>>http://localhost:5050/gerador.html
+
   cnpj teste: 14140218000156
 3. Cole o token
 4. Clique em "Buscar Notas"
+
+link do blender: https://dashboard.render.com/
+
 */
 -->

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Gerar Links de Pedidos</title>
+<style>
+body { font-family: Arial; padding: 20px; }
+input, button { padding: 10px; margin: 5px; }
+.link-box {
+  background: #f4f4f4;
+  padding: 10px;
+  margin: 5px 0;
+  word-break: break-all;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🔗 Gerar Links de Pedidos</h2>
+
+<input type="text" id="cnpj" placeholder="CNPJ">
+<input type="date" id="data">
+
+<button onclick="gerar()">Gerar Links</button>
+
+<div id="resultado"></div>
+
+<script>
+
+async function gerar() {
+
+  const cnpj = document.getElementById('cnpj').value;
+  const data = document.getElementById('data').value;
+
+  const res = await fetch('/api/gerar-links', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cnpj, data })
+  });
+
+  const dataRes = await res.json();
+
+  const div = document.getElementById('resultado');
+  div.innerHTML = "";
+
+  if (!dataRes.links || !dataRes.links.length) {
+    div.innerHTML = "Nenhum link encontrado";
+    return;
+  }
+
+  dataRes.links.forEach(l => {
+    div.innerHTML += `
+      <div class="link-box">
+        <b>Pedido:</b> ${l.nunota}<br>
+        <a href="${l.link}" target="_blank">${l.link}</a>
+      </div>
+    `;
+  });
+}
+
+</script>
+
+</body>
+</html>
