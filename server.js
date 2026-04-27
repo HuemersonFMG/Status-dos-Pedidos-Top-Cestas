@@ -13,10 +13,10 @@ const PORT = process.env.PORT || 5050;
 // =========================
 // 🔐 CONFIG
 // =========================
-const SECRET = "chave_super_secreta"; // 🔥 troque isso
+const SECRET = "chave_super_secreta"; // troque em produção
 
 // =========================
-// 🌐 LOG
+// 🌐 LOG GLOBAL
 // =========================
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url}`);
@@ -36,6 +36,8 @@ const PASS = "654321";
 // 🔐 LOGIN SANKHYA
 // =========================
 async function login() {
+  console.log("🔐 Login Sankhya...");
+
   const payload = {
     serviceName: "MobileLoginSP.login",
     requestBody: {
@@ -44,7 +46,7 @@ async function login() {
     }
   };
 
-  const res = await fetch(
+  const response = await fetch(
     `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
     {
       method: "POST",
@@ -53,8 +55,12 @@ async function login() {
     }
   );
 
-  const rawCookie = res.headers.get("set-cookie") || "";
-  return rawCookie.split(";")[0];
+  const rawCookie = response.headers.get("set-cookie") || "";
+  const cookie = rawCookie.split(";")[0];
+
+  console.log("🍪 COOKIE:", cookie);
+
+  return cookie;
 }
 
 // =========================
@@ -63,12 +69,12 @@ async function login() {
 function gerarToken(nunota) {
   return crypto
     .createHash('sha256')
-    .update(nunota + SECRET)
+    .update(String(nunota) + SECRET)
     .digest('hex');
 }
 
 // =========================
-// 🔍 GERAR LINKS POR CNPJ
+// 🔍 GERAR LINKS
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
   try {
@@ -92,6 +98,8 @@ app.post('/api/gerar-links', async (req, res) => {
       }
     };
 
+    console.log("📤 Chamando Sankhya...");
+
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
@@ -104,11 +112,35 @@ app.post('/api/gerar-links', async (req, res) => {
       }
     );
 
-    const json = JSON.parse(await response.text());
+    const text = await response.text();
 
-    const registros = json?.responseBody?.records?.record || [];
-    const lista = Array.isArray(registros) ? registros : [registros];
+    if (!response.ok || text.startsWith("<")) {
+      throw new Error("Erro na comunicação com Sankhya");
+    }
 
+    const json = JSON.parse(text);
+
+    // 🔥 erro Sankhya
+    if (json?.tsError) {
+      console.log("❌ ERRO SANKHYA:", json.tsError);
+      return res.json({ total: 0, links: [] });
+    }
+
+    // =========================
+    // 🔥 TRATAMENTO SEGURO
+    // =========================
+    let lista = [];
+
+    if (json?.responseBody?.records?.record) {
+      const registros = json.responseBody.records.record;
+      lista = Array.isArray(registros) ? registros : [registros];
+    }
+
+    console.log("📦 TOTAL REGISTROS:", lista.length);
+
+    // =========================
+    // 🔎 FILTRO
+    // =========================
     const filtrados = lista
       .map(r => ({
         NUNOTA: r.NUNOTA?.$,
@@ -116,16 +148,24 @@ app.post('/api/gerar-links', async (req, res) => {
         DTNEG: r.DTNEG?.$
       }))
       .filter(r => {
+
         if (r.CGC_CPF !== documento) return false;
 
         if (data) {
-          return r.DTNEG >= data;
+          const dataPedido = new Date(r.DTNEG);
+          const dataFiltro = new Date(data);
+          return dataPedido >= dataFiltro;
         }
 
         return true;
       });
 
-    const baseUrl = "https://status-dos-pedidos-top-cestas.onrender.com";
+    console.log("📊 FILTRADOS:", filtrados.length);
+
+    // =========================
+    // 🔗 GERAR LINKS
+    // =========================
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const links = filtrados.map(r => {
       const token = gerarToken(r.NUNOTA);
@@ -139,13 +179,13 @@ app.post('/api/gerar-links', async (req, res) => {
     res.json({ total: links.length, links });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ ERRO:", err);
     res.status(500).json({ erro: err.message });
   }
 });
 
 // =========================
-// 🔎 CONSULTA SEGURA POR LINK
+// 🔎 CONSULTA POR LINK
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -173,6 +213,8 @@ app.get('/api/pedido', async (req, res) => {
       }
     };
 
+    console.log("📤 Buscando pedido...");
+
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
@@ -185,14 +227,32 @@ app.get('/api/pedido', async (req, res) => {
       }
     );
 
-    const json = JSON.parse(await response.text());
+    const text = await response.text();
 
-    const registros = json?.responseBody?.records?.record || [];
-    const lista = Array.isArray(registros) ? registros : [registros];
+    if (!response.ok || text.startsWith("<")) {
+      throw new Error("Erro na comunicação com Sankhya");
+    }
+
+    const json = JSON.parse(text);
+
+    if (json?.tsError) {
+      console.log("❌ ERRO SANKHYA:", json.tsError);
+      return res.json({ rows: [] });
+    }
+
+    let lista = [];
+
+    if (json?.responseBody?.records?.record) {
+      const registros = json.responseBody.records.record;
+      lista = Array.isArray(registros) ? registros : [registros];
+    }
+
+    console.log("📦 TOTAL REGISTROS:", lista.length);
 
     const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
 
     if (!pedido) {
+      console.log("⚠️ Pedido não encontrado");
       return res.json({ rows: [] });
     }
 
@@ -206,7 +266,7 @@ app.get('/api/pedido', async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ ERRO:", err);
     res.status(500).json({ erro: err.message });
   }
 });
@@ -215,5 +275,5 @@ app.get('/api/pedido', async (req, res) => {
 // START
 // =========================
 app.listen(PORT, () => {
-  console.log(`🚀 Rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
