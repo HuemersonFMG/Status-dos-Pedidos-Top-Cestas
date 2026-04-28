@@ -13,10 +13,10 @@ const PORT = process.env.PORT || 5050;
 // =========================
 // 🔐 CONFIG
 // =========================
-const SECRET = "chave_super_secreta"; // troque em produção
+const SECRET = "chave_super_secreta";
 
 // =========================
-// 🌐 LOG GLOBAL
+// 🌐 LOG
 // =========================
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url}`);
@@ -33,11 +33,9 @@ const USER = "HUEMERSON";
 const PASS = "654321";
 
 // =========================
-// 🔐 LOGIN SANKHYA
+// 🔐 LOGIN
 // =========================
 async function login() {
-  console.log("🔐 Login Sankhya...");
-
   const payload = {
     serviceName: "MobileLoginSP.login",
     requestBody: {
@@ -55,16 +53,12 @@ async function login() {
     }
   );
 
-  const rawCookie = response.headers.get("set-cookie") || "";
-  const cookie = rawCookie.split(";")[0];
-
-  console.log("🍪 COOKIE:", cookie);
-
+  const cookie = (response.headers.get("set-cookie") || "").split(";")[0];
   return cookie;
 }
 
 // =========================
-// 🔐 GERAR TOKEN
+// 🔐 TOKEN
 // =========================
 function gerarToken(nunota) {
   return crypto
@@ -74,17 +68,23 @@ function gerarToken(nunota) {
 }
 
 // =========================
-// 🔍 GERAR LINKS
+// 🔧 UTIL
+// =========================
+function limparDoc(doc) {
+  return (doc || "").replace(/\D/g, '');
+}
+
+// =========================
+// 🔗 GERAR LINKS
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
   try {
 
-    const { cnpj, data } = req.body;
+    let { doc, data } = req.body;
+    doc = limparDoc(doc);
 
-    const documento = (cnpj || "").replace(/\D/g, '');
-
-    if (!documento) {
-      return res.status(400).json({ erro: "CNPJ obrigatório" });
+    if (!doc) {
+      return res.status(400).json({ erro: "CPF/CNPJ obrigatório" });
     }
 
     const cookie = await login();
@@ -92,13 +92,9 @@ app.post('/api/gerar-links', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION"
-        }
+        query: { viewName: "VW_NOTAS_FUSION" }
       }
     };
-
-    console.log("📤 Chamando Sankhya...");
 
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
@@ -113,79 +109,52 @@ app.post('/api/gerar-links', async (req, res) => {
     );
 
     const text = await response.text();
-
     if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
+      throw new Error("Erro Sankhya");
     }
 
     const json = JSON.parse(text);
 
-    // 🔥 erro Sankhya
-    if (json?.tsError) {
-      console.log("❌ ERRO SANKHYA:", json.tsError);
-      return res.json({ total: 0, links: [] });
-    }
-
-    // =========================
-    // 🔥 TRATAMENTO SEGURO
-    // =========================
     let lista = [];
-
     if (json?.responseBody?.records?.record) {
       const registros = json.responseBody.records.record;
       lista = Array.isArray(registros) ? registros : [registros];
     }
 
-    console.log("📦 TOTAL REGISTROS:", lista.length);
-
-    // =========================
     // 🔎 FILTRO
-    // =========================
-    const filtrados = lista
-      .map(r => ({
-        NUNOTA: r.NUNOTA?.$,
-        CGC_CPF: (r.CGC_CPF?.$ || "").replace(/\D/g, ''),
-        DTNEG: r.DTNEG?.$
-      }))
-      .filter(r => {
+    const filtrados = lista.filter(r => {
+      const docBanco = limparDoc(r.CGC_CPF?.$);
+      if (docBanco !== doc) return false;
 
-        if (r.CGC_CPF !== documento) return false;
+      if (data) {
+        const dt = new Date(r.DTNEG?.$);
+        return dt >= new Date(data);
+      }
 
-        if (data) {
-          const dataPedido = new Date(r.DTNEG);
-          const dataFiltro = new Date(data);
-          return dataPedido >= dataFiltro;
-        }
+      return true;
+    });
 
-        return true;
-      });
-
-    console.log("📊 FILTRADOS:", filtrados.length);
-
-    // =========================
-    // 🔗 GERAR LINKS
-    // =========================
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const links = filtrados.map(r => {
-      const token = gerarToken(r.NUNOTA);
-
+      const nunota = r.NUNOTA?.$;
       return {
-        nunota: r.NUNOTA,
-        link: `${baseUrl}/index.html?nunota=${r.NUNOTA}&token=${token}`
+        nunota,
+        nome: r.NOMEPARC?.$,
+        link: `${baseUrl}/index.html?nunota=${nunota}&token=${gerarToken(nunota)}`
       };
     });
 
     res.json({ total: links.length, links });
 
   } catch (err) {
-    console.error("❌ ERRO:", err);
+    console.error(err);
     res.status(500).json({ erro: err.message });
   }
 });
 
 // =========================
-// 🔎 CONSULTA POR LINK
+// 🔎 PEDIDO
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -196,9 +165,7 @@ app.get('/api/pedido', async (req, res) => {
       return res.status(400).json({ erro: "Parâmetros inválidos" });
     }
 
-    const tokenValido = gerarToken(nunota);
-
-    if (token !== tokenValido) {
+    if (token !== gerarToken(nunota)) {
       return res.status(403).json({ erro: "Acesso negado" });
     }
 
@@ -207,13 +174,9 @@ app.get('/api/pedido', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION"
-        }
+        query: { viewName: "VW_NOTAS_FUSION" }
       }
     };
-
-    console.log("📤 Buscando pedido...");
 
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
@@ -228,46 +191,99 @@ app.get('/api/pedido', async (req, res) => {
     );
 
     const text = await response.text();
-
     if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
+      throw new Error("Erro Sankhya");
     }
 
     const json = JSON.parse(text);
 
-    if (json?.tsError) {
-      console.log("❌ ERRO SANKHYA:", json.tsError);
-      return res.json({ rows: [] });
-    }
-
     let lista = [];
-
     if (json?.responseBody?.records?.record) {
       const registros = json.responseBody.records.record;
       lista = Array.isArray(registros) ? registros : [registros];
     }
 
-    console.log("📦 TOTAL REGISTROS:", lista.length);
+    const p = lista.find(r => r.NUNOTA?.$ == nunota);
 
-    const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
-
-    if (!pedido) {
-      console.log("⚠️ Pedido não encontrado");
-      return res.json({ rows: [] });
-    }
+    if (!p) return res.json({ rows: [] });
 
     res.json({
       rows: [{
-        NUNOTA: pedido.NUNOTA?.$,
-        NUMNOTA: pedido.NUMNOTA?.$,
-        NOMEPARC: pedido.NOMEPARC?.$,
-        ST_ENTREGAS: pedido.ST_ENTREGAS?.$
+        NUNOTA: p.NUNOTA?.$,
+        NUMNOTA: p.NUMNOTA?.$,
+        NOMEPARC: p.NOMEPARC?.$,
+        CGC_CPF: p.CGC_CPF?.$,
+        TIPO_DOC: p.TIPO_DOC?.$,
+        ST_ENTREGAS: p.ST_ENTREGAS?.$,
+        STATUS_FOTO: p.STATUS_FOTO?.$
       }]
     });
 
   } catch (err) {
-    console.error("❌ ERRO:", err);
+    console.error(err);
     res.status(500).json({ erro: err.message });
+  }
+});
+
+// =========================
+// 🖼️ FOTO
+// =========================
+app.get('/api/nota/:nunota/foto', async (req, res) => {
+  try {
+
+    const nunota = req.params.nunota;
+    const cookie = await login();
+
+    const payload = {
+      serviceName: "CRUDServiceProvider.loadView",
+      requestBody: {
+        query: { viewName: "VW_NOTAS_FUSION" }
+      }
+    };
+
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const text = await response.text();
+    const json = JSON.parse(text);
+
+    let lista = [];
+    if (json?.responseBody?.records?.record) {
+      const registros = json.responseBody.records.record;
+      lista = Array.isArray(registros) ? registros : [registros];
+    }
+
+    const p = lista.find(r => r.NUNOTA?.$ == nunota);
+
+    if (!p) return res.json({ imagem: null });
+
+    let imagem = null;
+
+    // 🔥 FOTO ENTREGA (BLOB → base64)
+    if (p.TIPO_FOTO?.$ == 1 && p.FOTO_ENTREGA?.$) {
+      const buffer = Buffer.from(p.FOTO_ENTREGA.$, 'base64');
+      imagem = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+    }
+
+    // 🔥 FOTO COMPROV (CLOB base64)
+    if (p.TIPO_FOTO?.$ == 2 && p.FOTO_COMPROV?.$) {
+      imagem = p.FOTO_COMPROV.$;
+    }
+
+    res.json({ imagem });
+
+  } catch (err) {
+    console.error(err);
+    res.json({ imagem: null });
   }
 });
 
@@ -275,5 +291,5 @@ app.get('/api/pedido', async (req, res) => {
 // START
 // =========================
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🚀 Rodando na porta ${PORT}`);
 });

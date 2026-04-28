@@ -43,6 +43,12 @@ img {
   cursor: pointer;
 }
 
+.sem-foto {
+  margin-top: 15px;
+  color: #888;
+  font-style: italic;
+}
+
 /* POPUP */
 .popup {
   position: fixed;
@@ -67,7 +73,7 @@ img {
 
 <h2>📦 Status do Pedido</h2>
 
-<div id="conteudo"></div>
+<div id="conteudo">Carregando...</div>
 
 <div class="popup" id="popup" onclick="fechar()">
   <img id="imgPopup">
@@ -77,6 +83,23 @@ img {
 
 function getParam(nome) {
   return new URLSearchParams(window.location.search).get(nome);
+}
+
+// 🚀 BUSCAR IMAGEM NA API
+async function carregarImagem(nunota) {
+  try {
+    const res = await fetch(`/api/nota/${nunota}/foto`);
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+
+    return data.imagem || null;
+
+  } catch (e) {
+    console.error('Erro ao carregar imagem:', e);
+    return null;
+  }
 }
 
 async function carregar() {
@@ -89,30 +112,52 @@ async function carregar() {
     return;
   }
 
-  const res = await fetch(`/api/pedido?nunota=${nunota}&token=${token}`);
-  const data = await res.json();
+  try {
 
-  if (!data.rows || !data.rows.length) {
-    document.body.innerHTML = "Pedido não encontrado";
-    return;
+    const res = await fetch(`/api/pedido?nunota=${nunota}&token=${token}`);
+    const data = await res.json();
+
+    if (!data.rows || !data.rows.length) {
+      document.body.innerHTML = "Pedido não encontrado";
+      return;
+    }
+
+    const p = data.rows[0];
+
+    const div = document.getElementById('conteudo');
+
+    // 🔥 BUSCAR IMAGEM SEPARADO
+    let imagem = await carregarImagem(p.NUNOTA);
+
+    let htmlImagem = '';
+
+    if (imagem) {
+      htmlImagem = `
+        <img src="${imagem}" onclick="abrir('${imagem}')">
+      `;
+    } else {
+      htmlImagem = `<div class="sem-foto">📷 Sem foto disponível</div>`;
+    }
+
+    div.innerHTML = `
+      <div class="card">
+        <p><b>Pedido:</b> ${p.NUNOTA}</p>
+        <p><b>Cliente:</b> ${p.NOMEPARC}</p>
+        <p><b>Documento:</b> ${p.CGC_CPF} (${p.TIPO_DOC})</p>
+        <p class="status">${p.ST_ENTREGAS}</p>
+        <p><b>Status Foto:</b> ${p.STATUS_FOTO}</p>
+
+        ${htmlImagem}
+      </div>
+    `;
+
+  } catch (e) {
+    console.error(e);
+    document.body.innerHTML = "Erro ao carregar pedido";
   }
-
-  const p = data.rows[0];
-
-  const div = document.getElementById('conteudo');
-
-  div.innerHTML = `
-    <div class="card">
-      <p><b>Pedido:</b> ${p.NUNOTA}</p>
-      <p><b>Cliente:</b> ${p.NOMEPARC}</p>
-      <p class="status">${p.ST_ENTREGAS}</p>
-
-      <img src="http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage"
-           onclick="abrir(this.src)">
-    </div>
-  `;
 }
 
+// POPUP
 function abrir(src) {
   document.getElementById('popup').style.display = "flex";
   document.getElementById('imgPopup').src = src;
@@ -128,6 +173,7 @@ carregar();
 
 </body>
 </html>
+
 
 
 
