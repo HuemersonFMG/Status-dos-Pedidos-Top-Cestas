@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 
+// 🔥 fetch compatível com Render
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
 const app = express();
 
 app.use(cors());
@@ -13,10 +16,17 @@ const PORT = process.env.PORT || 5050;
 // =========================
 // 🔐 CONFIG
 // =========================
-const SECRET = "chave_super_secreta";
+const SECRET = process.env.SECRET || "chave_super_secreta";
+
+// 🔗 SANKHYA
+const BASE_URL = "http://topcesta.fwc.cloud:8180";
+const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
+
+const USER = process.env.USER || "HUEMERSON";
+const PASS = process.env.PASS || "654321";
 
 // =========================
-// 🌐 LOG
+// 🌐 LOG GLOBAL
 // =========================
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url}`);
@@ -24,18 +34,11 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// 🔗 SANKHYA
-// =========================
-const BASE_URL = "http://topcesta.fwc.cloud:8180";
-const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
-
-const USER = "HUEMERSON";
-const PASS = "654321";
-
-// =========================
-// 🔐 LOGIN
+// 🔐 LOGIN SANKHYA
 // =========================
 async function login() {
+  console.log("🔐 Login Sankhya...");
+
   const payload = {
     serviceName: "MobileLoginSP.login",
     requestBody: {
@@ -53,7 +56,11 @@ async function login() {
     }
   );
 
-  const cookie = (response.headers.get("set-cookie") || "").split(";")[0];
+  const rawCookie = response.headers.get("set-cookie") || "";
+  const cookie = rawCookie.split(";")[0];
+
+  console.log("🍪 Cookie obtido");
+
   return cookie;
 }
 
@@ -68,22 +75,17 @@ function gerarToken(nunota) {
 }
 
 // =========================
-// 🔧 UTIL
-// =========================
-function limparDoc(doc) {
-  return (doc || "").replace(/\D/g, '');
-}
-
-// =========================
-// 🔗 GERAR LINKS
+// 🔍 GERAR LINKS (VIEW LEVE)
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
   try {
+    const { cnpj, data } = req.body;
 
-    let { doc, data } = req.body;
-    doc = limparDoc(doc);
+    const documento = (cnpj || "")
+      .replace(/\D/g, '')
+      .trim();
 
-    if (!doc) {
+    if (!documento) {
       return res.status(400).json({ erro: "CPF/CNPJ obrigatório" });
     }
 
@@ -92,9 +94,13 @@ app.post('/api/gerar-links', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: { viewName: "VW_NOTAS_FUSION" }
+        query: {
+          viewName: "VW_NOTAS_FUSION_LIGHT"
+        }
       }
     };
+
+    console.log("📤 Buscando dados (VIEW LIGHT)...");
 
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
@@ -109,56 +115,80 @@ app.post('/api/gerar-links', async (req, res) => {
     );
 
     const text = await response.text();
+
+    // 🔥 proteção
     if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro Sankhya");
+      console.error("❌ Resposta inválida Sankhya:", text.substring(0, 200));
+      throw new Error("Erro na comunicação com Sankhya");
     }
 
-    const json = JSON.parse(text);
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      console.error("❌ JSON inválido:", text.substring(0, 300));
+      throw new Error("Erro ao processar resposta");
+    }
+
+    if (json?.tsError) {
+      console.error("❌ Erro Sankhya:", json.tsError);
+      return res.json({ total: 0, links: [] });
+    }
 
     let lista = [];
+
     if (json?.responseBody?.records?.record) {
       const registros = json.responseBody.records.record;
       lista = Array.isArray(registros) ? registros : [registros];
     }
 
-    // 🔎 FILTRO
-    const filtrados = lista.filter(r => {
-      const docBanco = limparDoc(r.CGC_CPF?.$);
-      if (docBanco !== doc) return false;
+    console.log("📦 Total registros:", lista.length);
 
-      if (data) {
-        const dt = new Date(r.DTNEG?.$);
-        return dt >= new Date(data);
-      }
+    const filtrados = lista
+      .map(r => ({
+        NUNOTA: r.NUNOTA?.$,
+        CGC_CPF: (r.CGC_CPF?.$ || "").replace(/\D/g, ''),
+        DTNEG: r.DTNEG?.$
+      }))
+      .filter(r => {
 
-      return true;
-    });
+        if (!r.CGC_CPF) return false;
+
+        if (r.CGC_CPF !== documento) return false;
+
+        if (data) {
+          return new Date(r.DTNEG) >= new Date(data);
+        }
+
+        return true;
+      });
+
+    console.log("📊 Filtrados:", filtrados.length);
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const links = filtrados.map(r => {
-      const nunota = r.NUNOTA?.$;
+      const token = gerarToken(r.NUNOTA);
+
       return {
-        nunota,
-        nome: r.NOMEPARC?.$,
-        link: `${baseUrl}/index.html?nunota=${nunota}&token=${gerarToken(nunota)}`
+        nunota: r.NUNOTA,
+        link: `${baseUrl}/index.html?nunota=${r.NUNOTA}&token=${token}`
       };
     });
 
     res.json({ total: links.length, links });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ ERRO /gerar-links:", err);
     res.status(500).json({ erro: err.message });
   }
 });
 
 // =========================
-// 🔎 PEDIDO
+// 🔎 CONSULTA PEDIDO (VIEW COMPLETA)
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
-
     const { nunota, token } = req.query;
 
     if (!nunota || !token) {
@@ -174,9 +204,13 @@ app.get('/api/pedido', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: { viewName: "VW_NOTAS_FUSION" }
+        query: {
+          viewName: "VW_NOTAS_FUSION"
+        }
       }
     };
+
+    console.log("📤 Buscando pedido completo...");
 
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
@@ -191,99 +225,45 @@ app.get('/api/pedido', async (req, res) => {
     );
 
     const text = await response.text();
+
     if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro Sankhya");
+      throw new Error("Erro na comunicação com Sankhya");
     }
 
     const json = JSON.parse(text);
 
+    if (json?.tsError) {
+      console.error("❌ Erro Sankhya:", json.tsError);
+      return res.json({ rows: [] });
+    }
+
     let lista = [];
+
     if (json?.responseBody?.records?.record) {
       const registros = json.responseBody.records.record;
       lista = Array.isArray(registros) ? registros : [registros];
     }
 
-    const p = lista.find(r => r.NUNOTA?.$ == nunota);
+    const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
 
-    if (!p) return res.json({ rows: [] });
+    if (!pedido) {
+      return res.json({ rows: [] });
+    }
 
     res.json({
       rows: [{
-        NUNOTA: p.NUNOTA?.$,
-        NUMNOTA: p.NUMNOTA?.$,
-        NOMEPARC: p.NOMEPARC?.$,
-        CGC_CPF: p.CGC_CPF?.$,
-        TIPO_DOC: p.TIPO_DOC?.$,
-        ST_ENTREGAS: p.ST_ENTREGAS?.$,
-        STATUS_FOTO: p.STATUS_FOTO?.$
+        NUNOTA: pedido.NUNOTA?.$,
+        NUMNOTA: pedido.NUMNOTA?.$,
+        NOMEPARC: pedido.NOMEPARC?.$,
+        ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
+        TIPO_FOTO: pedido.TIPO_FOTO?.$,
+        STATUS_FOTO: pedido.STATUS_FOTO?.$
       }]
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ ERRO /pedido:", err);
     res.status(500).json({ erro: err.message });
-  }
-});
-
-// =========================
-// 🖼️ FOTO
-// =========================
-app.get('/api/nota/:nunota/foto', async (req, res) => {
-  try {
-
-    const nunota = req.params.nunota;
-    const cookie = await login();
-
-    const payload = {
-      serviceName: "CRUDServiceProvider.loadView",
-      requestBody: {
-        query: { viewName: "VW_NOTAS_FUSION" }
-      }
-    };
-
-    const response = await fetch(
-      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": cookie
-        },
-        body: JSON.stringify(payload)
-      }
-    );
-
-    const text = await response.text();
-    const json = JSON.parse(text);
-
-    let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const registros = json.responseBody.records.record;
-      lista = Array.isArray(registros) ? registros : [registros];
-    }
-
-    const p = lista.find(r => r.NUNOTA?.$ == nunota);
-
-    if (!p) return res.json({ imagem: null });
-
-    let imagem = null;
-
-    // 🔥 FOTO ENTREGA (BLOB → base64)
-    if (p.TIPO_FOTO?.$ == 1 && p.FOTO_ENTREGA?.$) {
-      const buffer = Buffer.from(p.FOTO_ENTREGA.$, 'base64');
-      imagem = `data:image/jpeg;base64,${buffer.toString('base64')}`;
-    }
-
-    // 🔥 FOTO COMPROV (CLOB base64)
-    if (p.TIPO_FOTO?.$ == 2 && p.FOTO_COMPROV?.$) {
-      imagem = p.FOTO_COMPROV.$;
-    }
-
-    res.json({ imagem });
-
-  } catch (err) {
-    console.error(err);
-    res.json({ imagem: null });
   }
 });
 
@@ -291,5 +271,5 @@ app.get('/api/nota/:nunota/foto', async (req, res) => {
 // START
 // =========================
 app.listen(PORT, () => {
-  console.log(`🚀 Rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

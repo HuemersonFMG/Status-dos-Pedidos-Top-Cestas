@@ -35,18 +35,14 @@ body {
 .status {
   font-size: 20px;
   font-weight: bold;
+  margin: 10px 0;
 }
 
 img {
   max-width: 100%;
   margin-top: 15px;
   cursor: pointer;
-}
-
-.sem-foto {
-  margin-top: 15px;
-  color: #888;
-  font-style: italic;
+  border-radius: 8px;
 }
 
 /* POPUP */
@@ -73,7 +69,7 @@ img {
 
 <h2>📦 Status do Pedido</h2>
 
-<div id="conteudo">Carregando...</div>
+<div id="conteudo"></div>
 
 <div class="popup" id="popup" onclick="fechar()">
   <img id="imgPopup">
@@ -81,44 +77,63 @@ img {
 
 <script>
 
+// =========================
+// 🔗 PEGAR PARAM
+// =========================
 function getParam(nome) {
   return new URLSearchParams(window.location.search).get(nome);
 }
 
-// 🚀 BUSCAR IMAGEM NA API
-async function carregarImagem(nunota) {
-  try {
-    const res = await fetch(`/api/nota/${nunota}/foto`);
+// =========================
+// 🖼️ DEFINIR IMAGEM
+// =========================
+function getImagem(p) {
 
-    if (!res.ok) return null;
-
-    const data = await res.json();
-
-    return data.imagem || null;
-
-  } catch (e) {
-    console.error('Erro ao carregar imagem:', e);
-    return null;
+  // 🔥 prioridade backend
+  if (p.TIPO_FOTO === 1) {
+    return `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage`;
   }
+
+  if (p.TIPO_FOTO === 2) {
+    return `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`;
+  }
+
+  return null;
 }
 
+// =========================
+// 🚀 CARREGAR
+// =========================
 async function carregar() {
 
   const nunota = getParam('nunota');
   const token = getParam('token');
 
   if (!nunota || !token) {
-    document.body.innerHTML = "Link inválido";
+    document.body.innerHTML = "❌ Link inválido";
     return;
   }
 
   try {
 
     const res = await fetch(`/api/pedido?nunota=${nunota}&token=${token}`);
-    const data = await res.json();
+
+    const texto = await res.text();
+
+    let data;
+
+    try {
+      data = JSON.parse(texto);
+    } catch {
+      throw new Error("Resposta inválida do servidor");
+    }
+
+    if (!res.ok) {
+      throw new Error(data.erro || "Erro ao consultar pedido");
+    }
 
     if (!data.rows || !data.rows.length) {
-      document.body.innerHTML = "Pedido não encontrado";
+      document.body.innerHTML = "⚠️ Pedido não encontrado";
       return;
     }
 
@@ -126,38 +141,35 @@ async function carregar() {
 
     const div = document.getElementById('conteudo');
 
-    // 🔥 BUSCAR IMAGEM SEPARADO
-    let imagem = await carregarImagem(p.NUNOTA);
-
-    let htmlImagem = '';
-
-    if (imagem) {
-      htmlImagem = `
-        <img src="${imagem}" onclick="abrir('${imagem}')">
-      `;
-    } else {
-      htmlImagem = `<div class="sem-foto">📷 Sem foto disponível</div>`;
-    }
+    const img = getImagem(p);
 
     div.innerHTML = `
       <div class="card">
         <p><b>Pedido:</b> ${p.NUNOTA}</p>
         <p><b>Cliente:</b> ${p.NOMEPARC}</p>
-        <p><b>Documento:</b> ${p.CGC_CPF} (${p.TIPO_DOC})</p>
-        <p class="status">${p.ST_ENTREGAS}</p>
-        <p><b>Status Foto:</b> ${p.STATUS_FOTO}</p>
+        <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-        ${htmlImagem}
+        <p class="status">${p.ST_ENTREGAS}</p>
+
+        <p><b>Status Foto:</b> ${p.STATUS_FOTO || "Sem info"}</p>
+
+        ${
+          img
+          ? `<img src="${img}" onclick="abrir(this.src)">`
+          : `<p>📷 Sem foto disponível</p>`
+        }
       </div>
     `;
 
-  } catch (e) {
-    console.error(e);
-    document.body.innerHTML = "Erro ao carregar pedido";
+  } catch (err) {
+    console.error("❌ Erro:", err);
+    document.body.innerHTML = `❌ ${err.message}`;
   }
 }
 
-// POPUP
+// =========================
+// 🔍 POPUP
+// =========================
 function abrir(src) {
   document.getElementById('popup').style.display = "flex";
   document.getElementById('imgPopup').src = src;
@@ -167,14 +179,13 @@ function fechar() {
   document.getElementById('popup').style.display = "none";
 }
 
+// START
 carregar();
 
 </script>
 
 </body>
 </html>
-
-
 
 
 
@@ -195,6 +206,10 @@ carregar();
 
 link do blender: https://dashboard.render.com/
 https://status-dos-pedidos-top-cestas.onrender.com/gerador.html
+
+VIWES
+VW_NOTAS_FUSION
+VW_NOTAS_FUSION_LIGHT
 
 */
 -->

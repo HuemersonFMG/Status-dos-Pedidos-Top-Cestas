@@ -23,14 +23,6 @@ input, button {
 
 button {
   cursor: pointer;
-  border: none;
-  border-radius: 5px;
-  background: #28a745;
-  color: #fff;
-}
-
-button:hover {
-  background: #218838;
 }
 
 #status {
@@ -54,15 +46,7 @@ button:hover {
 .actions button {
   margin-right: 5px;
   font-size: 12px;
-  background: #007bff;
 }
-
-.actions button:hover {
-  background: #0069d9;
-}
-
-.erro { color: red; }
-.sucesso { color: green; }
 </style>
 
 </head>
@@ -71,7 +55,7 @@ button:hover {
 
 <h2>🔗 Gerar Links de Pedidos</h2>
 
-<input type="text" id="doc" placeholder="Digite CPF ou CNPJ">
+<input type="text" id="cnpj" placeholder="Digite CPF ou CNPJ">
 <input type="date" id="data">
 
 <button onclick="gerar()">Gerar Links</button>
@@ -81,67 +65,75 @@ button:hover {
 
 <script>
 
-// 🔥 LIMPAR CPF/CNPJ
-function limparDoc(doc) {
-  return doc.replace(/\D/g, '');
+// =========================
+// 🔥 NORMALIZAR DOCUMENTO
+// =========================
+function limparDoc(valor) {
+  return (valor || "").replace(/\D/g, '');
 }
 
-// 🔥 VALIDAR CPF/CNPJ
-function validarDoc(doc) {
-  if (doc.length === 11) return true; // CPF
-  if (doc.length === 14) return true; // CNPJ
-  return false;
-}
-
+// =========================
+// 🔍 GERAR LINKS
+// =========================
 async function gerar() {
 
-  let doc = document.getElementById('doc').value.trim();
+  const cnpjInput = document.getElementById('cnpj').value;
   const data = document.getElementById('data').value;
+
+  const documento = limparDoc(cnpjInput);
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
-  doc = limparDoc(doc);
+  div.innerHTML = "";
 
-  if (!doc) {
-    status.innerHTML = "⚠️ Digite CPF ou CNPJ";
-    status.className = "erro";
+  if (!documento) {
+    status.innerHTML = "❌ Digite um CPF ou CNPJ válido";
     return;
   }
 
-  if (!validarDoc(doc)) {
-    status.innerHTML = "❌ CPF/CNPJ inválido";
-    status.className = "erro";
+  if (documento.length !== 11 && documento.length !== 14) {
+    status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
     return;
   }
 
   status.innerHTML = "⏳ Gerando links...";
-  status.className = "";
-
-  div.innerHTML = "";
 
   try {
+
+    console.log("📤 Enviando:", { documento, data });
 
     const res = await fetch('/api/gerar-links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ doc, data })
+      body: JSON.stringify({ cnpj: documento, data })
     });
 
-    if (!res.ok) {
-      throw new Error("Erro HTTP: " + res.status);
+    console.log("📡 Status HTTP:", res.status);
+
+    const texto = await res.text();
+
+    let dataRes;
+
+    try {
+      dataRes = JSON.parse(texto);
+    } catch (e) {
+      console.error("❌ Resposta inválida:", texto);
+      throw new Error("Resposta inválida do servidor");
     }
 
-    const dataRes = await res.json();
+    if (!res.ok) {
+      throw new Error(dataRes.erro || "Erro HTTP: " + res.status);
+    }
+
+    console.log("📦 Retorno:", dataRes);
 
     if (!dataRes.links || !dataRes.links.length) {
       status.innerHTML = "⚠️ Nenhum pedido encontrado";
-      status.className = "erro";
       return;
     }
 
     status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
-    status.className = "sucesso";
 
     dataRes.links.forEach(l => {
 
@@ -150,7 +142,6 @@ async function gerar() {
 
       el.innerHTML = `
         <b>Pedido:</b> ${l.nunota}<br>
-        <b>Cliente:</b> ${l.nome || '-'}<br>
         <a href="${l.link}" target="_blank">${l.link}</a>
 
         <div class="actions">
@@ -167,8 +158,7 @@ async function gerar() {
 
     console.error("❌ Erro:", err);
 
-    status.innerHTML = "❌ Erro ao gerar links";
-    status.className = "erro";
+    status.innerHTML = `❌ ${err.message}`;
   }
 }
 
@@ -177,7 +167,7 @@ async function gerar() {
 // =========================
 function copiar(link) {
   navigator.clipboard.writeText(link);
-  alert("✅ Link copiado!");
+  alert("Link copiado!");
 }
 
 // =========================
@@ -191,7 +181,7 @@ function abrir(link) {
 // 📲 WHATSAPP
 // =========================
 function whatsapp(link) {
-  const texto = encodeURIComponent("📦 Acompanhe seu pedido:\n" + link);
+  const texto = encodeURIComponent("Acompanhe seu pedido:\n" + link);
   window.open(`https://wa.me/?text=${texto}`, "_blank");
 }
 
