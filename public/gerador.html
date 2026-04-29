@@ -30,6 +30,10 @@ button {
   font-weight: bold;
 }
 
+.ok { color: green; }
+.erro { color: red; }
+.warn { color: orange; }
+
 .link-box {
   background: #fff;
   padding: 12px;
@@ -73,6 +77,18 @@ function limparDoc(valor) {
 }
 
 // =========================
+// ⏱️ FETCH COM TIMEOUT
+// =========================
+function fetchComTimeout(url, options, timeout = 15000) {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
+    )
+  ]);
+}
+
+// =========================
 // 🔍 GERAR LINKS
 // =========================
 async function gerar() {
@@ -88,22 +104,25 @@ async function gerar() {
   div.innerHTML = "";
 
   if (!documento) {
-    status.innerHTML = "❌ Digite um CPF ou CNPJ válido";
+    status.className = "erro";
+    status.innerHTML = "❌ Digite um CPF ou CNPJ";
     return;
   }
 
   if (documento.length !== 11 && documento.length !== 14) {
+    status.className = "erro";
     status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
     return;
   }
 
+  status.className = "";
   status.innerHTML = "⏳ Gerando links...";
 
   try {
 
     console.log("📤 Enviando:", { documento, data });
 
-    const res = await fetch('/api/gerar-links', {
+    const res = await fetchComTimeout('/api/gerar-links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cnpj: documento, data })
@@ -118,8 +137,8 @@ async function gerar() {
     try {
       dataRes = JSON.parse(texto);
     } catch (e) {
-      console.error("❌ Resposta inválida:", texto);
-      throw new Error("Resposta inválida do servidor");
+      console.error("❌ Resposta não é JSON:", texto);
+      throw new Error("Servidor retornou resposta inválida");
     }
 
     if (!res.ok) {
@@ -129,10 +148,12 @@ async function gerar() {
     console.log("📦 Retorno:", dataRes);
 
     if (!dataRes.links || !dataRes.links.length) {
+      status.className = "warn";
       status.innerHTML = "⚠️ Nenhum pedido encontrado";
       return;
     }
 
+    status.className = "ok";
     status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
 
     dataRes.links.forEach(l => {
@@ -158,6 +179,7 @@ async function gerar() {
 
     console.error("❌ Erro:", err);
 
+    status.className = "erro";
     status.innerHTML = `❌ ${err.message}`;
   }
 }
@@ -166,8 +188,9 @@ async function gerar() {
 // 📋 COPIAR
 // =========================
 function copiar(link) {
-  navigator.clipboard.writeText(link);
-  alert("Link copiado!");
+  navigator.clipboard.writeText(link)
+    .then(() => alert("Link copiado!"))
+    .catch(() => alert("Erro ao copiar"));
 }
 
 // =========================

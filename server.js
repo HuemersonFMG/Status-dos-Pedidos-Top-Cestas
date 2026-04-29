@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 
-// 🔥 fetch compatível com Render
+// fetch compatível com Render
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
@@ -18,7 +18,9 @@ const PORT = process.env.PORT || 5050;
 // =========================
 const SECRET = process.env.SECRET || "chave_super_secreta";
 
+// =========================
 // 🔗 SANKHYA
+// =========================
 const BASE_URL = "http://topcesta.fwc.cloud:8180";
 const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
 
@@ -60,10 +62,11 @@ async function login() {
   const cookie = rawCookie.split(";")[0];
 
   if (!cookie) {
-    throw new Error("Falha ao obter cookie do Sankhya");
+    console.error("❌ Falha ao obter cookie:", rawCookie);
+    throw new Error("Falha ao autenticar no Sankhya");
   }
 
-  console.log("🍪 Cookie obtido");
+  console.log("🍪 Cookie OK");
 
   return cookie;
 }
@@ -96,9 +99,7 @@ app.post('/api/gerar-links', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION_LIGHT"
-        }
+        query: { viewName: "VW_NOTAS_FUSION_LIGHT" }
       }
     };
 
@@ -119,7 +120,8 @@ app.post('/api/gerar-links', async (req, res) => {
     const text = await response.text();
 
     if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
+      console.error("❌ Sankhya retornou inválido:", text.substring(0, 200));
+      throw new Error("Erro Sankhya");
     }
 
     const json = JSON.parse(text);
@@ -130,12 +132,11 @@ app.post('/api/gerar-links', async (req, res) => {
     }
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
-    }
+    const registros = json?.responseBody?.records?.record;
 
-    console.log("📦 Total:", lista.length);
+    if (registros) {
+      lista = Array.isArray(registros) ? registros : [registros];
+    }
 
     const filtrados = lista
       .map(r => ({
@@ -149,14 +150,14 @@ app.post('/api/gerar-links', async (req, res) => {
         return true;
       });
 
-    console.log("📊 Filtrados:", filtrados.length);
-
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const links = filtrados.map(r => ({
       nunota: r.NUNOTA,
       link: `${baseUrl}/index.html?nunota=${r.NUNOTA}&token=${gerarToken(r.NUNOTA)}`
     }));
+
+    console.log("📊 Links gerados:", links.length);
 
     res.json({ total: links.length, links });
 
@@ -186,9 +187,7 @@ app.get('/api/pedido', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION"
-        }
+        query: { viewName: "VW_NOTAS_FUSION" }
       }
     };
 
@@ -209,7 +208,8 @@ app.get('/api/pedido', async (req, res) => {
     const text = await response.text();
 
     if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
+      console.error("❌ Sankhya inválido:", text.substring(0, 200));
+      throw new Error("Erro Sankhya");
     }
 
     const json = JSON.parse(text);
@@ -220,9 +220,10 @@ app.get('/api/pedido', async (req, res) => {
     }
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
+    const registros = json?.responseBody?.records?.record;
+
+    if (registros) {
+      lista = Array.isArray(registros) ? registros : [registros];
     }
 
     const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
@@ -231,13 +232,26 @@ app.get('/api/pedido', async (req, res) => {
       return res.json({ rows: [] });
     }
 
-    // 🔥 DETECÇÃO DE FOTO
-    const temFoto1 = !!pedido.FOTO;
-    const temFoto2 = !!pedido.AD_COMPROVTRANSP;
-
+    // =========================
+    // 🔥 DETECÇÃO DE ARQUIVO
+    // =========================
     let tipoFoto = 0;
-    if (temFoto1) tipoFoto = 1;
-    else if (temFoto2) tipoFoto = 2;
+    let tipoArquivo = null;
+
+    if (pedido.FOTO) {
+      tipoFoto = 1;
+      tipoArquivo = "imagem";
+    }
+    else if (pedido.AD_COMPROVTRANSP) {
+      tipoFoto = 2;
+
+      // tentativa simples de detectar PDF
+      if (String(pedido.AD_COMPROVTRANSP).includes("JVBER")) {
+        tipoArquivo = "pdf";
+      } else {
+        tipoArquivo = "imagem";
+      }
+    }
 
     res.json({
       rows: [{
@@ -248,7 +262,8 @@ app.get('/api/pedido', async (req, res) => {
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
         TIPO_FOTO: tipoFoto,
-        STATUS_FOTO: tipoFoto ? "Disponível" : "Sem foto"
+        TIPO_ARQUIVO: tipoArquivo,
+        STATUS_FOTO: tipoFoto ? "Disponível" : "Sem arquivo"
       }]
     });
 
