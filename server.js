@@ -32,7 +32,7 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// 🔐 LOGIN SANKHYA
+// 🔐 LOGIN
 // =========================
 async function login() {
 
@@ -56,7 +56,7 @@ async function login() {
   const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  if (!cookie) throw new Error("Falha ao autenticar no Sankhya");
+  if (!cookie) throw new Error("Erro ao logar no Sankhya");
 
   return cookie;
 }
@@ -72,32 +72,52 @@ function gerarToken(nunota) {
 }
 
 // =========================
+// 📎 PROXY DE ARQUIVO (PDF)
+// =========================
+app.get('/api/arquivo', async (req, res) => {
+  try {
+
+    const { url } = req.query;
+
+    if (!url) {
+      return res.status(400).send("URL não informada");
+    }
+
+    console.log("📎 Baixando arquivo externo:", url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return res.status(500).send("Erro ao buscar arquivo");
+    }
+
+    const contentType = response.headers.get("content-type") || "application/octet-stream";
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", "inline");
+
+    response.body.pipe(res);
+
+  } catch (err) {
+    console.error("❌ ERRO /api/arquivo:", err);
+    res.status(500).send("Erro ao carregar arquivo");
+  }
+});
+
+// =========================
 // 🔍 GERAR LINKS
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
-
   try {
 
-    let { cnpj, ordemCarga, data } = req.body;
-
-    const documento = (cnpj || "").replace(/\D/g, '');
-    const ordem = ordemCarga ? String(ordemCarga).trim() : null;
-
-    // 🔥 validação
-    if ((!documento && !ordem) || (documento && ordem)) {
-      return res.status(400).json({
-        erro: "Informe CPF/CNPJ OU Ordem de Carga"
-      });
-    }
+    const { cnpj, ordemCarga, data } = req.body;
 
     const cookie = await login();
 
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION_LIGHT"
-        }
+        query: { viewName: "VW_NOTAS_FUSION_LIGHT" }
       }
     };
 
@@ -113,38 +133,22 @@ app.post('/api/gerar-links', async (req, res) => {
       }
     );
 
-    const text = await response.text();
-
-    if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
-    }
-
-    const json = JSON.parse(text);
+    const json = await response.json();
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
-    }
+    const r = json?.responseBody?.records?.record;
+    lista = Array.isArray(r) ? r : [r];
 
-    // =========================
-    // 🔥 FILTRO CORRETO
-    // =========================
-    const filtrados = lista.filter(r => {
+    const filtrados = lista.filter(item => {
 
-      const doc = (r.CGC_CPF?.$ || "").replace(/\D/g, '');
-      const oc = String(r.ORDEMCARGA?.$ || "").trim();
+      const doc = (item.CGC_CPF?.$ || "").replace(/\D/g, '');
+      const ordem = String(item.ORDEMCARGA?.$ || "");
 
-      if (documento) {
-        if (doc !== documento) return false;
-      }
-
-      if (ordem) {
-        if (oc !== ordem) return false;
-      }
+      if (cnpj && doc !== cnpj) return false;
+      if (ordemCarga && ordem !== ordemCarga) return false;
 
       if (data) {
-        if (new Date(r.DTNEG?.$) < new Date(data)) return false;
+        return new Date(item.DTNEG?.$) >= new Date(data);
       }
 
       return true;
@@ -169,14 +173,9 @@ app.post('/api/gerar-links', async (req, res) => {
 // 🔎 CONSULTA PEDIDO
 // =========================
 app.get('/api/pedido', async (req, res) => {
-
   try {
 
     const { nunota, token } = req.query;
-
-    if (!nunota || !token) {
-      return res.status(400).json({ erro: "Parâmetros inválidos" });
-    }
 
     if (token !== gerarToken(nunota)) {
       return res.status(403).json({ erro: "Acesso negado" });
@@ -187,9 +186,7 @@ app.get('/api/pedido', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION"
-        }
+        query: { viewName: "VW_NOTAS_FUSION" }
       }
     };
 
@@ -205,47 +202,58 @@ app.get('/api/pedido', async (req, res) => {
       }
     );
 
-    const text = await response.text();
-
-    if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
-    }
-
-    const json = JSON.parse(text);
+    const json = await response.json();
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
-    }
+    const r = json?.responseBody?.records?.record;
+    lista = Array.isArray(r) ? r : [r];
 
-    // 🔥 ENCONTRA O PEDIDO CORRETO
-    const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
+    const pedido = lista.find(p => p.NUNOTA?.$ == nunota);
 
     if (!pedido) {
       return res.json({ rows: [] });
     }
 
     // =========================
-    // 🔥 USAR VIEW (CORRETO)
+    // 📎 TRATAR COMPROVANTE (CLOB)
     // =========================
-    const tipoFoto = Number(pedido.TIPO_FOTO?.$ || 0);
-    const statusFoto = pedido.STATUS_FOTO?.$ || "Sem comprovante";
+    const comprovante = pedido.AD_COMPROVTRANSP?.$ || null;
 
-    // =========================
-    // 🔥 DETECTAR URL EXTERNA (PDF S3)
-    // =========================
+    let tipoArquivo = null;
     let urlArquivo = null;
 
-    const comprov = pedido.FOTO_COMPROV?.$;
+    if (comprovante) {
 
-    if (tipoFoto === 2 && comprov) {
-      const valor = String(comprov);
+      console.log("📄 Conteúdo comprovante:", comprovante.substring(0, 80));
 
-      if (valor.startsWith("http")) {
-        urlArquivo = valor;
+      // 🔥 URL direta
+      if (comprovante.startsWith("http")) {
+        tipoArquivo = "pdf";
+        urlArquivo = `/api/arquivo?url=${encodeURIComponent(comprovante)}`;
+      }
+
+      // 🔥 Base64 PDF
+      else if (comprovante.startsWith("JVBER")) {
+        tipoArquivo = "pdf";
+        urlArquivo = `data:application/pdf;base64,${comprovante}`;
+      }
+
+      // 🔥 JSON com URL
+      else if (comprovante.startsWith("{")) {
+        try {
+          const obj = JSON.parse(comprovante);
+          if (obj.url) {
+            tipoArquivo = "pdf";
+            urlArquivo = `/api/arquivo?url=${encodeURIComponent(obj.url)}`;
+          }
+        } catch {}
       }
     }
+
+    // =========================
+    // 🖼️ IMAGEM (mantida)
+    // =========================
+    const temFoto = pedido.FOTO_ENTREGA;
 
     res.json({
       rows: [{
@@ -254,9 +262,18 @@ app.get('/api/pedido', async (req, res) => {
         CGC_CPF: pedido.CGC_CPF?.$,
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
-        TIPO_FOTO: tipoFoto,
-        STATUS_FOTO: statusFoto,
-        URL_ARQUIVO: urlArquivo
+        // imagem continua funcionando
+        TIPO_FOTO: temFoto ? 1 : 0,
+
+        // novo padrão
+        TIPO_ARQUIVO: tipoArquivo,
+        URL_ARQUIVO: urlArquivo,
+
+        STATUS_FOTO: tipoArquivo
+          ? "Comprovante disponível"
+          : temFoto
+          ? "Foto disponível"
+          : "Sem comprovante"
       }]
     });
 

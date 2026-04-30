@@ -60,7 +60,7 @@ button {
 <h2>🔗 Gerar Links de Pedidos</h2>
 
 <input type="text" id="cnpj" placeholder="CPF ou CNPJ">
-<input type="text" id="ordemCarga" placeholder="Ordem de Carga">
+<input type="text" id="ordem" placeholder="Ordem de Carga">
 <input type="date" id="data">
 
 <button onclick="gerar()">Gerar Links</button>
@@ -71,21 +71,21 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAÇÃO
+// 🔥 NORMALIZAR
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
 }
 
 // =========================
-// 🔄 EXCLUSIVIDADE CAMPOS
+// 🔒 CONTROLE EXCLUSIVO
 // =========================
-document.getElementById('cnpj').addEventListener('input', function() {
-  document.getElementById('ordemCarga').disabled = !!this.value;
+document.getElementById('cnpj').addEventListener('input', () => {
+  document.getElementById('ordem').value = "";
 });
 
-document.getElementById('ordemCarga').addEventListener('input', function() {
-  document.getElementById('cnpj').disabled = !!this.value;
+document.getElementById('ordem').addEventListener('input', () => {
+  document.getElementById('cnpj').value = "";
 });
 
 // =========================
@@ -95,7 +95,7 @@ function fetchComTimeout(url, options, timeout = 20000) {
   return Promise.race([
     fetch(url, options),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
+      setTimeout(() => reject(new Error("Tempo esgotado")), timeout)
     )
   ]);
 }
@@ -105,36 +105,28 @@ function fetchComTimeout(url, options, timeout = 20000) {
 // =========================
 async function gerar() {
 
-  const cnpjRaw = document.getElementById('cnpj').value;
-  const ordemCargaRaw = document.getElementById('ordemCarga').value;
+  const cnpjInput = document.getElementById('cnpj').value;
+  const ordemInput = document.getElementById('ordem').value;
   const data = document.getElementById('data').value;
 
-  const cnpj = limparDoc(cnpjRaw);
-  const ordemCarga = ordemCargaRaw.trim();
+  const cnpj = limparDoc(cnpjInput);
+  const ordemCarga = ordemInput.trim();
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // =========================
-  // VALIDAÇÃO
-  // =========================
+  // 🔥 VALIDAÇÃO EXCLUSIVA
   if (!cnpj && !ordemCarga) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga";
+    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
     return;
   }
 
   if (cnpj && ordemCarga) {
     status.className = "erro";
     status.innerHTML = "❌ Use apenas um filtro por vez";
-    return;
-  }
-
-  if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
-    status.className = "erro";
-    status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
     return;
   }
 
@@ -146,7 +138,7 @@ async function gerar() {
     const payload = {
       cnpj: cnpj || null,
       ordemCarga: ordemCarga || null,
-      data: data || null
+      data
     };
 
     console.log("📤 Enviando:", payload);
@@ -164,14 +156,14 @@ async function gerar() {
     try {
       dataRes = JSON.parse(texto);
     } catch {
-      console.error("❌ Resposta inválida:", texto);
+      console.error("❌ Retorno inválido:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
     console.log("📦 Retorno:", dataRes);
 
     if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro HTTP: " + res.status);
+      throw new Error(dataRes.erro || "Erro ao gerar links");
     }
 
     if (!dataRes.links || !dataRes.links.length) {
@@ -181,12 +173,12 @@ async function gerar() {
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
+    status.innerHTML = `✅ ${dataRes.links.length} link(s) encontrado(s)`;
 
-    // =========================
-    // RENDER LINKS
-    // =========================
-    dataRes.links.forEach(l => {
+    // 🔥 LIMITAR RENDER (evita travar browser)
+    const MAX = 200;
+
+    dataRes.links.slice(0, MAX).forEach(l => {
 
       const el = document.createElement('div');
       el.className = "link-box";
@@ -205,6 +197,10 @@ async function gerar() {
       div.appendChild(el);
     });
 
+    if (dataRes.links.length > MAX) {
+      div.innerHTML += `<p class="warn">⚠️ Exibindo apenas ${MAX} resultados</p>`;
+    }
+
   } catch (err) {
 
     console.error("❌ Erro:", err);
@@ -219,7 +215,7 @@ async function gerar() {
 // =========================
 function copiar(link) {
   navigator.clipboard.writeText(link)
-    .then(() => alert("Link copiado!"))
+    .then(() => alert("Link copiado"))
     .catch(() => alert("Erro ao copiar"));
 }
 
