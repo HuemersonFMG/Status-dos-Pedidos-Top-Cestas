@@ -44,6 +44,13 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
+.btn {
+  margin-top: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+/* POPUP */
 .popup {
   position: fixed;
   top:0;
@@ -66,6 +73,7 @@ body {
 .popup img, .popup iframe {
   max-width: 100%;
   max-height: 100%;
+  border-radius: 8px;
 }
 
 .close {
@@ -85,6 +93,7 @@ body {
 
 <div id="conteudo"></div>
 
+<!-- POPUP -->
 <div class="popup" id="popup">
   <div class="popup-content">
     <span class="close" onclick="fechar()">✖</span>
@@ -114,7 +123,7 @@ function fetchComTimeout(url, timeout = 15000) {
 }
 
 // =========================
-// 📎 ARQUIVO (IMG / PDF)
+// 📎 ARQUIVO (IMG ou PDF)
 // =========================
 function getArquivo(p) {
 
@@ -128,7 +137,7 @@ function getArquivo(p) {
   if (p.TIPO_FOTO === 2) {
     return {
       url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
-      tipo: "auto"
+      tipo: "auto" // pode ser PDF ou imagem
     };
   }
 
@@ -149,9 +158,12 @@ function abrirArquivo(arq) {
     body.innerHTML = `<img src="${arq.url}">`;
   } else {
     body.innerHTML = `
-      <iframe src="${arq.url}"></iframe>
-      <p style="color:white">
-        Se não abrir, <a href="${arq.url}" target="_blank" style="color:yellow">clique aqui</a>
+      <iframe src="${arq.url}" frameborder="0"></iframe>
+      <p style="color:white;margin-top:10px;">
+        Se não abrir,
+        <a href="${arq.url}" target="_blank" style="color:yellow;">
+          clique aqui
+        </a>
       </p>
     `;
   }
@@ -159,8 +171,25 @@ function abrirArquivo(arq) {
   popup.style.display = "flex";
 }
 
+// =========================
+// ❌ FECHAR POPUP
+// =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
+}
+
+// =========================
+// 🎨 COR STATUS
+// =========================
+function getClasseStatus(txt) {
+  if (!txt) return "";
+
+  txt = txt.toUpperCase();
+
+  if (txt.includes("ENTREGUE")) return "ok";
+  if (txt.includes("ENTREGANDO")) return "warn";
+
+  return "";
 }
 
 // =========================
@@ -170,6 +199,7 @@ async function carregar() {
 
   const nunota = getParam('nunota');
   const token = getParam('token');
+
   const div = document.getElementById('conteudo');
 
   if (!nunota || !token) {
@@ -183,21 +213,19 @@ async function carregar() {
 
     const res = await fetchComTimeout(`/api/pedido?nunota=${nunota}&token=${token}`);
 
-    // 🔥 TRATAMENTO FORTE DE ERRO
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error("❌ ERRO HTTP:", res.status, txt);
-      throw new Error(`Erro ${res.status} ao consultar pedido`);
-    }
-
-    const text = await res.text();
+    const texto = await res.text();
 
     let data;
+
     try {
-      data = JSON.parse(text);
+      data = JSON.parse(texto);
     } catch {
-      console.error("❌ NÃO É JSON:", text);
-      throw new Error("Resposta inválida do servidor");
+      console.error("❌ HTML retornado:", texto);
+      throw new Error("Servidor retornou resposta inválida");
+    }
+
+    if (!res.ok) {
+      throw new Error(data.erro || "Erro ao consultar pedido");
     }
 
     if (!data.rows || !data.rows.length) {
@@ -206,6 +234,7 @@ async function carregar() {
     }
 
     const p = data.rows[0];
+
     const arq = getArquivo(p);
 
     div.innerHTML = `
@@ -214,28 +243,29 @@ async function carregar() {
         <p><b>Cliente:</b> ${p.NOMEPARC}</p>
         <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-        <p class="status">${p.ST_ENTREGAS}</p>
+        <p class="status ${getClasseStatus(p.ST_ENTREGAS)}">
+          ${p.ST_ENTREGAS}
+        </p>
 
         <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
 
         ${
           arq
-          ? `<p style="cursor:pointer;color:blue" onclick='abrirArquivo(${JSON.stringify(arq)})'>
-              📎 Ver comprovante
-            </p>`
-          : `<p>📷 Sem comprovante</p>`
+          ? `<button class="btn" onclick='abrirArquivo(${JSON.stringify(arq)})'>
+               📎 Ver comprovante
+             </button>`
+          : `<p>📷 Sem comprovante disponível</p>`
         }
       </div>
-   `;
+    `;
 
   } catch (err) {
 
-    console.error("❌ Erro geral:", err);
+    console.error("❌ Erro:", err);
 
     div.innerHTML = `
-      <p class="erro">
-        ❌ ${err.message}
-      </p>
+      <p class="erro">❌ ${err.message}</p>
+      <button class="btn" onclick="location.reload()">🔄 Tentar novamente</button>
     `;
   }
 }
