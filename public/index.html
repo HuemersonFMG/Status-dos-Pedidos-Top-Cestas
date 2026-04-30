@@ -44,11 +44,18 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
-.preview {
-  max-width: 100%;
+.btn-link {
   margin-top: 15px;
+  padding: 10px;
+  background: #007bff;
+  color: #fff;
+  border-radius: 5px;
   cursor: pointer;
-  border-radius: 8px;
+  display: inline-block;
+}
+
+.btn-link:hover {
+  background: #0056b3;
 }
 
 /* POPUP */
@@ -124,7 +131,7 @@ function fetchComTimeout(url, timeout = 15000) {
 }
 
 // =========================
-// 📷 DEFINIR URL ARQUIVO
+// 📎 DEFINIR ARQUIVO
 // =========================
 function getArquivo(p) {
 
@@ -138,7 +145,7 @@ function getArquivo(p) {
   if (p.TIPO_FOTO === 2) {
     return {
       url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
-      tipo: "auto" // pode ser PDF ou imagem
+      tipo: "auto"
     };
   }
 
@@ -148,22 +155,20 @@ function getArquivo(p) {
 // =========================
 // 🔍 ABRIR POPUP
 // =========================
-function abrirArquivo(arq) {
+function abrirArquivo(url, tipo) {
 
   const popup = document.getElementById('popup');
   const body = document.getElementById('popupBody');
 
   body.innerHTML = "";
 
-  // 🔥 tentativa inteligente
-  if (arq.tipo === "img") {
-    body.innerHTML = `<img src="${arq.url}">`;
+  if (tipo === "img") {
+    body.innerHTML = `<img src="${url}">`;
   } else {
-    // tenta abrir como PDF
     body.innerHTML = `
-      <iframe src="${arq.url}" frameborder="0"></iframe>
+      <iframe src="${url}" frameborder="0"></iframe>
       <p style="color:white;margin-top:10px;">
-        Se não abrir, <a href="${arq.url}" target="_blank" style="color:yellow;">clique aqui</a>
+        Se não abrir, <a href="${url}" target="_blank" style="color:yellow;">clique aqui</a>
       </p>
     `;
   }
@@ -172,10 +177,23 @@ function abrirArquivo(arq) {
 }
 
 // =========================
-// ❌ FECHAR POPUP
+// ❌ FECHAR
 // =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
+}
+
+// =========================
+// 🎨 STATUS COLOR
+// =========================
+function getClasseStatus(status) {
+  if (!status) return "";
+
+  const s = status.toUpperCase();
+
+  if (s.includes("ENTREGUE")) return "ok";
+  if (s.includes("ENTREGANDO")) return "warn";
+  return "erro";
 }
 
 // =========================
@@ -220,7 +238,6 @@ async function carregar() {
     }
 
     const p = data.rows[0];
-
     const arq = getArquivo(p);
 
     div.innerHTML = `
@@ -229,17 +246,17 @@ async function carregar() {
         <p><b>Cliente:</b> ${p.NOMEPARC}</p>
         <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-        <p class="status">${p.ST_ENTREGAS}</p>
+        <p class="status ${getClasseStatus(p.ST_ENTREGAS)}">
+          ${p.ST_ENTREGAS}
+        </p>
 
-        <p><b>Status Comprovante:</b> ${p.STATUS_FOTO}</p>
+        <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
 
         ${
           arq
-          ? `
-            <div onclick='abrirArquivo(${JSON.stringify(arq)})'>
-              <p style="cursor:pointer;color:blue;">📎 Ver comprovante</p>
-            </div>
-          `
+          ? `<div class="btn-link" onclick="abrirArquivo('${arq.url}', '${arq.tipo}')">
+               📎 Ver comprovante
+             </div>`
           : `<p>📷 Sem comprovante disponível</p>`
         }
       </div>
