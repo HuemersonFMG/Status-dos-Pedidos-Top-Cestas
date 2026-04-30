@@ -71,36 +71,23 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAR
+// 🔥 NORMALIZAÇÃO
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
 }
 
 // =========================
-// 🔒 CONTROLE DE CAMPOS
+// 🔄 CONTROLE DE CAMPOS (OU UM OU OUTRO)
 // =========================
-const cnpjInput = document.getElementById('cnpj');
-const ordemInput = document.getElementById('ordem');
-
-// Quando digita CNPJ → trava ORDEM
-cnpjInput.addEventListener('input', () => {
-  if (cnpjInput.value.trim()) {
-    ordemInput.disabled = true;
-    ordemInput.value = "";
-  } else {
-    ordemInput.disabled = false;
-  }
+document.getElementById('cnpj').addEventListener('input', () => {
+  const val = limparDoc(document.getElementById('cnpj').value);
+  document.getElementById('ordem').disabled = val.length > 0;
 });
 
-// Quando digita ORDEM → trava CNPJ
-ordemInput.addEventListener('input', () => {
-  if (ordemInput.value.trim()) {
-    cnpjInput.disabled = true;
-    cnpjInput.value = "";
-  } else {
-    cnpjInput.disabled = false;
-  }
+document.getElementById('ordem').addEventListener('input', () => {
+  const val = document.getElementById('ordem').value.trim();
+  document.getElementById('cnpj').disabled = val.length > 0;
 });
 
 // =========================
@@ -116,50 +103,50 @@ function fetchComTimeout(url, options, timeout = 20000) {
 }
 
 // =========================
-// 🔍 GERAR LINKS
+// 🚀 GERAR LINKS
 // =========================
 async function gerar() {
 
-  const cnpjRaw = cnpjInput.value;
-  const ordemRaw = ordemInput.value;
+  const cnpjInput = document.getElementById('cnpj').value;
+  const ordemInput = document.getElementById('ordem').value;
   const data = document.getElementById('data').value;
 
-  const documento = limparDoc(cnpjRaw);
-  const ordem = ordemRaw.trim();
+  const cnpj = limparDoc(cnpjInput);
+  const ordemCarga = ordemInput.trim();
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // 🔥 VALIDAÇÃO CORRETA
-  if (!documento && !ordem) {
+  // 🔴 VALIDAÇÃO
+  if (!cnpj && !ordemCarga) {
     status.className = "erro";
     status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga";
     return;
   }
 
-  if (documento && ordem) {
+  if (cnpj && ordemCarga) {
     status.className = "erro";
     status.innerHTML = "❌ Use apenas um filtro por vez";
     return;
   }
 
-  if (documento && documento.length !== 11 && documento.length !== 14) {
+  if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
     status.className = "erro";
     status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
     return;
   }
 
   status.className = "";
-  status.innerHTML = "⏳ Gerando links...";
+  status.innerHTML = "⏳ Buscando pedidos...";
 
   try {
 
     const payload = {
-      cnpj: documento || null,
-      ordemCarga: ordem || null,
-      data
+      cnpj: cnpj || null,
+      ordemCarga: ordemCarga || null,
+      data: data || null
     };
 
     console.log("📤 Enviando:", payload);
@@ -177,8 +164,8 @@ async function gerar() {
     try {
       dataRes = JSON.parse(texto);
     } catch {
-      console.error("❌ Resposta inválida:", texto);
-      throw new Error("Servidor retornou resposta inválida");
+      console.error("❌ HTML retornado:", texto);
+      throw new Error("Resposta inválida do servidor");
     }
 
     if (!res.ok) {

@@ -44,11 +44,11 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
-.preview {
-  max-width: 100%;
+.link-arquivo {
   margin-top: 15px;
   cursor: pointer;
-  border-radius: 8px;
+  color: blue;
+  text-decoration: underline;
 }
 
 /* POPUP */
@@ -105,7 +105,7 @@ body {
 <script>
 
 // =========================
-// 🔗 PEGAR PARAM
+// 🔗 PARAMS
 // =========================
 function getParam(nome) {
   return new URLSearchParams(window.location.search).get(nome);
@@ -114,7 +114,7 @@ function getParam(nome) {
 // =========================
 // ⏱️ FETCH COM TIMEOUT
 // =========================
-function fetchComTimeout(url, timeout = 20000) {
+function fetchComTimeout(url, timeout = 15000) {
   return Promise.race([
     fetch(url),
     new Promise((_, reject) =>
@@ -124,7 +124,7 @@ function fetchComTimeout(url, timeout = 20000) {
 }
 
 // =========================
-// 📎 DEFINIR ARQUIVO
+// 📷 DEFINIR ARQUIVO
 // =========================
 function getArquivo(p) {
 
@@ -138,7 +138,7 @@ function getArquivo(p) {
   if (p.TIPO_FOTO === 2) {
     return {
       url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
-      tipo: "auto" // pode ser PDF ou imagem
+      tipo: "auto"
     };
   }
 
@@ -146,7 +146,7 @@ function getArquivo(p) {
 }
 
 // =========================
-// 🔍 ABRIR POPUP
+// 🔍 POPUP
 // =========================
 function abrirArquivo(arq) {
 
@@ -169,9 +169,6 @@ function abrirArquivo(arq) {
   popup.style.display = "flex";
 }
 
-// =========================
-// ❌ FECHAR
-// =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
 }
@@ -219,11 +216,6 @@ async function carregar() {
 
     const p = data.rows[0];
 
-    // 🔥 status colorido
-    let statusClass = "ok";
-    if (p.ST_ENTREGAS === "ENTREGANDO") statusClass = "warn";
-    if (p.ST_ENTREGAS === "AGUARDANDO ROTA") statusClass = "erro";
-
     const arq = getArquivo(p);
 
     div.innerHTML = `
@@ -232,19 +224,15 @@ async function carregar() {
         <p><b>Cliente:</b> ${p.NOMEPARC}</p>
         <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-        <p class="status ${statusClass}">
-          ${p.ST_ENTREGAS}
-        </p>
+        <p class="status">${p.ST_ENTREGAS}</p>
 
-        <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
+        <p><b>Status Comprovante:</b> ${p.STATUS_FOTO}</p>
 
         ${
           arq
-          ? `
-            <div onclick='abrirArquivo(${JSON.stringify(arq)})'>
-              <p style="cursor:pointer;color:blue;">📎 Ver comprovante</p>
-            </div>
-          `
+          ? `<div class="link-arquivo" onclick='abrirArquivo(${JSON.stringify(arq)})'>
+               📎 Ver comprovante
+             </div>`
           : `<p>📷 Sem comprovante disponível</p>`
         }
       </div>
@@ -254,10 +242,7 @@ async function carregar() {
 
     console.error("❌ Erro:", err);
 
-    div.innerHTML = `
-      <p class="erro">❌ ${err.message}</p>
-      <p class="warn">Tente novamente em alguns segundos</p>
-    `;
+    div.innerHTML = `<p class="erro">❌ ${err.message}</p>`;
   }
 }
 
