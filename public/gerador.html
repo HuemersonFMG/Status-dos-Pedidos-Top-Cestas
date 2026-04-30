@@ -52,13 +52,14 @@ button {
   font-size: 12px;
 }
 </style>
+
 </head>
 
 <body>
 
 <h2>🔗 Gerar Links de Pedidos</h2>
 
-<input type="text" id="documento" placeholder="CPF ou CNPJ">
+<input type="text" id="cnpj" placeholder="CPF ou CNPJ">
 <input type="text" id="ordem" placeholder="Ordem de Carga">
 <input type="date" id="data">
 
@@ -70,11 +71,37 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAR DOCUMENTO
+// 🔥 NORMALIZAR
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
 }
+
+// =========================
+// 🔒 CONTROLE DE CAMPOS
+// =========================
+const cnpjInput = document.getElementById('cnpj');
+const ordemInput = document.getElementById('ordem');
+
+// Quando digita CNPJ → trava ORDEM
+cnpjInput.addEventListener('input', () => {
+  if (cnpjInput.value.trim()) {
+    ordemInput.disabled = true;
+    ordemInput.value = "";
+  } else {
+    ordemInput.disabled = false;
+  }
+});
+
+// Quando digita ORDEM → trava CNPJ
+ordemInput.addEventListener('input', () => {
+  if (ordemInput.value.trim()) {
+    cnpjInput.disabled = true;
+    cnpjInput.value = "";
+  } else {
+    cnpjInput.disabled = false;
+  }
+});
 
 // =========================
 // ⏱️ FETCH COM TIMEOUT
@@ -93,21 +120,19 @@ function fetchComTimeout(url, options, timeout = 20000) {
 // =========================
 async function gerar() {
 
-  const docInput = document.getElementById('documento').value;
-  const ordemInput = document.getElementById('ordem').value;
+  const cnpjRaw = cnpjInput.value;
+  const ordemRaw = ordemInput.value;
   const data = document.getElementById('data').value;
 
-  const documento = limparDoc(docInput);
-  const ordem = ordemInput.trim();
+  const documento = limparDoc(cnpjRaw);
+  const ordem = ordemRaw.trim();
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // =========================
-  // 🔒 VALIDAÇÃO
-  // =========================
+  // 🔥 VALIDAÇÃO CORRETA
   if (!documento && !ordem) {
     status.className = "erro";
     status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga";
@@ -116,16 +141,14 @@ async function gerar() {
 
   if (documento && ordem) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe apenas um campo (CPF/CNPJ OU Ordem)";
+    status.innerHTML = "❌ Use apenas um filtro por vez";
     return;
   }
 
-  if (documento) {
-    if (documento.length !== 11 && documento.length !== 14) {
-      status.className = "erro";
-      status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
-      return;
-    }
+  if (documento && documento.length !== 11 && documento.length !== 14) {
+    status.className = "erro";
+    status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
+    return;
   }
 
   status.className = "";
@@ -135,7 +158,7 @@ async function gerar() {
 
     const payload = {
       cnpj: documento || null,
-      ordem: ordem || null,
+      ordemCarga: ordem || null,
       data
     };
 
@@ -147,8 +170,6 @@ async function gerar() {
       body: JSON.stringify(payload)
     });
 
-    console.log("📡 Status HTTP:", res.status);
-
     const texto = await res.text();
 
     let dataRes;
@@ -156,7 +177,7 @@ async function gerar() {
     try {
       dataRes = JSON.parse(texto);
     } catch {
-      console.error("❌ Resposta não é JSON:", texto);
+      console.error("❌ Resposta inválida:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
