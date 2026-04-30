@@ -60,7 +60,7 @@ button {
 <h2>🔗 Gerar Links de Pedidos</h2>
 
 <input type="text" id="cnpj" placeholder="CPF ou CNPJ">
-<input type="text" id="ordem" placeholder="Ordem de Carga">
+<input type="text" id="ordemCarga" placeholder="Ordem de Carga">
 <input type="date" id="data">
 
 <button onclick="gerar()">Gerar Links</button>
@@ -71,21 +71,32 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAR
+// 🔥 NORMALIZAR DOC
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
 }
 
 // =========================
-// 🔒 CONTROLE EXCLUSIVO
+// 🔒 BLOQUEIO DE CAMPOS
 // =========================
-document.getElementById('cnpj').addEventListener('input', () => {
-  document.getElementById('ordem').value = "";
+const campoCNPJ = document.getElementById('cnpj');
+const campoOrdem = document.getElementById('ordemCarga');
+
+campoCNPJ.addEventListener('input', () => {
+  if (campoCNPJ.value.trim()) {
+    campoOrdem.disabled = true;
+  } else {
+    campoOrdem.disabled = false;
+  }
 });
 
-document.getElementById('ordem').addEventListener('input', () => {
-  document.getElementById('cnpj').value = "";
+campoOrdem.addEventListener('input', () => {
+  if (campoOrdem.value.trim()) {
+    campoCNPJ.disabled = true;
+  } else {
+    campoCNPJ.disabled = false;
+  }
 });
 
 // =========================
@@ -95,7 +106,7 @@ function fetchComTimeout(url, options, timeout = 20000) {
   return Promise.race([
     fetch(url, options),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo esgotado")), timeout)
+      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
     )
   ]);
 }
@@ -105,8 +116,8 @@ function fetchComTimeout(url, options, timeout = 20000) {
 // =========================
 async function gerar() {
 
-  const cnpjInput = document.getElementById('cnpj').value;
-  const ordemInput = document.getElementById('ordem').value;
+  const cnpjInput = campoCNPJ.value;
+  const ordemInput = campoOrdem.value;
   const data = document.getElementById('data').value;
 
   const cnpj = limparDoc(cnpjInput);
@@ -117,16 +128,17 @@ async function gerar() {
 
   div.innerHTML = "";
 
-  // 🔥 VALIDAÇÃO EXCLUSIVA
-  if (!cnpj && !ordemCarga) {
+  // 🔥 validação exclusiva
+  if ((!cnpj && !ordemCarga) || (cnpj && ordemCarga)) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
+    status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga (apenas um)";
     return;
   }
 
-  if (cnpj && ordemCarga) {
+  // valida CPF/CNPJ
+  if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
     status.className = "erro";
-    status.innerHTML = "❌ Use apenas um filtro por vez";
+    status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
     return;
   }
 
@@ -135,18 +147,16 @@ async function gerar() {
 
   try {
 
-    const payload = {
-      cnpj: cnpj || null,
-      ordemCarga: ordemCarga || null,
-      data
-    };
-
-    console.log("📤 Enviando:", payload);
+    console.log("📤 Enviando:", { cnpj, ordemCarga, data });
 
     const res = await fetchComTimeout('/api/gerar-links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        cnpj: cnpj || null,
+        ordemCarga: ordemCarga || null,
+        data
+      })
     });
 
     const texto = await res.text();
@@ -156,15 +166,15 @@ async function gerar() {
     try {
       dataRes = JSON.parse(texto);
     } catch {
-      console.error("❌ Retorno inválido:", texto);
+      console.error("❌ HTML retornado:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
-    console.log("📦 Retorno:", dataRes);
-
     if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro ao gerar links");
+      throw new Error(dataRes.erro || "Erro HTTP: " + res.status);
     }
+
+    console.log("📦 Retorno:", dataRes);
 
     if (!dataRes.links || !dataRes.links.length) {
       status.className = "warn";
@@ -173,12 +183,12 @@ async function gerar() {
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.links.length} link(s) encontrado(s)`;
+    status.innerHTML = `✅ ${dataRes.links.length} pedido(s) encontrado(s)`;
 
-    // 🔥 LIMITAR RENDER (evita travar browser)
-    const MAX = 200;
+    // 🔥 LIMITADOR (evita travar tela)
+    const limite = 300;
 
-    dataRes.links.slice(0, MAX).forEach(l => {
+    dataRes.links.slice(0, limite).forEach(l => {
 
       const el = document.createElement('div');
       el.className = "link-box";
@@ -197,8 +207,11 @@ async function gerar() {
       div.appendChild(el);
     });
 
-    if (dataRes.links.length > MAX) {
-      div.innerHTML += `<p class="warn">⚠️ Exibindo apenas ${MAX} resultados</p>`;
+    if (dataRes.links.length > limite) {
+      const aviso = document.createElement('p');
+      aviso.className = "warn";
+      aviso.innerHTML = `⚠️ Exibindo apenas os primeiros ${limite} resultados`;
+      div.appendChild(aviso);
     }
 
   } catch (err) {
@@ -215,7 +228,7 @@ async function gerar() {
 // =========================
 function copiar(link) {
   navigator.clipboard.writeText(link)
-    .then(() => alert("Link copiado"))
+    .then(() => alert("Link copiado!"))
     .catch(() => alert("Erro ao copiar"));
 }
 

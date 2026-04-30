@@ -44,6 +44,12 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
+.btn {
+  margin-top: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
 /* POPUP */
 .popup {
   position: fixed;
@@ -51,52 +57,31 @@ body {
   left:0;
   width:100%;
   height:100%;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.85);
   display:none;
   justify-content:center;
   align-items:center;
   z-index: 9999;
-  flex-direction: column;
 }
 
-.toolbar {
-  margin-bottom: 10px;
-}
-
-.toolbar button {
-  margin: 3px;
-  padding: 8px;
-  cursor: pointer;
-}
-
-.viewer {
+.popup-content {
+  position: relative;
   max-width: 90%;
-  max-height: 85%;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  max-height: 90%;
 }
 
-.viewer img {
+.popup img, .popup iframe {
   max-width: 100%;
   max-height: 100%;
-  transition: transform 0.3s;
-}
-
-.viewer iframe {
-  width: 100%;
-  height: 80vh;
-  border: none;
-  background: #fff;
+  border-radius: 8px;
 }
 
 .close {
   position: absolute;
-  top: 15px;
-  right: 25px;
+  top: -30px;
+  right: 0;
   color: white;
-  font-size: 28px;
+  font-size: 24px;
   cursor: pointer;
 }
 </style>
@@ -110,29 +95,23 @@ body {
 
 <!-- POPUP -->
 <div class="popup" id="popup">
-  <span class="close" onclick="fechar()">✖</span>
-
-  <div class="toolbar" id="toolbar">
-    <button onclick="zoomIn()">🔍 +</button>
-    <button onclick="zoomOut()">🔍 -</button>
-    <button onclick="girar()">🔄 Girar</button>
-    <button onclick="resetar()">♻️ Reset</button>
+  <div class="popup-content">
+    <span class="close" onclick="fechar()">✖</span>
+    <div id="popupBody"></div>
   </div>
-
-  <div class="viewer" id="viewer"></div>
 </div>
 
 <script>
 
 // =========================
-// 🔗 PARAM
+// 🔗 PARAMS
 // =========================
 function getParam(nome) {
   return new URLSearchParams(window.location.search).get(nome);
 }
 
 // =========================
-// ⏱️ FETCH
+// ⏱️ FETCH COM TIMEOUT
 // =========================
 function fetchComTimeout(url, timeout = 15000) {
   return Promise.race([
@@ -144,98 +123,73 @@ function fetchComTimeout(url, timeout = 15000) {
 }
 
 // =========================
-// 🎛️ CONTROLES
+// 📎 ARQUIVO (IMG ou PDF)
 // =========================
-let scale = 1;
-let rotate = 0;
-let tipoAtual = null;
+function getArquivo(p) {
 
-function aplicarTransform() {
-  const el = document.getElementById('viewer').querySelector('img');
-  if (el) {
-    el.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
+  if (p.TIPO_FOTO === 1) {
+    return {
+      url: `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage`,
+      tipo: "img"
+    };
   }
-}
 
-function zoomIn() {
-  scale += 0.2;
-  aplicarTransform();
-}
+  if (p.TIPO_FOTO === 2) {
+    return {
+      url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
+      tipo: "auto" // pode ser PDF ou imagem
+    };
+  }
 
-function zoomOut() {
-  scale -= 0.2;
-  aplicarTransform();
-}
-
-function girar() {
-  rotate += 90;
-  aplicarTransform();
-}
-
-function resetar() {
-  scale = 1;
-  rotate = 0;
-  aplicarTransform();
+  return null;
 }
 
 // =========================
-// 📎 ABRIR ARQUIVO
+// 🔍 POPUP
 // =========================
-function abrirArquivo(p) {
+function abrirArquivo(arq) {
 
-  const viewer = document.getElementById('viewer');
-  const toolbar = document.getElementById('toolbar');
+  const popup = document.getElementById('popup');
+  const body = document.getElementById('popupBody');
 
-  viewer.innerHTML = "";
-  scale = 1;
-  rotate = 0;
+  body.innerHTML = "";
 
-  // =========================
-  // 📄 PDF
-  // =========================
-  if (p.TIPO_ARQUIVO === "pdf" && p.URL_ARQUIVO) {
-
-    tipoAtual = "pdf";
-
-    toolbar.style.display = "none"; // PDF não usa zoom manual
-
-    viewer.innerHTML = `
-      <iframe src="${p.URL_ARQUIVO}"></iframe>
+  if (arq.tipo === "img") {
+    body.innerHTML = `<img src="${arq.url}">`;
+  } else {
+    body.innerHTML = `
+      <iframe src="${arq.url}" frameborder="0"></iframe>
       <p style="color:white;margin-top:10px;">
-        Se não abrir, <a href="${p.URL_ARQUIVO}" target="_blank" style="color:yellow;">clique aqui</a>
+        Se não abrir,
+        <a href="${arq.url}" target="_blank" style="color:yellow;">
+          clique aqui
+        </a>
       </p>
     `;
   }
 
-  // =========================
-  // 🖼️ IMG (dbimage)
-  // =========================
-  else if (p.TIPO_FOTO === 1) {
-
-    tipoAtual = "img";
-
-    toolbar.style.display = "block";
-
-    const url = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage`;
-
-    viewer.innerHTML = `<img src="${url}">`;
-
-    setTimeout(aplicarTransform, 100);
-  }
-
-  else {
-    alert("Nenhum arquivo disponível");
-    return;
-  }
-
-  document.getElementById('popup').style.display = "flex";
+  popup.style.display = "flex";
 }
 
 // =========================
-// ❌ FECHAR
+// ❌ FECHAR POPUP
 // =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
+}
+
+// =========================
+// 🎨 COR STATUS
+// =========================
+function getClasseStatus(txt) {
+  if (!txt) return "";
+
+  txt = txt.toUpperCase();
+
+  if (txt.includes("ENTREGUE")) return "ok";
+  if (txt.includes("ENTREGANDO")) return "warn";
+
+  return "";
 }
 
 // =========================
@@ -253,7 +207,7 @@ async function carregar() {
     return;
   }
 
-  div.innerHTML = "⏳ Carregando...";
+  div.innerHTML = "⏳ Carregando pedido...";
 
   try {
 
@@ -266,8 +220,8 @@ async function carregar() {
     try {
       data = JSON.parse(texto);
     } catch {
-      console.error("❌ HTML:", texto);
-      throw new Error("Resposta inválida do servidor");
+      console.error("❌ HTML retornado:", texto);
+      throw new Error("Servidor retornou resposta inválida");
     }
 
     if (!res.ok) {
@@ -281,20 +235,24 @@ async function carregar() {
 
     const p = data.rows[0];
 
+    const arq = getArquivo(p);
+
     div.innerHTML = `
       <div class="card">
         <p><b>Pedido:</b> ${p.NUNOTA}</p>
         <p><b>Cliente:</b> ${p.NOMEPARC}</p>
         <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-        <p class="status">${p.ST_ENTREGAS}</p>
+        <p class="status ${getClasseStatus(p.ST_ENTREGAS)}">
+          ${p.ST_ENTREGAS}
+        </p>
 
         <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
 
         ${
-          (p.TIPO_ARQUIVO || p.TIPO_FOTO)
-          ? `<button onclick='abrirArquivo(${JSON.stringify(p)})'>
-               📎 Visualizar comprovante
+          arq
+          ? `<button class="btn" onclick='abrirArquivo(${JSON.stringify(arq)})'>
+               📎 Ver comprovante
              </button>`
           : `<p>📷 Sem comprovante disponível</p>`
         }
@@ -305,7 +263,10 @@ async function carregar() {
 
     console.error("❌ Erro:", err);
 
-    div.innerHTML = `<p class="erro">❌ ${err.message}</p>`;
+    div.innerHTML = `
+      <p class="erro">❌ ${err.message}</p>
+      <button class="btn" onclick="location.reload()">🔄 Tentar novamente</button>
+    `;
   }
 }
 
