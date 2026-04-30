@@ -18,6 +18,9 @@ const PORT = process.env.PORT || 5050;
 // =========================
 const SECRET = process.env.SECRET || "chave_super_secreta";
 
+// =========================
+// 🔗 SANKHYA
+// =========================
 const BASE_URL = "http://topcesta.fwc.cloud:8180";
 const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
 
@@ -56,7 +59,7 @@ async function login() {
   const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  if (!cookie) throw new Error("Erro ao autenticar no Sankhya");
+  if (!cookie) throw new Error("Erro ao obter cookie Sankhya");
 
   return cookie;
 }
@@ -72,42 +75,40 @@ function gerarToken(nunota) {
 }
 
 // =========================
-// 🔍 GERAR LINKS (FILTRO DIRETO)
+// 🔍 GERAR LINKS (COM FILTRO REAL)
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
   try {
-    let { cnpj, ordemCarga, data } = req.body;
+    const { cnpj, ordemCarga, data } = req.body;
 
-    cnpj = (cnpj || "").replace(/\D/g, '');
-    ordemCarga = (ordemCarga || "").toString().trim();
+    const doc = (cnpj || "").replace(/\D/g, '');
+    const ordem = ordemCarga ? String(ordemCarga).trim() : null;
 
-    // 🚫 validação
-    if (!cnpj && !ordemCarga) {
-      return res.status(400).json({ erro: "Informe CPF/CNPJ ou Ordem de Carga" });
-    }
-
-    if (cnpj && ordemCarga) {
-      return res.status(400).json({ erro: "Use apenas um filtro por vez" });
+    // 🔥 REGRA: só um filtro
+    if ((!doc && !ordem) || (doc && ordem)) {
+      return res.status(400).json({
+        erro: "Informe CPF/CNPJ OU Ordem de Carga (apenas um)"
+      });
     }
 
     const cookie = await login();
 
     // =========================
-    // 🔥 MONTA FILTRO DINÂMICO
+    // 🔥 FILTRO DINÂMICO
     // =========================
     let filtro = "";
 
-    if (cnpj) {
-      filtro = `CGC_CPF = '${cnpj}'`;
+    if (doc) {
+      filtro = `CGC_CPF = '${doc}'`;
     } else {
-      filtro = `ORDEMCARGA = ${Number(ordemCarga)}`;
+      filtro = `ORDEMCARGA = ${ordem}`;
     }
 
     if (data) {
-      filtro += ` AND DTNEG >= TO_DATE('${data}','YYYY-MM-DD')`;
+      filtro += ` AND DTNEG >= TO_DATE('${data}', 'YYYY-MM-DD')`;
     }
 
-    console.log("🔎 Filtro:", filtro);
+    console.log("🔎 Filtro aplicado:", filtro);
 
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
@@ -115,7 +116,7 @@ app.post('/api/gerar-links', async (req, res) => {
         query: {
           viewName: "VW_NOTAS_FUSION_LIGHT",
           criteria: {
-            expression: { $: filtro }
+            expression: filtro
           }
         }
       }
@@ -142,13 +143,19 @@ app.post('/api/gerar-links', async (req, res) => {
 
     const json = JSON.parse(text);
 
+    if (json?.tsError) {
+      console.error(json.tsError);
+      return res.json({ total: 0, links: [] });
+    }
+
     let lista = [];
+
     if (json?.responseBody?.records?.record) {
       const r = json.responseBody.records.record;
       lista = Array.isArray(r) ? r : [r];
     }
 
-    console.log("📦 Encontrados:", lista.length);
+    console.log("📦 Registros filtrados:", lista.length);
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
@@ -157,10 +164,13 @@ app.post('/api/gerar-links', async (req, res) => {
       link: `${baseUrl}/index.html?nunota=${r.NUNOTA?.$}&token=${gerarToken(r.NUNOTA?.$)}`
     }));
 
-    res.json({ total: links.length, links });
+    res.json({
+      total: links.length,
+      links
+    });
 
   } catch (err) {
-    console.error("❌ ERRO /gerar-links:", err);
+    console.error("❌ ERRO:", err);
     res.status(500).json({ erro: err.message });
   }
 });
@@ -188,9 +198,7 @@ app.get('/api/pedido', async (req, res) => {
         query: {
           viewName: "VW_NOTAS_FUSION",
           criteria: {
-            expression: {
-              $: `NUNOTA = ${Number(nunota)}`
-            }
+            expression: `NUNOTA = ${nunota}`
           }
         }
       }
@@ -211,13 +219,13 @@ app.get('/api/pedido', async (req, res) => {
     const text = await response.text();
 
     if (!response.ok || text.startsWith("<")) {
-      console.error("❌ Sankhya:", text.substring(0, 200));
       throw new Error("Erro na comunicação com Sankhya");
     }
 
     const json = JSON.parse(text);
 
     let lista = [];
+
     if (json?.responseBody?.records?.record) {
       const r = json.responseBody.records.record;
       lista = Array.isArray(r) ? r : [r];
@@ -232,11 +240,10 @@ app.get('/api/pedido', async (req, res) => {
     res.json({
       rows: [{
         NUNOTA: p.NUNOTA?.$,
-        NUMNOTA: p.NUMNOTA?.$,
         NOMEPARC: p.NOMEPARC?.$,
         CGC_CPF: p.CGC_CPF?.$,
         ST_ENTREGAS: p.ST_ENTREGAS?.$,
-        TIPO_FOTO: Number(p.TIPO_FOTO?.$ || 0),
+        TIPO_FOTO: p.TIPO_FOTO?.$,
         STATUS_FOTO: p.STATUS_FOTO?.$
       }]
     });

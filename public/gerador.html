@@ -60,7 +60,7 @@ button {
 <h2>🔗 Gerar Links de Pedidos</h2>
 
 <input type="text" id="cnpj" placeholder="CPF ou CNPJ">
-<input type="text" id="ordem" placeholder="Ordem de Carga">
+<input type="number" id="ordemCarga" placeholder="Ordem de Carga">
 <input type="date" id="data">
 
 <button onclick="gerar()">Gerar Links</button>
@@ -71,23 +71,37 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAÇÃO
+// 🔥 NORMALIZAR
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
 }
 
 // =========================
-// 🔄 CONTROLE DE CAMPOS (OU UM OU OUTRO)
+// 🔒 CONTROLE DE CAMPOS
 // =========================
 document.getElementById('cnpj').addEventListener('input', () => {
-  const val = limparDoc(document.getElementById('cnpj').value);
-  document.getElementById('ordem').disabled = val.length > 0;
+  const cnpj = limparDoc(document.getElementById('cnpj').value);
+  const ordem = document.getElementById('ordemCarga');
+
+  if (cnpj.length > 0) {
+    ordem.disabled = true;
+    ordem.value = "";
+  } else {
+    ordem.disabled = false;
+  }
 });
 
-document.getElementById('ordem').addEventListener('input', () => {
-  const val = document.getElementById('ordem').value.trim();
-  document.getElementById('cnpj').disabled = val.length > 0;
+document.getElementById('ordemCarga').addEventListener('input', () => {
+  const ordem = document.getElementById('ordemCarga').value;
+  const cnpj = document.getElementById('cnpj');
+
+  if (ordem.length > 0) {
+    cnpj.disabled = true;
+    cnpj.value = "";
+  } else {
+    cnpj.disabled = false;
+  }
 });
 
 // =========================
@@ -108,31 +122,31 @@ function fetchComTimeout(url, options, timeout = 20000) {
 async function gerar() {
 
   const cnpjInput = document.getElementById('cnpj').value;
-  const ordemInput = document.getElementById('ordem').value;
+  const ordemInput = document.getElementById('ordemCarga').value;
   const data = document.getElementById('data').value;
 
-  const cnpj = limparDoc(cnpjInput);
-  const ordemCarga = ordemInput.trim();
+  const documento = limparDoc(cnpjInput);
+  const ordemCarga = ordemInput ? Number(ordemInput) : null;
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // 🔴 VALIDAÇÃO
-  if (!cnpj && !ordemCarga) {
+  // 🔒 VALIDAÇÃO
+  if (!documento && !ordemCarga) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga";
+    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
     return;
   }
 
-  if (cnpj && ordemCarga) {
+  if (documento && ordemCarga) {
     status.className = "erro";
     status.innerHTML = "❌ Use apenas um filtro por vez";
     return;
   }
 
-  if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
+  if (documento && documento.length !== 11 && documento.length !== 14) {
     status.className = "erro";
     status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
     return;
@@ -144,8 +158,8 @@ async function gerar() {
   try {
 
     const payload = {
-      cnpj: cnpj || null,
-      ordemCarga: ordemCarga || null,
+      cnpj: documento || null,
+      ordemCarga: ordemCarga,
       data: data || null
     };
 
@@ -157,19 +171,20 @@ async function gerar() {
       body: JSON.stringify(payload)
     });
 
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("❌ ERRO HTTP:", res.status, txt);
+      throw new Error(`Erro ${res.status} ao buscar pedidos`);
+    }
+
     const texto = await res.text();
 
     let dataRes;
-
     try {
       dataRes = JSON.parse(texto);
     } catch {
-      console.error("❌ HTML retornado:", texto);
-      throw new Error("Resposta inválida do servidor");
-    }
-
-    if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro HTTP: " + res.status);
+      console.error("❌ NÃO É JSON:", texto);
+      throw new Error("Servidor retornou resposta inválida");
     }
 
     console.log("📦 Retorno:", dataRes);
@@ -181,7 +196,7 @@ async function gerar() {
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
+    status.innerHTML = `✅ ${dataRes.links.length} pedido(s) encontrado(s)`;
 
     dataRes.links.forEach(l => {
 
