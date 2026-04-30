@@ -46,7 +46,7 @@ body {
 
 .btn {
   margin-top: 10px;
-  padding: 8px 12px;
+  padding: 10px 15px;
   cursor: pointer;
 }
 
@@ -123,10 +123,25 @@ function fetchComTimeout(url, timeout = 15000) {
 }
 
 // =========================
-// 📎 ARQUIVO (IMG ou PDF)
+// 🎨 STATUS COR
+// =========================
+function getClasseStatus(txt) {
+  if (!txt) return "";
+
+  txt = txt.toUpperCase();
+
+  if (txt.includes("ENTREGUE")) return "ok";
+  if (txt.includes("ENTREGANDO")) return "warn";
+
+  return "";
+}
+
+// =========================
+// 📎 DEFINIR ARQUIVO
 // =========================
 function getArquivo(p) {
 
+  // 📷 IMAGEM (BLOB Sankhya)
   if (p.TIPO_FOTO === 1) {
     return {
       url: `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage`,
@@ -134,10 +149,19 @@ function getArquivo(p) {
     };
   }
 
+  // 📄 PDF EXTERNO (S3)
+  if (p.TIPO_FOTO === 2 && p.URL_ARQUIVO) {
+    return {
+      url: p.URL_ARQUIVO,
+      tipo: "pdf"
+    };
+  }
+
+  // 📄 fallback blob Sankhya
   if (p.TIPO_FOTO === 2) {
     return {
       url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
-      tipo: "auto" // pode ser PDF ou imagem
+      tipo: "pdf"
     };
   }
 
@@ -154,9 +178,13 @@ function abrirArquivo(arq) {
 
   body.innerHTML = "";
 
+  // 📷 imagem
   if (arq.tipo === "img") {
     body.innerHTML = `<img src="${arq.url}">`;
-  } else {
+  }
+
+  // 📄 pdf
+  else {
     body.innerHTML = `
       <iframe src="${arq.url}" frameborder="0"></iframe>
       <p style="color:white;margin-top:10px;">
@@ -176,20 +204,6 @@ function abrirArquivo(arq) {
 // =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
-}
-
-// =========================
-// 🎨 COR STATUS
-// =========================
-function getClasseStatus(txt) {
-  if (!txt) return "";
-
-  txt = txt.toUpperCase();
-
-  if (txt.includes("ENTREGUE")) return "ok";
-  if (txt.includes("ENTREGANDO")) return "warn";
-
-  return "";
 }
 
 // =========================
@@ -310,6 +324,7 @@ git push
 VIWES
 VW_NOTAS_FUSION
 VW_NOTAS_FUSION_LIGHT
+Exemplo comp transp: https://prd-easydoc-solistica.s3.amazonaws.com/folders/76b55b2991eb7c4391d4e552bbb2bc79
 
 */
 -->

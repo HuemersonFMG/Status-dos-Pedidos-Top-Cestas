@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 
-// 🔥 fetch compatível com Render
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
@@ -33,10 +32,9 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// 🔐 LOGIN
+// 🔐 LOGIN SANKHYA
 // =========================
 async function login() {
-  console.log("🔐 Login Sankhya...");
 
   const payload = {
     serviceName: "MobileLoginSP.login",
@@ -58,11 +56,7 @@ async function login() {
   const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  if (!cookie) {
-    throw new Error("Falha ao obter cookie Sankhya");
-  }
-
-  console.log("🍪 Cookie OK");
+  if (!cookie) throw new Error("Falha ao autenticar no Sankhya");
 
   return cookie;
 }
@@ -78,33 +72,21 @@ function gerarToken(nunota) {
 }
 
 // =========================
-// 🔥 NORMALIZADOR
-// =========================
-function normalizarRegistro(r) {
-  return {
-    NUNOTA: String(r.NUNOTA?.$ || '').trim(),
-    CGC_CPF: String(r.CGC_CPF?.$ || '').replace(/\D/g, ''),
-    ORDEMCARGA: String(r.ORDEMCARGA?.$ || '').trim(),
-    DTNEG: r.DTNEG?.$ || '',
-    NOMEPARC: r.NOMEPARC?.$
-  };
-}
-
-// =========================
 // 🔍 GERAR LINKS
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
+
   try {
 
     let { cnpj, ordemCarga, data } = req.body;
 
-    cnpj = (cnpj || "").replace(/\D/g, '');
-    ordemCarga = (ordemCarga || "").trim();
+    const documento = (cnpj || "").replace(/\D/g, '');
+    const ordem = ordemCarga ? String(ordemCarga).trim() : null;
 
-    // 🔥 validação obrigatória
-    if ((!cnpj && !ordemCarga) || (cnpj && ordemCarga)) {
+    // 🔥 validação
+    if ((!documento && !ordem) || (documento && ordem)) {
       return res.status(400).json({
-        erro: "Informe apenas CPF/CNPJ OU Ordem de Carga"
+        erro: "Informe CPF/CNPJ OU Ordem de Carga"
       });
     }
 
@@ -118,8 +100,6 @@ app.post('/api/gerar-links', async (req, res) => {
         }
       }
     };
-
-    console.log("📤 Buscando VIEW LIGHT...");
 
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
@@ -141,42 +121,40 @@ app.post('/api/gerar-links', async (req, res) => {
 
     const json = JSON.parse(text);
 
-    if (json?.tsError) {
-      console.error("❌ Sankhya:", json.tsError);
-      return res.json({ total: 0, links: [] });
-    }
-
     let lista = [];
     if (json?.responseBody?.records?.record) {
       const r = json.responseBody.records.record;
       lista = Array.isArray(r) ? r : [r];
     }
 
-    console.log("📦 Total bruto:", lista.length);
+    // =========================
+    // 🔥 FILTRO CORRETO
+    // =========================
+    const filtrados = lista.filter(r => {
 
-    const listaNormalizada = lista.map(normalizarRegistro);
+      const doc = (r.CGC_CPF?.$ || "").replace(/\D/g, '');
+      const oc = String(r.ORDEMCARGA?.$ || "").trim();
 
-    // 🔥 FILTRO REAL
-    const filtrados = listaNormalizada.filter(r => {
-
-      if (cnpj) {
-        return r.CGC_CPF === cnpj;
+      if (documento) {
+        if (doc !== documento) return false;
       }
 
-      if (ordemCarga) {
-        return r.ORDEMCARGA === ordemCarga;
+      if (ordem) {
+        if (oc !== ordem) return false;
       }
 
-      return false;
+      if (data) {
+        if (new Date(r.DTNEG?.$) < new Date(data)) return false;
+      }
+
+      return true;
     });
-
-    console.log("📊 Filtrados:", filtrados.length);
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const links = filtrados.map(r => ({
-      nunota: r.NUNOTA,
-      link: `${baseUrl}/index.html?nunota=${r.NUNOTA}&token=${gerarToken(r.NUNOTA)}`
+      nunota: r.NUNOTA?.$,
+      link: `${baseUrl}/index.html?nunota=${r.NUNOTA?.$}&token=${gerarToken(r.NUNOTA?.$)}`
     }));
 
     res.json({ total: links.length, links });
@@ -191,6 +169,7 @@ app.post('/api/gerar-links', async (req, res) => {
 // 🔎 CONSULTA PEDIDO
 // =========================
 app.get('/api/pedido', async (req, res) => {
+
   try {
 
     const { nunota, token } = req.query;
@@ -214,8 +193,6 @@ app.get('/api/pedido', async (req, res) => {
       }
     };
 
-    console.log("📤 Buscando pedido...");
-
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
@@ -236,44 +213,50 @@ app.get('/api/pedido', async (req, res) => {
 
     const json = JSON.parse(text);
 
-    if (json?.tsError) {
-      console.error("❌ Sankhya:", json.tsError);
-      return res.json({ rows: [] });
-    }
-
     let lista = [];
     if (json?.responseBody?.records?.record) {
       const r = json.responseBody.records.record;
       lista = Array.isArray(r) ? r : [r];
     }
 
-    const listaNormalizada = lista.map(normalizarRegistro);
+    // 🔥 ENCONTRA O PEDIDO CORRETO
+    const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
 
-    // 🔥 AGORA SIM: busca correta
-    const pedidoBase = listaNormalizada.find(r => r.NUNOTA === String(nunota));
-
-    if (!pedidoBase) {
+    if (!pedido) {
       return res.json({ rows: [] });
     }
 
-    // 🔥 pega o original (com campos completos)
-    const pedidoOriginal = lista.find(r => String(r.NUNOTA?.$).trim() === String(nunota));
+    // =========================
+    // 🔥 USAR VIEW (CORRETO)
+    // =========================
+    const tipoFoto = Number(pedido.TIPO_FOTO?.$ || 0);
+    const statusFoto = pedido.STATUS_FOTO?.$ || "Sem comprovante";
 
-    // 🔥 DETECÇÃO DE ARQUIVO
-    let tipoFoto = 0;
+    // =========================
+    // 🔥 DETECTAR URL EXTERNA (PDF S3)
+    // =========================
+    let urlArquivo = null;
 
-    if (pedidoOriginal.FOTO_ENTREGA) tipoFoto = 1;
-    else if (pedidoOriginal.FOTO_COMPROV) tipoFoto = 2;
+    const comprov = pedido.FOTO_COMPROV?.$;
+
+    if (tipoFoto === 2 && comprov) {
+      const valor = String(comprov);
+
+      if (valor.startsWith("http")) {
+        urlArquivo = valor;
+      }
+    }
 
     res.json({
       rows: [{
-        NUNOTA: pedidoBase.NUNOTA,
-        NOMEPARC: pedidoBase.NOMEPARC,
-        CGC_CPF: pedidoBase.CGC_CPF,
-        ST_ENTREGAS: pedidoOriginal.ST_ENTREGAS?.$,
+        NUNOTA: pedido.NUNOTA?.$,
+        NOMEPARC: pedido.NOMEPARC?.$,
+        CGC_CPF: pedido.CGC_CPF?.$,
+        ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
         TIPO_FOTO: tipoFoto,
-        STATUS_FOTO: tipoFoto ? "Disponível" : "Sem comprovante"
+        STATUS_FOTO: statusFoto,
+        URL_ARQUIVO: urlArquivo
       }]
     });
 
@@ -287,5 +270,5 @@ app.get('/api/pedido', async (req, res) => {
 // START
 // =========================
 app.listen(PORT, () => {
-  console.log(`🚀 Rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

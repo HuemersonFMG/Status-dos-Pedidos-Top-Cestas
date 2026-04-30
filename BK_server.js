@@ -1,5 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
+
+// 🔥 fetch compatível com Render
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 
@@ -10,7 +14,18 @@ app.use(express.static('public'));
 const PORT = process.env.PORT || 5050;
 
 // =========================
-// 🌐 LOG GLOBAL
+// 🔐 CONFIG
+// =========================
+const SECRET = process.env.SECRET || "chave_super_secreta";
+
+const BASE_URL = "http://topcesta.fwc.cloud:8180";
+const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
+
+const USER = process.env.USER || "HUEMERSON";
+const PASS = process.env.PASS || "654321";
+
+// =========================
+// 🌐 LOG
 // =========================
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url}`);
@@ -18,31 +33,7 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// 🔐 AUTH API
-// =========================
-app.use('/api', (req, res, next) => {
-  const token = req.headers.authorization;
-  const cleanToken = token?.replace("Bearer ", "");
-
-  if (cleanToken !== "d7e10ab7-a425-4e84-874b-ce5d2961fe2a") {
-    console.log("❌ Token inválido:", token);
-    return res.status(401).json({ erro: "Não autorizado" });
-  }
-
-  next();
-});
-
-// =========================
-// 🔗 CONFIG SANKHYA
-// =========================
-const BASE_URL = "http://topcesta.fwc.cloud:8180";
-const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
-
-const USER = "HUEMERSON";
-const PASS = "654321";
-
-// =========================
-// 🔐 LOGIN STATELESS
+// 🔐 LOGIN
 // =========================
 async function login() {
   console.log("🔐 Login Sankhya...");
@@ -67,42 +58,54 @@ async function login() {
   const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  console.log("🍪 COOKIE:", cookie);
+  if (!cookie) {
+    throw new Error("Falha ao obter cookie Sankhya");
+  }
+
+  console.log("🍪 Cookie OK");
 
   return cookie;
 }
 
 // =========================
-// NORMALIZAR TEXTO
+// 🔐 TOKEN
 // =========================
-function normalizar(txt) {
-  return (txt || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function gerarToken(nunota) {
+  return crypto
+    .createHash('sha256')
+    .update(String(nunota) + SECRET)
+    .digest('hex');
 }
 
 // =========================
-// HEALTH
+// 🔥 NORMALIZADOR
 // =========================
-app.get('/api/health', (req, res) => {
-  res.json({ status: "OK" });
-});
+function normalizarRegistro(r) {
+  return {
+    NUNOTA: String(r.NUNOTA?.$ || '').trim(),
+    CGC_CPF: String(r.CGC_CPF?.$ || '').replace(/\D/g, ''),
+    ORDEMCARGA: String(r.ORDEMCARGA?.$ || '').trim(),
+    DTNEG: r.DTNEG?.$ || '',
+    NOMEPARC: r.NOMEPARC?.$
+  };
+}
 
 // =========================
-// 🚀 CONSULTA
+// 🔍 GERAR LINKS
 // =========================
-app.post('/api/notas', async (req, res) => {
+app.post('/api/gerar-links', async (req, res) => {
   try {
 
-    const { tipo, valor } = req.body;
-    const filtro = (valor || "").trim();
+    let { cnpj, ordemCarga, data } = req.body;
 
-    console.log("🔎 Tipo:", tipo);
-    console.log("🔎 Valor:", filtro);
+    cnpj = (cnpj || "").replace(/\D/g, '');
+    ordemCarga = (ordemCarga || "").trim();
 
-    if (!filtro) {
-      return res.status(400).json({ erro: "Valor não informado" });
+    // 🔥 validação obrigatória
+    if ((!cnpj && !ordemCarga) || (cnpj && ordemCarga)) {
+      return res.status(400).json({
+        erro: "Informe apenas CPF/CNPJ OU Ordem de Carga"
+      });
     }
 
     const cookie = await login();
@@ -111,12 +114,12 @@ app.post('/api/notas', async (req, res) => {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
         query: {
-          viewName: "VW_NOTAS_FUSION"
+          viewName: "VW_NOTAS_FUSION_LIGHT"
         }
       }
     };
 
-    console.log("📤 Chamando Sankhya...");
+    console.log("📤 Buscando VIEW LIGHT...");
 
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
@@ -139,60 +142,143 @@ app.post('/api/notas', async (req, res) => {
     const json = JSON.parse(text);
 
     if (json?.tsError) {
-      console.log("❌ ERRO SANKHYA:", json.tsError);
+      console.error("❌ Sankhya:", json.tsError);
+      return res.json({ total: 0, links: [] });
+    }
+
+    let lista = [];
+    if (json?.responseBody?.records?.record) {
+      const r = json.responseBody.records.record;
+      lista = Array.isArray(r) ? r : [r];
+    }
+
+    console.log("📦 Total bruto:", lista.length);
+
+    const listaNormalizada = lista.map(normalizarRegistro);
+
+    // 🔥 FILTRO REAL
+    const filtrados = listaNormalizada.filter(r => {
+
+      if (cnpj) {
+        return r.CGC_CPF === cnpj;
+      }
+
+      if (ordemCarga) {
+        return r.ORDEMCARGA === ordemCarga;
+      }
+
+      return false;
+    });
+
+    console.log("📊 Filtrados:", filtrados.length);
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    const links = filtrados.map(r => ({
+      nunota: r.NUNOTA,
+      link: `${baseUrl}/index.html?nunota=${r.NUNOTA}&token=${gerarToken(r.NUNOTA)}`
+    }));
+
+    res.json({ total: links.length, links });
+
+  } catch (err) {
+    console.error("❌ ERRO /gerar-links:", err);
+    res.status(500).json({ erro: err.message });
+  }
+});
+
+// =========================
+// 🔎 CONSULTA PEDIDO
+// =========================
+app.get('/api/pedido', async (req, res) => {
+  try {
+
+    const { nunota, token } = req.query;
+
+    if (!nunota || !token) {
+      return res.status(400).json({ erro: "Parâmetros inválidos" });
+    }
+
+    if (token !== gerarToken(nunota)) {
+      return res.status(403).json({ erro: "Acesso negado" });
+    }
+
+    const cookie = await login();
+
+    const payload = {
+      serviceName: "CRUDServiceProvider.loadView",
+      requestBody: {
+        query: {
+          viewName: "VW_NOTAS_FUSION"
+        }
+      }
+    };
+
+    console.log("📤 Buscando pedido...");
+
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const text = await response.text();
+
+    if (!response.ok || text.startsWith("<")) {
+      throw new Error("Erro na comunicação com Sankhya");
+    }
+
+    const json = JSON.parse(text);
+
+    if (json?.tsError) {
+      console.error("❌ Sankhya:", json.tsError);
       return res.json({ rows: [] });
     }
 
-    let rows = [];
-
-    const registros = json?.responseBody?.records?.record;
-
-    if (registros) {
-
-      const lista = Array.isArray(registros) ? registros : [registros];
-
-      rows = lista
-        .map(r => ({
-          NUNOTA: r.NUNOTA?.$ || "",
-          NUMNOTA: r.NUMNOTA?.$ || "",
-          TOP: r.TOP?.$ || "",
-          DTNEG: r.DTNEG?.$ || "",
-          VLRNOTA: r.VLRNOTA?.$ || "",
-          CODPARC: r.CODPARC?.$ || "",
-          NOMEPARC: r.NOMEPARC?.$ || "",
-          CGC_CPF: (r.CGC_CPF?.$ || "").replace(/\D/g, ""),
-          ENTREGAR: r.ENTREGAR?.$ || "",
-          RECEBIDO: r.RECEBIDO?.$ || "",
-          ST_ENTREGAS: r.ST_ENTREGAS?.$ || ""
-        }))
-        .filter(r => {
-
-          // CPF/CNPJ
-          if (tipo === "cpf") {
-            return r.CGC_CPF === filtro.replace(/\D/g, "");
-          }
-
-          // 🔥 PEDIDO (AGORA CORRETO)
-          if (tipo === "pedido") {
-            return String(r.NUNOTA).includes(String(filtro));
-          }
-
-          // NOME (LIKE)
-          if (tipo === "nome") {
-            return normalizar(r.NOMEPARC)
-              .includes(normalizar(filtro));
-          }
-
-          return true;
-        });
+    let lista = [];
+    if (json?.responseBody?.records?.record) {
+      const r = json.responseBody.records.record;
+      lista = Array.isArray(r) ? r : [r];
     }
 
-    console.log(`📊 Registros encontrados: ${rows.length}`);
+    const listaNormalizada = lista.map(normalizarRegistro);
 
-    res.json({ rows });
+    // 🔥 AGORA SIM: busca correta
+    const pedidoBase = listaNormalizada.find(r => r.NUNOTA === String(nunota));
+
+    if (!pedidoBase) {
+      return res.json({ rows: [] });
+    }
+
+    // 🔥 pega o original (com campos completos)
+    const pedidoOriginal = lista.find(r => String(r.NUNOTA?.$).trim() === String(nunota));
+
+    // 🔥 DETECÇÃO DE ARQUIVO
+    let tipoFoto = 0;
+
+    if (pedidoOriginal.FOTO_ENTREGA) tipoFoto = 1;
+    else if (pedidoOriginal.FOTO_COMPROV) tipoFoto = 2;
+
+    res.json({
+      rows: [{
+        NUNOTA: pedidoBase.NUNOTA,
+        NOMEPARC: pedidoBase.NOMEPARC,
+        CGC_CPF: pedidoBase.CGC_CPF,
+        ST_ENTREGAS: pedidoOriginal.ST_ENTREGAS?.$,
+
+        TIPO_FOTO: tipoFoto,
+        STATUS_FOTO: tipoFoto ? "Disponível" : "Sem comprovante"
+      }]
+    });
 
   } catch (err) {
-    console.error("❌ Erro:", err);
+    console.error("❌ ERRO /pedido:", err);
     res.status(500).json({ erro: err.message });
   }
 });
@@ -201,5 +287,5 @@ app.post('/api/notas', async (req, res) => {
 // START
 // =========================
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`🚀 Rodando na porta ${PORT}`);
 });

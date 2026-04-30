@@ -15,298 +15,265 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>TC | ST Entregas</title>
-
-<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
-<link rel="stylesheet" href="Styles/Styles.css">
+<title>Status do Pedido</title>
 
 <style>
+body {
+  font-family: Arial;
+  text-align: center;
+  padding: 20px;
+  background: #f5f5f5;
+}
 
-/* =========================
-IMAGEM THUMB
-========================= */
-.img-thumb {
-  width: 120px;
+.card {
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 500px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.status {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.ok { color: green; }
+.warn { color: orange; }
+.erro { color: red; }
+
+.btn {
+  margin-top: 10px;
+  padding: 8px 12px;
   cursor: pointer;
+}
+
+/* POPUP */
+.popup {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.85);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index: 9999;
+}
+
+.popup-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+}
+
+.popup img, .popup iframe {
+  max-width: 100%;
+  max-height: 100%;
   border-radius: 8px;
 }
 
-/* =========================
-MODAL
-========================= */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  inset: 0;
-  background: rgba(0,0,0,0.9);
-}
-
-.modal-box {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.modal-img {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  max-width: 90%;
-  max-height: 70vh;
-  transform: translate(-50%, -50%);
-}
-
-/* CONTROLES SEMPRE NA FRENTE */
-.controls {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 99999;
-  background: rgba(0,0,0,0.8);
-  padding: 10px;
-  border-radius: 10px;
-  color: white;
-  display: flex;
-  gap: 10px;
-}
-
-/* BOTÃO FECHAR */
 .close {
-  position: fixed;
-  top: 20px;
-  right: 30px;
+  position: absolute;
+  top: -30px;
+  right: 0;
   color: white;
-  font-size: 28px;
+  font-size: 24px;
   cursor: pointer;
-  z-index: 99999;
 }
-
 </style>
 </head>
 
 <body>
 
-<header>
-  <a href="https://topalimentos3.lojavirtualnuvem.com.br/produtos/" target="_blank">
-    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png">
-  </a>
-  <h1>Status pedidos</h1>
-</header>
+<h2>📦 Status do Pedido</h2>
 
-<div class="card">
+<div id="conteudo"></div>
 
-  <h2>🔍 Consulta</h2>
-
-  <select id="tipo">
-    <option value="cpf">CPF/CNPJ</option>
-    <option value="pedido">Nº Pedido</option>
-    <option value="nome">Nome</option>
-  </select>
-
-  <input type="text" id="valor" placeholder="Digite o valor">
-
-  <button onclick="consultar()">Buscar</button>
-
-  <div id="status"></div>
-
-</div>
-
-<div class="card">
-<table>
-<thead>
-<tr>
-<th>Nº Pedido</th>
-<th>Nº NFe</th>
-<th>TOP</th>
-<th>DATA</th>
-<th>VALOR</th>
-<th>PARCEIRO</th>
-<th>STATUS</th>
-</tr>
-</thead>
-
-<tbody id="tbody">
-<tr><td colspan="7">Nenhum dado</td></tr>
-</tbody>
-</table>
-</div>
-
-<!-- MODAL -->
-<div id="modal" class="modal">
-  <div class="modal-box">
-
-    <span class="close" onclick="fecharModal()">✖</span>
-
-    <img id="imgModal" class="modal-img">
-
-    <div class="controls">
-      🔄 <input type="range" min="0" max="3" id="rotate">
-      🔍 <input type="range" min="0" max="200" id="zoom">
-      ↔️ <input type="range" min="-200" max="200" id="moveX">
-      ↕️ <input type="range" min="-200" max="200" id="moveY">
-    </div>
-
+<!-- POPUP -->
+<div class="popup" id="popup">
+  <div class="popup-content">
+    <span class="close" onclick="fechar()">✖</span>
+    <div id="popupBody"></div>
   </div>
 </div>
 
 <script>
 
 // =========================
-// FORMATOS
+// 🔗 PARAMS
 // =========================
-function formatarValor(v) {
-  return Number(v || 0).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  });
-}
-
-function formatarData(d) {
-  return d ? d.split(" ")[0] : "";
+function getParam(nome) {
+  return new URLSearchParams(window.location.search).get(nome);
 }
 
 // =========================
-// CONSULTA
+// ⏱️ FETCH COM TIMEOUT
 // =========================
-async function consultar() {
+function fetchComTimeout(url, timeout = 15000) {
+  return Promise.race([
+    fetch(url),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
+    )
+  ]);
+}
 
-  const tipo = document.getElementById('tipo').value;
-  let valor = document.getElementById('valor').value.trim();
+// =========================
+// 📎 ARQUIVO (IMG ou PDF)
+// =========================
+function getArquivo(p) {
 
-  const status = document.getElementById('status');
-  const tbody = document.getElementById('tbody');
-
-  status.innerHTML = "⏳ Consultando...";
-  tbody.innerHTML = "";
-
-  // 🔥 TRATAMENTO ESPECÍFICO POR TIPO
-  if (tipo === "cpf") {
-    valor = valor.replace(/\D/g, '');
+  if (p.TIPO_FOTO === 1) {
+    return {
+      url: `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage`,
+      tipo: "img"
+    };
   }
+
+  if (p.TIPO_FOTO === 2) {
+    return {
+      url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
+      tipo: "auto" // pode ser PDF ou imagem
+    };
+  }
+
+  return null;
+}
+
+// =========================
+// 🔍 POPUP
+// =========================
+function abrirArquivo(arq) {
+
+  const popup = document.getElementById('popup');
+  const body = document.getElementById('popupBody');
+
+  body.innerHTML = "";
+
+  if (arq.tipo === "img") {
+    body.innerHTML = `<img src="${arq.url}">`;
+  } else {
+    body.innerHTML = `
+      <iframe src="${arq.url}" frameborder="0"></iframe>
+      <p style="color:white;margin-top:10px;">
+        Se não abrir,
+        <a href="${arq.url}" target="_blank" style="color:yellow;">
+          clique aqui
+        </a>
+      </p>
+    `;
+  }
+
+  popup.style.display = "flex";
+}
+
+// =========================
+// ❌ FECHAR POPUP
+// =========================
+function fechar() {
+  document.getElementById('popup').style.display = "none";
+}
+
+// =========================
+// 🎨 COR STATUS
+// =========================
+function getClasseStatus(txt) {
+  if (!txt) return "";
+
+  txt = txt.toUpperCase();
+
+  if (txt.includes("ENTREGUE")) return "ok";
+  if (txt.includes("ENTREGANDO")) return "warn";
+
+  return "";
+}
+
+// =========================
+// 🚀 CARREGAR
+// =========================
+async function carregar() {
+
+  const nunota = getParam('nunota');
+  const token = getParam('token');
+
+  const div = document.getElementById('conteudo');
+
+  if (!nunota || !token) {
+    div.innerHTML = "<p class='erro'>❌ Link inválido</p>";
+    return;
+  }
+
+  div.innerHTML = "⏳ Carregando pedido...";
 
   try {
 
-    const res = await fetch('/api/notas', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer d7e10ab7-a425-4e84-874b-ce5d2961fe2a'
-      },
-      body: JSON.stringify({ tipo, valor })
-    });
+    const res = await fetchComTimeout(`/api/pedido?nunota=${nunota}&token=${token}`);
 
-    const data = await res.json();
-    const linhas = data.rows || [];
+    const texto = await res.text();
 
-    if (!linhas.length) {
-      tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado</td></tr>`;
-      status.innerHTML = "⚠️ Nenhum resultado";
+    let data;
+
+    try {
+      data = JSON.parse(texto);
+    } catch {
+      console.error("❌ HTML retornado:", texto);
+      throw new Error("Servidor retornou resposta inválida");
+    }
+
+    if (!res.ok) {
+      throw new Error(data.erro || "Erro ao consultar pedido");
+    }
+
+    if (!data.rows || !data.rows.length) {
+      div.innerHTML = "<p class='warn'>⚠️ Pedido não encontrado</p>";
       return;
     }
 
-    linhas.forEach(l => {
+    const p = data.rows[0];
 
-      const cor =
-        l.ST_ENTREGAS === 'ENTREGUE' ? 'green' :
-        l.ST_ENTREGAS === 'ENTREGANDO' ? 'orange' :
-        'gray';
+    const arq = getArquivo(p);
 
-      // 🔥 GARANTIA: USAR NUNOTA (PEDIDO)
-      const pedido = l.NUNOTA || "";
+    div.innerHTML = `
+      <div class="card">
+        <p><b>Pedido:</b> ${p.NUNOTA}</p>
+        <p><b>Cliente:</b> ${p.NOMEPARC}</p>
+        <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-      const tr = document.createElement('tr');
+        <p class="status ${getClasseStatus(p.ST_ENTREGAS)}">
+          ${p.ST_ENTREGAS}
+        </p>
 
-      tr.innerHTML = `
-        <td><strong>${pedido}</strong></td>
-        <td>${l.NUMNOTA || ""}</td>
-        <td>${l.TOP}</td>
-        <td>${formatarData(l.DTNEG)}</td>
-        <td>${formatarValor(l.VLRNOTA)}</td>
-        <td>${l.NOMEPARC}</td>
-        <td style="color:${cor};font-weight:bold">${l.ST_ENTREGAS}</td>
-      `;
+        <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
 
-      tbody.appendChild(tr);
-
-      // IMAGEM
-      const img1 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${pedido}@SEQ=1.dbimage`;
-      const img2 = `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO2@FOTO@NUNOTA=${pedido}@SEQ=1.dbimage`;
-
-      const trImg = document.createElement('tr');
-
-      trImg.innerHTML = `
-        <td colspan="7" style="text-align:center">
-          <img src="${img1}"
-               class="img-thumb"
-               onerror="this.src='${img2}'"
-               onclick="abrirModal(this.src)">
-        </td>
-      `;
-
-      tbody.appendChild(trImg);
-
-    });
-
-    status.innerHTML = `✅ ${linhas.length} registros`;
+        ${
+          arq
+          ? `<button class="btn" onclick='abrirArquivo(${JSON.stringify(arq)})'>
+               📎 Ver comprovante
+             </button>`
+          : `<p>📷 Sem comprovante disponível</p>`
+        }
+      </div>
+    `;
 
   } catch (err) {
-    console.error(err);
-    status.innerHTML = "❌ Erro na consulta";
+
+    console.error("❌ Erro:", err);
+
+    div.innerHTML = `
+      <p class="erro">❌ ${err.message}</p>
+      <button class="btn" onclick="location.reload()">🔄 Tentar novamente</button>
+    `;
   }
 }
 
-// =========================
-// MODAL
-// =========================
-const modal = document.getElementById('modal');
-const img = document.getElementById('imgModal');
-
-let r = 0, z = 1, x = 0, y = 0;
-
-function abrirModal(src) {
-  modal.style.display = "block";
-  img.src = src;
-
-  r = 0; z = 1; x = 0; y = 0;
-  atualizar();
-}
-
-function fecharModal() {
-  modal.style.display = "none";
-}
-
-document.getElementById('rotate').oninput = e => {
-  r = e.target.value * 90;
-  atualizar();
-};
-
-document.getElementById('zoom').oninput = e => {
-  z = 1 + (e.target.value / 100);
-  atualizar();
-};
-
-document.getElementById('moveX').oninput = e => {
-  x = e.target.value;
-  atualizar();
-};
-
-document.getElementById('moveY').oninput = e => {
-  y = e.target.value;
-  atualizar();
-};
-
-function atualizar() {
-  img.style.transform =
-    `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) rotate(${r}deg) scale(${z})`;
-}
+// START
+carregar();
 
 </script>
-
-<footer>
-<p>&copy; Top Cestas - 2026</p>
-</footer>
 
 </body>
 </html>
@@ -321,11 +288,29 @@ function atualizar() {
 /*
 1. Reinicie o servidor (npm start)
 2. Acesse: http://localhost:5050
-  cnpj teste: 14140218000156
+
+>>http://localhost:5050/gerador.html
+-----------------------------------------------------------------
+  cnpj teste: 14140218000156 - 03750757006040
 3. Cole o token
 4. Clique em "Buscar Notas"
 
+------------------------------------------------------------------
+APLICAÇÃO NO SERVIDOR RENDER - PARA TESTES
+------------------------------------------------------------------
 link do blender: https://dashboard.render.com/
+https://status-dos-pedidos-top-cestas.onrender.com/gerador.html
+
+COMANDOS GIT:
+git status
+git add .
+git commit -m "fix: filtro exclusivo cgc_cpf ou ordemcarga + ajustes frontend"
+git push
+
+VIWES
+VW_NOTAS_FUSION
+VW_NOTAS_FUSION_LIGHT
+Exemplo comp transp: https://prd-easydoc-solistica.s3.amazonaws.com/folders/76b55b2991eb7c4391d4e552bbb2bc79
 
 */
 -->
