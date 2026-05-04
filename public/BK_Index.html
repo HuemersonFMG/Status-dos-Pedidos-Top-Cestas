@@ -15,7 +15,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Status do Pedido</title>
+<title>Tracker de Pedidos</title>
+<link rel="stylesheet" href="Styles/Styles.css">
+<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
 
 <style>
 body {
@@ -44,10 +46,8 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
-.btn {
-  margin-top: 10px;
-  padding: 8px 12px;
-  cursor: pointer;
+hr {
+  margin: 15px 0;
 }
 
 /* POPUP */
@@ -57,37 +57,64 @@ body {
   left:0;
   width:100%;
   height:100%;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.9);
   display:none;
   justify-content:center;
   align-items:center;
+  flex-direction: column;
   z-index: 9999;
 }
 
-.popup-content {
-  position: relative;
+.viewer {
   max-width: 90%;
-  max-height: 90%;
+  max-height: 80%;
+  overflow: hidden;
 }
 
-.popup img, .popup iframe {
+.viewer img {
   max-width: 100%;
   max-height: 100%;
-  border-radius: 8px;
+  transform-origin: center;
+  transition: transform 0.2s;
+}
+
+.viewer iframe {
+  width: 90vw;
+  height: 80vh;
+  border: none;
+}
+
+.controls {
+  margin-top: 10px;
+}
+
+.controls button {
+  margin: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
 }
 
 .close {
   position: absolute;
-  top: -30px;
-  right: 0;
+  top: 15px;
+  right: 20px;
   color: white;
-  font-size: 24px;
+  font-size: 28px;
   cursor: pointer;
 }
 </style>
+
 </head>
 
 <body>
+
+  <header>
+    <a href="https://topalimentos.shop/produtos/">
+        <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+             alt="LogoTopCestas">
+    </a>
+    <h1>Sistema de rastreio de pedidos.</h1>
+  </header>
 
 <h2>📦 Status do Pedido</h2>
 
@@ -95,10 +122,11 @@ body {
 
 <!-- POPUP -->
 <div class="popup" id="popup">
-  <div class="popup-content">
-    <span class="close" onclick="fechar()">✖</span>
-    <div id="popupBody"></div>
-  </div>
+  <span class="close" onclick="fechar()">✖</span>
+
+  <div class="viewer" id="viewer"></div>
+
+  <div class="controls" id="controls"></div>
 </div>
 
 <script>
@@ -113,7 +141,7 @@ function getParam(nome) {
 // =========================
 // ⏱️ FETCH COM TIMEOUT
 // =========================
-function fetchComTimeout(url, timeout = 15000) {
+function fetchComTimeout(url, timeout = 20000) {
   return Promise.race([
     fetch(url),
     new Promise((_, reject) =>
@@ -123,48 +151,78 @@ function fetchComTimeout(url, timeout = 15000) {
 }
 
 // =========================
-// 📎 ARQUIVO (IMG ou PDF)
+// 📅 FORMATAR DATA
 // =========================
-function getArquivo(p) {
-
-  if (p.TIPO_FOTO === 1) {
-    return {
-      url: `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage`,
-      tipo: "img"
-    };
+function formatarData(data) {
+  if (!data) return "-";
+  try {
+    return new Date(data).toLocaleDateString('pt-BR');
+  } catch {
+    return data;
   }
-
-  if (p.TIPO_FOTO === 2) {
-    return {
-      url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
-      tipo: "auto" // pode ser PDF ou imagem
-    };
-  }
-
-  return null;
 }
 
 // =========================
-// 🔍 POPUP
+// 🎛️ CONTROLE IMAGEM
 // =========================
-function abrirArquivo(arq) {
+let escala = 1;
+let rotacao = 0;
+
+function zoomIn() {
+  escala += 0.2;
+  atualizarTransform();
+}
+
+function zoomOut() {
+  escala = Math.max(0.2, escala - 0.2);
+  atualizarTransform();
+}
+
+function girar() {
+  rotacao += 90;
+  atualizarTransform();
+}
+
+function atualizarTransform() {
+  const img = document.getElementById("imgViewer");
+  if (img) {
+    img.style.transform = `scale(${escala}) rotate(${rotacao}deg)`;
+  }
+}
+
+// =========================
+// 🔍 ABRIR ARQUIVO
+// =========================
+function abrirArquivo(url, tipo) {
 
   const popup = document.getElementById('popup');
-  const body = document.getElementById('popupBody');
+  const viewer = document.getElementById('viewer');
+  const controls = document.getElementById('controls');
 
-  body.innerHTML = "";
+  viewer.innerHTML = "";
+  controls.innerHTML = "";
 
-  if (arq.tipo === "img") {
-    body.innerHTML = `<img src="${arq.url}">`;
+  escala = 1;
+  rotacao = 0;
+
+  if (tipo === "img") {
+
+    viewer.innerHTML = `<img id="imgViewer" src="${url}">`;
+
+    controls.innerHTML = `
+      <button onclick="zoomIn()">➕ Zoom</button>
+      <button onclick="zoomOut()">➖ Zoom</button>
+      <button onclick="girar()">🔄 Girar</button>
+      <button onclick="baixar('${url}')">⬇️ Download</button>
+    `;
+
   } else {
-    body.innerHTML = `
-      <iframe src="${arq.url}" frameborder="0"></iframe>
-      <p style="color:white;margin-top:10px;">
-        Se não abrir,
-        <a href="${arq.url}" target="_blank" style="color:yellow;">
-          clique aqui
-        </a>
-      </p>
+
+    viewer.innerHTML = `<iframe src="${url}"></iframe>`;
+
+    controls.innerHTML = `
+      <button onclick="window.open('${url}','_blank')">🔗 Abrir PDF</button>
+      <button onclick="baixar('${url}')">⬇️ Download</button>
     `;
   }
 
@@ -172,24 +230,20 @@ function abrirArquivo(arq) {
 }
 
 // =========================
-// ❌ FECHAR POPUP
+// ⬇️ DOWNLOAD
 // =========================
-function fechar() {
-  document.getElementById('popup').style.display = "none";
+function baixar(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = "_blank";
+  a.click();
 }
 
 // =========================
-// 🎨 COR STATUS
+// ❌ FECHAR
 // =========================
-function getClasseStatus(txt) {
-  if (!txt) return "";
-
-  txt = txt.toUpperCase();
-
-  if (txt.includes("ENTREGUE")) return "ok";
-  if (txt.includes("ENTREGANDO")) return "warn";
-
-  return "";
+function fechar() {
+  document.getElementById('popup').style.display = "none";
 }
 
 // =========================
@@ -212,7 +266,6 @@ async function carregar() {
   try {
 
     const res = await fetchComTimeout(`/api/pedido?nunota=${nunota}&token=${token}`);
-
     const texto = await res.text();
 
     let data;
@@ -220,7 +273,7 @@ async function carregar() {
     try {
       data = JSON.parse(texto);
     } catch {
-      console.error("❌ HTML retornado:", texto);
+      console.error("❌ Resposta inválida:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
@@ -234,28 +287,36 @@ async function carregar() {
     }
 
     const p = data.rows[0];
-
-    const arq = getArquivo(p);
+    const arq = p.ARQUIVO;
 
     div.innerHTML = `
       <div class="card">
-        <p><b>Pedido:</b> ${p.NUNOTA}</p>
-        <p><b>Cliente:</b> ${p.NOMEPARC}</p>
-        <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-        <p class="status ${getClasseStatus(p.ST_ENTREGAS)}">
-          ${p.ST_ENTREGAS}
-        </p>
+        <p><b>📅 Data:</b> ${formatarData(p.DTNEG)}</p>
+        <p><b>🚚 Ordem de Carga:</b> ${p.ORDEMCARGA || "-"}</p>
 
-        <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
+        <hr>
+
+        <p><b>🧾 Pedido:</b> ${p.NUNOTA}</p>
+        <p><b>👤 Cliente:</b> ${p.NOMEPARC}</p>
+        <p><b>📄 Documento:</b> ${p.CGC_CPF || "-"}</p>
+        <p><b>🚛 Transportadora:</b> ${p.TRANSPORTADORA || "-"}</p>
+
+        <hr>
+
+        <p class="status">${p.ST_ENTREGAS}</p>
+
+        <p><b>📎 Comprovante:</b> ${p.STATUS_FOTO}</p>
 
         ${
           arq
-          ? `<button class="btn" onclick='abrirArquivo(${JSON.stringify(arq)})'>
-               📎 Ver comprovante
-             </button>`
+          ? `<p style="color:blue;cursor:pointer"
+                onclick="abrirArquivo('${arq.url}','${arq.tipo}')">
+                📎 Visualizar comprovante
+            </p>`
           : `<p>📷 Sem comprovante disponível</p>`
         }
+
       </div>
     `;
 
@@ -263,10 +324,7 @@ async function carregar() {
 
     console.error("❌ Erro:", err);
 
-    div.innerHTML = `
-      <p class="erro">❌ ${err.message}</p>
-      <button class="btn" onclick="location.reload()">🔄 Tentar novamente</button>
-    `;
+    div.innerHTML = `<p class="erro">❌ ${err.message}</p>`;
   }
 }
 
@@ -274,6 +332,10 @@ async function carregar() {
 carregar();
 
 </script>
+
+<footer>
+  <p style="text-align: center;">&copy; Top Cestas - 2025 - Monitoramento em Tempo Real de Pedidos.</p>
+</footer>
 
 </body>
 </html>
@@ -298,7 +360,8 @@ carregar();
 ------------------------------------------------------------------
 APLICAÇÃO NO SERVIDOR RENDER - PARA TESTES
 ------------------------------------------------------------------
-link do blender: https://dashboard.render.com/
+link do blender:
+https://dashboard.render.com/
 https://status-dos-pedidos-top-cestas.onrender.com/gerador.html
 
 COMANDOS GIT:

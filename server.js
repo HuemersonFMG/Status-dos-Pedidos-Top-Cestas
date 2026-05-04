@@ -73,51 +73,16 @@ function gerarToken(nunota) {
     .digest('hex');
 }
 
-//===========================
-//FORMAT DATA
-//===========================
+// =========================
+// 📅 FORMATAR DATA
+// =========================
 function formatarDataBR(data) {
   if (!data) return "";
 
-  const limpa = data.split(" ")[0]; // remove hora
-
+  const limpa = data.split(" ")[0];
   const [dia, mes, ano] = limpa.split("/");
 
-  return `${ano}-${mes}-${dia}`; // converte pra ISO
-}
-
-// =========================
-// 📦 DEFINIR ARQUIVO
-// =========================
-function montarArquivo(nunota, registro) {
-
-  const temFoto =
-    registro.FOTO_ENTREGA &&
-    registro.FOTO_ENTREGA.$ &&
-    registro.FOTO_ENTREGA.$ !== "";
-
-  const temComprov =
-    registro.FOTO_COMPROV &&
-    registro.FOTO_COMPROV.$ &&
-    registro.FOTO_COMPROV.$ !== "";
-
-  // 🔥 PRIORIDADE: FOTO APP
-  if (temFoto) {
-    return {
-      url: `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`,
-      tipo: "img"
-    };
-  }
-
-  // 🔥 FALLBACK: PDF
-  if (temComprov) {
-    return {
-      url: `${BASE_URL}/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${nunota}.dbimage`,
-      tipo: "pdf"
-    };
-  }
-
-  return null;
+  return `${ano}-${mes}-${dia}`;
 }
 
 // =========================
@@ -131,7 +96,6 @@ app.post('/api/gerar-links', async (req, res) => {
     const documento = (cnpj || "").replace(/\D/g, '');
     const ordem = ordemCarga ? String(ordemCarga) : null;
 
-    // 🔥 validação exclusiva
     if ((!documento && !ordem) || (documento && ordem)) {
       return res.status(400).json({
         erro: "Informe CPF/CNPJ OU Ordem de Carga (apenas um)"
@@ -170,7 +134,6 @@ app.post('/api/gerar-links', async (req, res) => {
       lista = Array.isArray(rec) ? rec : [rec];
     }
 
-    // 🔥 FILTRO CORRETO
     const filtrados = lista.filter(r => {
 
       const doc = (r.CGC_CPF?.$ || "").replace(/\D/g, '');
@@ -202,7 +165,7 @@ app.post('/api/gerar-links', async (req, res) => {
 });
 
 // =========================
-// 🔎 CONSULTA PEDIDO (CORRIGIDO)
+// 🔎 CONSULTA PEDIDO
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -249,44 +212,100 @@ app.get('/api/pedido', async (req, res) => {
       lista = Array.isArray(rec) ? rec : [rec];
     }
 
-    // 🔥 BUSCA EXATA POR NUNOTA
     const pedido = lista.find(r => String(r.NUNOTA.$) === String(nunota));
 
     if (!pedido) {
       return res.json({ rows: [] });
     }
 
-    // 🔥 ARQUIVO COM FALLBACK INTELIGENTE
-    const arquivo = montarArquivo(nunota, pedido);
+    const temFoto = pedido.FOTO_BLOB?.$;
+    const temPdf = pedido.PDF_BLOB?.$;
 
     res.json({
       rows: [{
         NUNOTA: pedido.NUNOTA?.$,
         NUMNOTA: pedido.NUMNOTA?.$,
-
         NOMEPARC: pedido.NOMEPARC?.$,
         CGC_CPF: pedido.CGC_CPF?.$,
-
         DTNEG: formatarDataBR(pedido.DTNEG?.$),
         ORDEMCARGA: pedido.ORDEMCARGA?.$,
-
         TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || "").trim(),
-
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
-        ARQUIVO: arquivo,
-
-        STATUS_FOTO: arquivo
-          ? (arquivo.tipo === "img"
-              ? "Foto Entrega"
-              : "Comprovante PDF")
-          : "Sem comprovante"
+        TEM_FOTO: !!temFoto,
+        TEM_PDF: !!temPdf
       }]
     });
 
   } catch (err) {
     console.error("❌ ERRO pedido:", err);
     res.status(500).json({ erro: err.message });
+  }
+});
+
+// =========================
+// 📷 IMAGEM
+// =========================
+app.get('/api/comprovante/imagem', async (req, res) => {
+  try {
+
+    const { nunota, token } = req.query;
+
+    if (token !== gerarToken(nunota)) {
+      return res.status(403).send("Acesso negado");
+    }
+
+    const cookie = await login();
+
+    const url = `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
+
+    const response = await fetch(url, {
+      headers: { "Cookie": cookie }
+    });
+
+    if (!response.ok) {
+      return res.status(404).send("Imagem não encontrada");
+    }
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    response.body.pipe(res);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erro ao carregar imagem");
+  }
+});
+
+// =========================
+// 📄 PDF
+// =========================
+app.get('/api/comprovante/pdf', async (req, res) => {
+  try {
+
+    const { nunota, token } = req.query;
+
+    if (token !== gerarToken(nunota)) {
+      return res.status(403).send("Acesso negado");
+    }
+
+    const cookie = await login();
+
+    const url = `${BASE_URL}/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${nunota}.dbimage`;
+
+    const response = await fetch(url, {
+      headers: { "Cookie": cookie }
+    });
+
+    if (!response.ok) {
+      return res.status(404).send("PDF não encontrado");
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    response.body.pipe(res);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erro ao carregar PDF");
   }
 });
 

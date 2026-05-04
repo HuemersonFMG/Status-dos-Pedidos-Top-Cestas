@@ -2,7 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Gerar Links de Pedidos</title>
+<title>Top - Gerador.</title>
+<link rel="stylesheet" href="Styles/Styles.css">
+<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
 
 <style>
 body {
@@ -52,10 +54,17 @@ button {
   font-size: 12px;
 }
 </style>
-
 </head>
 
 <body>
+
+  <header>
+    <a href="https://topalimentos.shop/produtos/">
+        <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+             alt="LogoTopCestas">
+    </a>
+    <h1>Entregas - Gerador de Links por pedidos.</h1>
+  </header>
 
 <h2>🔗 Gerar Links de Pedidos</h2>
 
@@ -78,24 +87,26 @@ function limparDoc(valor) {
 }
 
 // =========================
-// 🔒 BLOQUEIO DE CAMPOS
+// 🔁 CONTROLE EXCLUSIVO
 // =========================
-const campoCNPJ = document.getElementById('cnpj');
-const campoOrdem = document.getElementById('ordemCarga');
+const cnpjInput = document.getElementById('cnpj');
+const ordemInput = document.getElementById('ordemCarga');
 
-campoCNPJ.addEventListener('input', () => {
-  if (campoCNPJ.value.trim()) {
-    campoOrdem.disabled = true;
+cnpjInput.addEventListener('input', () => {
+  if (cnpjInput.value.trim()) {
+    ordemInput.disabled = true;
+    ordemInput.value = "";
   } else {
-    campoOrdem.disabled = false;
+    ordemInput.disabled = false;
   }
 });
 
-campoOrdem.addEventListener('input', () => {
-  if (campoOrdem.value.trim()) {
-    campoCNPJ.disabled = true;
+ordemInput.addEventListener('input', () => {
+  if (ordemInput.value.trim()) {
+    cnpjInput.disabled = true;
+    cnpjInput.value = "";
   } else {
-    campoCNPJ.disabled = false;
+    cnpjInput.disabled = false;
   }
 });
 
@@ -112,51 +123,60 @@ function fetchComTimeout(url, options, timeout = 20000) {
 }
 
 // =========================
-// 🚀 GERAR LINKS
+// 🔍 GERAR LINKS
 // =========================
 async function gerar() {
 
-  const cnpjInput = campoCNPJ.value;
-  const ordemInput = campoOrdem.value;
+  const cnpjRaw = cnpjInput.value;
+  const ordemRaw = ordemInput.value;
   const data = document.getElementById('data').value;
 
-  const cnpj = limparDoc(cnpjInput);
-  const ordemCarga = ordemInput.trim();
+  const documento = limparDoc(cnpjRaw);
+  const ordem = ordemRaw ? ordemRaw.trim() : null;
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // 🔥 validação exclusiva
-  if ((!cnpj && !ordemCarga) || (cnpj && ordemCarga)) {
+  // =========================
+  // 🔥 VALIDAÇÃO
+  // =========================
+  if (!documento && !ordem) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga (apenas um)";
+    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
     return;
   }
 
-  // valida CPF/CNPJ
-  if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
+  if (documento && ordem) {
     status.className = "erro";
-    status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
+    status.innerHTML = "❌ Use apenas um filtro por vez";
+    return;
+  }
+
+  if (documento && documento.length !== 11 && documento.length !== 14) {
+    status.className = "erro";
+    status.innerHTML = "❌ CPF (11) ou CNPJ (14)";
     return;
   }
 
   status.className = "";
-  status.innerHTML = "⏳ Buscando pedidos...";
+  status.innerHTML = "⏳ Gerando links...";
 
   try {
 
-    console.log("📤 Enviando:", { cnpj, ordemCarga, data });
+    const payload = {
+      cnpj: documento || null,
+      ordemCarga: ordem || null,
+      data: data || null
+    };
+
+    console.log("📤 Enviando:", payload);
 
     const res = await fetchComTimeout('/api/gerar-links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cnpj: cnpj || null,
-        ordemCarga: ordemCarga || null,
-        data
-      })
+      body: JSON.stringify(payload)
     });
 
     const texto = await res.text();
@@ -166,15 +186,15 @@ async function gerar() {
     try {
       dataRes = JSON.parse(texto);
     } catch {
-      console.error("❌ HTML retornado:", texto);
+      console.error("❌ Resposta inválida:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
-    if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro HTTP: " + res.status);
-    }
-
     console.log("📦 Retorno:", dataRes);
+
+    if (!res.ok) {
+      throw new Error(dataRes.erro || "Erro ao gerar links");
+    }
 
     if (!dataRes.links || !dataRes.links.length) {
       status.className = "warn";
@@ -183,12 +203,12 @@ async function gerar() {
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.links.length} pedido(s) encontrado(s)`;
+    status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
 
-    // 🔥 LIMITADOR (evita travar tela)
-    const limite = 300;
-
-    dataRes.links.slice(0, limite).forEach(l => {
+    // =========================
+    // 🔗 LISTAGEM
+    // =========================
+    dataRes.links.forEach(l => {
 
       const el = document.createElement('div');
       el.className = "link-box";
@@ -206,13 +226,6 @@ async function gerar() {
 
       div.appendChild(el);
     });
-
-    if (dataRes.links.length > limite) {
-      const aviso = document.createElement('p');
-      aviso.className = "warn";
-      aviso.innerHTML = `⚠️ Exibindo apenas os primeiros ${limite} resultados`;
-      div.appendChild(aviso);
-    }
 
   } catch (err) {
 
@@ -248,6 +261,10 @@ function whatsapp(link) {
 }
 
 </script>
+
+<footer>
+  <p style="text-align: center;">&copy; Top Cestas - 2025 - Sistema de rastreio de pedidos</p>
+</footer>
 
 </body>
 </html>

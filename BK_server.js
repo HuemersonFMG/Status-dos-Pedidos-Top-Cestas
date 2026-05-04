@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 
-// 🔥 fetch compatível com Render
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
@@ -36,7 +35,6 @@ app.use((req, res, next) => {
 // 🔐 LOGIN
 // =========================
 async function login() {
-  console.log("🔐 Login Sankhya...");
 
   const payload = {
     serviceName: "MobileLoginSP.login",
@@ -59,10 +57,8 @@ async function login() {
   const cookie = rawCookie.split(";")[0];
 
   if (!cookie) {
-    throw new Error("Falha ao obter cookie Sankhya");
+    throw new Error("Erro ao autenticar no Sankhya");
   }
-
-  console.log("🍪 Cookie OK");
 
   return cookie;
 }
@@ -77,17 +73,51 @@ function gerarToken(nunota) {
     .digest('hex');
 }
 
+//===========================
+//FORMAT DATA
+//===========================
+function formatarDataBR(data) {
+  if (!data) return "";
+
+  const limpa = data.split(" ")[0]; // remove hora
+
+  const [dia, mes, ano] = limpa.split("/");
+
+  return `${ano}-${mes}-${dia}`; // converte pra ISO
+}
+
 // =========================
-// 🔥 NORMALIZADOR
+// 📦 DEFINIR ARQUIVO
 // =========================
-function normalizarRegistro(r) {
-  return {
-    NUNOTA: String(r.NUNOTA?.$ || '').trim(),
-    CGC_CPF: String(r.CGC_CPF?.$ || '').replace(/\D/g, ''),
-    ORDEMCARGA: String(r.ORDEMCARGA?.$ || '').trim(),
-    DTNEG: r.DTNEG?.$ || '',
-    NOMEPARC: r.NOMEPARC?.$
-  };
+function montarArquivo(nunota, registro) {
+
+  const temFoto =
+    registro.FOTO_ENTREGA &&
+    registro.FOTO_ENTREGA.$ &&
+    registro.FOTO_ENTREGA.$ !== "";
+
+  const temComprov =
+    registro.FOTO_COMPROV &&
+    registro.FOTO_COMPROV.$ &&
+    registro.FOTO_COMPROV.$ !== "";
+
+  // 🔥 PRIORIDADE: FOTO APP
+  if (temFoto) {
+    return {
+      url: `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`,
+      tipo: "img"
+    };
+  }
+
+  // 🔥 FALLBACK: PDF
+  if (temComprov) {
+    return {
+      url: `${BASE_URL}/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${nunota}.dbimage`,
+      tipo: "pdf"
+    };
+  }
+
+  return null;
 }
 
 // =========================
@@ -96,15 +126,15 @@ function normalizarRegistro(r) {
 app.post('/api/gerar-links', async (req, res) => {
   try {
 
-    let { cnpj, ordemCarga, data } = req.body;
+    const { cnpj, ordemCarga, data } = req.body;
 
-    cnpj = (cnpj || "").replace(/\D/g, '');
-    ordemCarga = (ordemCarga || "").trim();
+    const documento = (cnpj || "").replace(/\D/g, '');
+    const ordem = ordemCarga ? String(ordemCarga) : null;
 
-    // 🔥 validação obrigatória
-    if ((!cnpj && !ordemCarga) || (cnpj && ordemCarga)) {
+    // 🔥 validação exclusiva
+    if ((!documento && !ordem) || (documento && ordem)) {
       return res.status(400).json({
-        erro: "Informe apenas CPF/CNPJ OU Ordem de Carga"
+        erro: "Informe CPF/CNPJ OU Ordem de Carga (apenas um)"
       });
     }
 
@@ -119,8 +149,6 @@ app.post('/api/gerar-links', async (req, res) => {
       }
     };
 
-    console.log("📤 Buscando VIEW LIGHT...");
-
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
@@ -133,62 +161,48 @@ app.post('/api/gerar-links', async (req, res) => {
       }
     );
 
-    const text = await response.text();
-
-    if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
-    }
-
-    const json = JSON.parse(text);
-
-    if (json?.tsError) {
-      console.error("❌ Sankhya:", json.tsError);
-      return res.json({ total: 0, links: [] });
-    }
+    const json = await response.json();
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
+    const rec = json?.responseBody?.records?.record;
+
+    if (rec) {
+      lista = Array.isArray(rec) ? rec : [rec];
     }
 
-    console.log("📦 Total bruto:", lista.length);
+    // 🔥 FILTRO CORRETO
+    const filtrados = lista.filter(r => {
 
-    const listaNormalizada = lista.map(normalizarRegistro);
+      const doc = (r.CGC_CPF?.$ || "").replace(/\D/g, '');
+      const oc = r.ORDEMCARGA?.$ ? String(r.ORDEMCARGA.$) : "";
 
-    // 🔥 FILTRO REAL
-    const filtrados = listaNormalizada.filter(r => {
+      if (documento && doc !== documento) return false;
+      if (ordem && oc !== ordem) return false;
 
-      if (cnpj) {
-        return r.CGC_CPF === cnpj;
+      if (data) {
+        return new Date(r.DTNEG?.$) >= new Date(data);
       }
 
-      if (ordemCarga) {
-        return r.ORDEMCARGA === ordemCarga;
-      }
-
-      return false;
+      return true;
     });
-
-    console.log("📊 Filtrados:", filtrados.length);
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const links = filtrados.map(r => ({
-      nunota: r.NUNOTA,
-      link: `${baseUrl}/index.html?nunota=${r.NUNOTA}&token=${gerarToken(r.NUNOTA)}`
+      nunota: r.NUNOTA.$,
+      link: `${baseUrl}/index.html?nunota=${r.NUNOTA.$}&token=${gerarToken(r.NUNOTA.$)}`
     }));
 
     res.json({ total: links.length, links });
 
   } catch (err) {
-    console.error("❌ ERRO /gerar-links:", err);
+    console.error("❌ ERRO gerar-links:", err);
     res.status(500).json({ erro: err.message });
   }
 });
 
 // =========================
-// 🔎 CONSULTA PEDIDO
+// 🔎 CONSULTA PEDIDO (CORRIGIDO)
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -214,8 +228,6 @@ app.get('/api/pedido', async (req, res) => {
       }
     };
 
-    console.log("📤 Buscando pedido...");
-
     const response = await fetch(
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
@@ -228,57 +240,52 @@ app.get('/api/pedido', async (req, res) => {
       }
     );
 
-    const text = await response.text();
-
-    if (!response.ok || text.startsWith("<")) {
-      throw new Error("Erro na comunicação com Sankhya");
-    }
-
-    const json = JSON.parse(text);
-
-    if (json?.tsError) {
-      console.error("❌ Sankhya:", json.tsError);
-      return res.json({ rows: [] });
-    }
+    const json = await response.json();
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
+    const rec = json?.responseBody?.records?.record;
+
+    if (rec) {
+      lista = Array.isArray(rec) ? rec : [rec];
     }
 
-    const listaNormalizada = lista.map(normalizarRegistro);
+    // 🔥 BUSCA EXATA POR NUNOTA
+    const pedido = lista.find(r => String(r.NUNOTA.$) === String(nunota));
 
-    // 🔥 AGORA SIM: busca correta
-    const pedidoBase = listaNormalizada.find(r => r.NUNOTA === String(nunota));
-
-    if (!pedidoBase) {
+    if (!pedido) {
       return res.json({ rows: [] });
     }
 
-    // 🔥 pega o original (com campos completos)
-    const pedidoOriginal = lista.find(r => String(r.NUNOTA?.$).trim() === String(nunota));
-
-    // 🔥 DETECÇÃO DE ARQUIVO
-    let tipoFoto = 0;
-
-    if (pedidoOriginal.FOTO_ENTREGA) tipoFoto = 1;
-    else if (pedidoOriginal.FOTO_COMPROV) tipoFoto = 2;
+    // 🔥 ARQUIVO COM FALLBACK INTELIGENTE
+    const arquivo = montarArquivo(nunota, pedido);
 
     res.json({
       rows: [{
-        NUNOTA: pedidoBase.NUNOTA,
-        NOMEPARC: pedidoBase.NOMEPARC,
-        CGC_CPF: pedidoBase.CGC_CPF,
-        ST_ENTREGAS: pedidoOriginal.ST_ENTREGAS?.$,
+        NUNOTA: pedido.NUNOTA?.$,
+        NUMNOTA: pedido.NUMNOTA?.$,
 
-        TIPO_FOTO: tipoFoto,
-        STATUS_FOTO: tipoFoto ? "Disponível" : "Sem comprovante"
+        NOMEPARC: pedido.NOMEPARC?.$,
+        CGC_CPF: pedido.CGC_CPF?.$,
+
+        DTNEG: formatarDataBR(pedido.DTNEG?.$),
+        ORDEMCARGA: pedido.ORDEMCARGA?.$,
+
+        TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || "").trim(),
+
+        ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
+
+        ARQUIVO: arquivo,
+
+        STATUS_FOTO: arquivo
+          ? (arquivo.tipo === "img"
+              ? "Foto Entrega"
+              : "Comprovante PDF")
+          : "Sem comprovante"
       }]
     });
 
   } catch (err) {
-    console.error("❌ ERRO /pedido:", err);
+    console.error("❌ ERRO pedido:", err);
     res.status(500).json({ erro: err.message });
   }
 });
@@ -287,5 +294,5 @@ app.get('/api/pedido', async (req, res) => {
 // START
 // =========================
 app.listen(PORT, () => {
-  console.log(`🚀 Rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

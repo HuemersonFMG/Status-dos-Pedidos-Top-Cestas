@@ -15,7 +15,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Top || Pedidos</title>
+<title>Tracker de Pedidos</title>
+
 <link rel="stylesheet" href="Styles/Styles.css">
 <link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
 
@@ -46,11 +47,6 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
-hr {
-  margin: 15px 0;
-}
-
-/* POPUP */
 .popup {
   position: fixed;
   top:0;
@@ -65,15 +61,9 @@ hr {
   z-index: 9999;
 }
 
-.viewer {
-  max-width: 90%;
-  max-height: 80%;
-  overflow: hidden;
-}
-
 .viewer img {
-  max-width: 100%;
-  max-height: 100%;
+  max-width: 90vw;
+  max-height: 80vh;
   transform-origin: center;
   transition: transform 0.2s;
 }
@@ -84,14 +74,9 @@ hr {
   border: none;
 }
 
-.controls {
-  margin-top: 10px;
-}
-
 .controls button {
   margin: 5px;
-  padding: 8px 12px;
-  cursor: pointer;
+  padding: 8px;
 }
 
 .close {
@@ -103,29 +88,26 @@ hr {
   cursor: pointer;
 }
 </style>
-
 </head>
 
 <body>
 
-  <header>
-    <a href="https://topalimentos.shop/produtos/">
-        <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-             alt="LogoTopCestas">
-    </a>
-    <h1>Sistema de rastreio de pedidos.</h1>
-  </header>
+<header>
+  <a href="https://topalimentos.shop/produtos/" target="_blank">
+    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+         alt="LogoTopCestas" style="max-height:60px;">
+  </a>
+  <h1>Status do Pedido</h1>
+</header>
 
-<h2>📦 Status do Pedido</h2>
+<h2>📦 Acompanhamento</h2>
 
 <div id="conteudo"></div>
 
 <!-- POPUP -->
 <div class="popup" id="popup">
   <span class="close" onclick="fechar()">✖</span>
-
   <div class="viewer" id="viewer"></div>
-
   <div class="controls" id="controls"></div>
 </div>
 
@@ -139,15 +121,17 @@ function getParam(nome) {
 }
 
 // =========================
-// ⏱️ FETCH COM TIMEOUT
+// ⏱️ FETCH
 // =========================
-function fetchComTimeout(url, timeout = 20000) {
-  return Promise.race([
-    fetch(url),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
-    )
-  ]);
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.erro || "Erro na requisição");
+  }
+
+  return data;
 }
 
 // =========================
@@ -155,11 +139,7 @@ function fetchComTimeout(url, timeout = 20000) {
 // =========================
 function formatarData(data) {
   if (!data) return "-";
-  try {
-    return new Date(data).toLocaleDateString('pt-BR');
-  } catch {
-    return data;
-  }
+  return new Date(data).toLocaleDateString('pt-BR');
 }
 
 // =========================
@@ -168,22 +148,11 @@ function formatarData(data) {
 let escala = 1;
 let rotacao = 0;
 
-function zoomIn() {
-  escala += 0.2;
-  atualizarTransform();
-}
+function zoomIn() { escala += 0.2; aplicar(); }
+function zoomOut() { escala = Math.max(0.2, escala - 0.2); aplicar(); }
+function girar() { rotacao += 90; aplicar(); }
 
-function zoomOut() {
-  escala = Math.max(0.2, escala - 0.2);
-  atualizarTransform();
-}
-
-function girar() {
-  rotacao += 90;
-  atualizarTransform();
-}
-
-function atualizarTransform() {
+function aplicar() {
   const img = document.getElementById("imgViewer");
   if (img) {
     img.style.transform = `scale(${escala}) rotate(${rotacao}deg)`;
@@ -193,55 +162,37 @@ function atualizarTransform() {
 // =========================
 // 🔍 ABRIR ARQUIVO
 // =========================
-function abrirArquivo(url, tipo) {
+function abrirImagem(url) {
 
-  const popup = document.getElementById('popup');
   const viewer = document.getElementById('viewer');
   const controls = document.getElementById('controls');
 
-  viewer.innerHTML = "";
-  controls.innerHTML = "";
+  viewer.innerHTML = `<img id="imgViewer" src="${url}">`;
 
-  escala = 1;
-  rotacao = 0;
+  controls.innerHTML = `
+    <button onclick="zoomIn()">➕</button>
+    <button onclick="zoomOut()">➖</button>
+    <button onclick="girar()">🔄</button>
+    <button onclick="window.open('${url}')">⬇️</button>
+  `;
 
-  if (tipo === "img") {
-
-    viewer.innerHTML = `<img id="imgViewer" src="${url}">`;
-
-    controls.innerHTML = `
-      <button onclick="zoomIn()">➕ Zoom</button>
-      <button onclick="zoomOut()">➖ Zoom</button>
-      <button onclick="girar()">🔄 Girar</button>
-      <button onclick="baixar('${url}')">⬇️ Download</button>
-    `;
-
-  } else {
-
-    viewer.innerHTML = `<iframe src="${url}"></iframe>`;
-
-    controls.innerHTML = `
-      <button onclick="window.open('${url}','_blank')">🔗 Abrir PDF</button>
-      <button onclick="baixar('${url}')">⬇️ Download</button>
-    `;
-  }
-
-  popup.style.display = "flex";
+  document.getElementById('popup').style.display = "flex";
 }
 
-// =========================
-// ⬇️ DOWNLOAD
-// =========================
-function baixar(url) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.target = "_blank";
-  a.click();
+function abrirPDF(url) {
+
+  const viewer = document.getElementById('viewer');
+  const controls = document.getElementById('controls');
+
+  viewer.innerHTML = `<iframe src="${url}"></iframe>`;
+
+  controls.innerHTML = `
+    <button onclick="window.open('${url}')">🔗 Abrir</button>
+  `;
+
+  document.getElementById('popup').style.display = "flex";
 }
 
-// =========================
-// ❌ FECHAR
-// =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
 }
@@ -261,33 +212,20 @@ async function carregar() {
     return;
   }
 
-  div.innerHTML = "⏳ Carregando pedido...";
+  div.innerHTML = "⏳ Carregando...";
 
   try {
 
-    const res = await fetchComTimeout(`/api/pedido?nunota=${nunota}&token=${token}`);
-    const texto = await res.text();
+    const data = await fetchJSON(`/api/pedido?nunota=${nunota}&token=${token}`);
+    const p = data.rows[0];
 
-    let data;
-
-    try {
-      data = JSON.parse(texto);
-    } catch {
-      console.error("❌ Resposta inválida:", texto);
-      throw new Error("Servidor retornou resposta inválida");
-    }
-
-    if (!res.ok) {
-      throw new Error(data.erro || "Erro ao consultar pedido");
-    }
-
-    if (!data.rows || !data.rows.length) {
-      div.innerHTML = "<p class='warn'>⚠️ Pedido não encontrado</p>";
+    if (!p) {
+      div.innerHTML = "<p class='warn'>Pedido não encontrado</p>";
       return;
     }
 
-    const p = data.rows[0];
-    const arq = p.ARQUIVO;
+    const urlImg = `/api/comprovante/imagem?nunota=${nunota}&token=${token}`;
+    const urlPdf = `/api/comprovante/pdf?nunota=${nunota}&token=${token}`;
 
     div.innerHTML = `
       <div class="card">
@@ -306,24 +244,27 @@ async function carregar() {
 
         <p class="status">${p.ST_ENTREGAS}</p>
 
-        <p><b>📎 Comprovante:</b> ${p.STATUS_FOTO}</p>
+        <hr>
+
+        <p><b>📎 Comprovante:</b></p>
 
         ${
-          arq
-          ? `<p style="color:blue;cursor:pointer"
-                onclick="abrirArquivo('${arq.url}','${arq.tipo}')">
-                📎 Visualizar comprovante
-            </p>`
-          : `<p>📷 Sem comprovante disponível</p>`
+          p.TEM_FOTO
+            ? `<p style="color:blue;cursor:pointer" onclick="abrirImagem('${urlImg}')">
+                 📷 Visualizar Foto
+               </p>`
+            : p.TEM_PDF
+            ? `<p style="color:blue;cursor:pointer" onclick="abrirPDF('${urlPdf}')">
+                 📄 Visualizar PDF
+               </p>`
+            : `<p>Sem comprovante disponível</p>`
         }
 
       </div>
     `;
 
   } catch (err) {
-
-    console.error("❌ Erro:", err);
-
+    console.error(err);
     div.innerHTML = `<p class="erro">❌ ${err.message}</p>`;
   }
 }
@@ -334,12 +275,13 @@ carregar();
 </script>
 
 <footer>
-  <p style="text-align: center;">&copy; Top Cestas - 2025 - Sistema de rastreio de pedidos.</p>
+  <p style="text-align:center;">
+    &copy; Top Cestas - 2026 - Monitoramento de Pedidos
+  </p>
 </footer>
 
 </body>
 </html>
-
 
 
 <!--
