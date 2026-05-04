@@ -77,14 +77,13 @@ function gerarToken(nunota) {
 //FORMAT DATA
 //===========================
 function formatarDataBR(data) {
-  if (!data) return null;
+  if (!data) return "";
 
-  try {
-    const d = new Date(data);
-    return d.toLocaleDateString('pt-BR');
-  } catch {
-    return data;
-  }
+  const limpa = data.split(" ")[0]; // remove hora
+
+  const [dia, mes, ano] = limpa.split("/");
+
+  return `${ano}-${mes}-${dia}`; // converte pra ISO
 }
 
 // =========================
