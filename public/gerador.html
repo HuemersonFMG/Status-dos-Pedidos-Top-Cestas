@@ -5,7 +5,7 @@
 <title>Top - Gerador</title>
 
 <link rel="stylesheet" href="Styles/Styles.css">
-<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
 
 <style>
 body {
@@ -14,9 +14,7 @@ body {
   background: #f5f5f5;
 }
 
-h2 {
-  margin-bottom: 15px;
-}
+h2 { margin-bottom: 10px; }
 
 input, button {
   padding: 10px;
@@ -24,9 +22,7 @@ input, button {
   font-size: 14px;
 }
 
-button {
-  cursor: pointer;
-}
+button { cursor: pointer; }
 
 #status {
   margin-top: 10px;
@@ -60,14 +56,14 @@ button {
 <body>
 
 <header>
-  <a href="https://topalimentos.shop/produtos/" target="_blank">
-    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-         alt="LogoTopCestas" style="max-height:60px;">
+  <a href="https://topalimentos.shop/produtos/">
+    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png"
+         alt="Logo Top Cestas">
   </a>
-  <h1>Entregas - Gerador de Links</h1>
+  <h1>Gerador de Links de Pedidos</h1>
 </header>
 
-<h2>🔗 Gerar Links de Pedidos</h2>
+<h2>🔗 Gerar Links</h2>
 
 <input type="text" id="cnpj" placeholder="CPF ou CNPJ">
 <input type="text" id="ordemCarga" placeholder="Ordem de Carga">
@@ -81,7 +77,7 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAR DOC
+// 🔧 HELPERS
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
@@ -95,24 +91,40 @@ const ordemInput = document.getElementById('ordemCarga');
 
 cnpjInput.addEventListener('input', () => {
   ordemInput.disabled = !!cnpjInput.value.trim();
-  if (cnpjInput.value.trim()) ordemInput.value = "";
+  if (cnpjInput.value) ordemInput.value = "";
 });
 
 ordemInput.addEventListener('input', () => {
   cnpjInput.disabled = !!ordemInput.value.trim();
-  if (ordemInput.value.trim()) cnpjInput.value = "";
+  if (ordemInput.value) cnpjInput.value = "";
 });
 
 // =========================
-// ⏱️ FETCH COM TIMEOUT
+// ⏱️ FETCH SEGURO
 // =========================
-function fetchComTimeout(url, options, timeout = 20000) {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo esgotado")), timeout)
-    )
-  ]);
+async function fetchSeguro(url, options) {
+
+  const res = await fetch(url, options);
+  const text = await res.text();
+
+  if (!text) {
+    throw new Error("Resposta vazia do servidor");
+  }
+
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.error("❌ Resposta inválida:", text);
+    throw new Error("Erro ao processar resposta do servidor");
+  }
+
+  if (!res.ok) {
+    throw new Error(data.erro || "Erro na requisição");
+  }
+
+  return data;
 }
 
 // =========================
@@ -121,15 +133,15 @@ function fetchComTimeout(url, options, timeout = 20000) {
 async function gerar() {
 
   const documento = limparDoc(cnpjInput.value);
-  const ordem = ordemInput.value.trim() || null;
+  const ordem = ordemInput.value.trim();
   const data = document.getElementById('data').value;
 
   const status = document.getElementById('status');
-  const container = document.getElementById('resultado');
+  const div = document.getElementById('resultado');
 
-  container.innerHTML = "";
+  div.innerHTML = "";
 
-  // 🔥 validações
+  // 🔥 VALIDAÇÃO
   if (!documento && !ordem) {
     status.className = "erro";
     status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
@@ -138,7 +150,7 @@ async function gerar() {
 
   if (documento && ordem) {
     status.className = "erro";
-    status.innerHTML = "❌ Use apenas um filtro";
+    status.innerHTML = "❌ Use apenas um filtro por vez";
     return;
   }
 
@@ -149,25 +161,21 @@ async function gerar() {
   }
 
   status.className = "";
-  status.innerHTML = "⏳ Gerando links...";
+  status.innerHTML = "⏳ Buscando pedidos...";
 
   try {
 
-    const res = await fetchComTimeout('/api/gerar-links', {
+    const payload = {
+      cnpj: documento || null,
+      ordemCarga: ordem || null,
+      data: data || null
+    };
+
+    const dataRes = await fetchSeguro('/api/gerar-links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cnpj: documento || null,
-        ordemCarga: ordem || null,
-        data: data || null
-      })
+      body: JSON.stringify(payload)
     });
-
-    const dataRes = await res.json();
-
-    if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro no servidor");
-    }
 
     if (!dataRes.links || !dataRes.links.length) {
       status.className = "warn";
@@ -178,9 +186,7 @@ async function gerar() {
     status.className = "ok";
     status.innerHTML = `✅ ${dataRes.total} pedido(s) encontrado(s)`;
 
-    // 🚀 PERFORMANCE (IMPORTANTE)
-    const fragment = document.createDocumentFragment();
-
+    // 🔗 LISTAGEM
     dataRes.links.forEach(l => {
 
       const el = document.createElement('div');
@@ -197,14 +203,12 @@ async function gerar() {
         </div>
       `;
 
-      fragment.appendChild(el);
+      div.appendChild(el);
     });
-
-    container.appendChild(fragment);
 
   } catch (err) {
 
-    console.error(err);
+    console.error("❌ Erro:", err);
 
     status.className = "erro";
     status.innerHTML = `❌ ${err.message}`;
@@ -216,9 +220,7 @@ async function gerar() {
 // =========================
 function copiar(link) {
   navigator.clipboard.writeText(link)
-    .then(() => {
-      console.log("Copiado:", link);
-    })
+    .then(() => alert("Link copiado!"))
     .catch(() => alert("Erro ao copiar"));
 }
 
@@ -233,18 +235,15 @@ function abrir(link) {
 // 📲 WHATSAPP
 // =========================
 function whatsapp(link) {
-
-  const mensagem = `Acompanhe seu pedido:\n${link}`;
-  const url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
-
-  window.open(url, "_blank");
+  const texto = encodeURIComponent("Acompanhe seu pedido:\n" + link);
+  window.open(`https://wa.me/?text=${texto}`, "_blank");
 }
 
 </script>
 
 <footer>
   <p style="text-align:center;">
-    &copy; Top Cestas - 2026 - Rastreamento de Pedidos
+    © Top Cestas - 2026 - Sistema de rastreio de pedidos
   </p>
 </footer>
 

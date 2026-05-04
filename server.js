@@ -165,7 +165,7 @@ app.post('/api/gerar-links', async (req, res) => {
 });
 
 // =========================
-// 🔎 CONSULTA PEDIDO
+// 🔎 CONSULTA PEDIDO (SEM BLOB)
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -218,8 +218,7 @@ app.get('/api/pedido', async (req, res) => {
       return res.json({ rows: [] });
     }
 
-    const temFoto = pedido.FOTO_BLOB?.$;
-    const temPdf = pedido.PDF_BLOB?.$;
+    const tipo = Number(pedido.TIPO_FOTO?.$ || 0);
 
     res.json({
       rows: [{
@@ -232,8 +231,8 @@ app.get('/api/pedido', async (req, res) => {
         TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || "").trim(),
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
-        TEM_FOTO: !!temFoto,
-        TEM_PDF: !!temPdf
+        TEM_FOTO: tipo === 1,
+        TEM_PDF: tipo === 2
       }]
     });
 
