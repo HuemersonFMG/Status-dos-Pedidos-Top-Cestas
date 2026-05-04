@@ -248,16 +248,30 @@ app.get('/api/pedido', async (req, res) => {
 
     res.json({
       rows: [{
-        NUNOTA: pedido.NUNOTA.$,
+        NUNOTA: pedido.NUNOTA?.$,
         NUMNOTA: pedido.NUMNOTA?.$,
+
         NOMEPARC: pedido.NOMEPARC?.$,
         CGC_CPF: pedido.CGC_CPF?.$,
+
+        // 🔥 NOVOS CAMPOS
+        DTNEG: pedido.DTNEG?.$,
+        ORDEMCARGA: pedido.ORDEMCARGA?.$,
+
+        TRANSPORTADORA:
+          pedido.TRANSPORTADORA?.$ ||
+          pedido.NOMEPARC_TRANSP?.$ ||
+          pedido.NOMECONTATO?.$ ||
+          "-",
+
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
         ARQUIVO: arquivo,
 
         STATUS_FOTO: arquivo
-          ? (arquivo.tipo === "img" ? "Foto Entrega" : "Comprovante PDF")
+          ? (arquivo.tipo === "img"
+              ? "Foto Entrega"
+              : "Comprovante PDF")
           : "Sem comprovante"
       }]
     });

@@ -44,6 +44,10 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
+hr {
+  margin: 15px 0;
+}
+
 /* POPUP */
 .popup {
   position: fixed;
@@ -136,6 +140,18 @@ function fetchComTimeout(url, timeout = 20000) {
 }
 
 // =========================
+// 📅 FORMATAR DATA
+// =========================
+function formatarData(data) {
+  if (!data) return "-";
+  try {
+    return new Date(data).toLocaleDateString('pt-BR');
+  } catch {
+    return data;
+  }
+}
+
+// =========================
 // 🎛️ CONTROLE IMAGEM
 // =========================
 let escala = 1;
@@ -178,7 +194,6 @@ function abrirArquivo(url, tipo) {
   escala = 1;
   rotacao = 0;
 
-  // 🖼️ IMAGEM
   if (tipo === "img") {
 
     viewer.innerHTML = `<img id="imgViewer" src="${url}">`;
@@ -189,14 +204,10 @@ function abrirArquivo(url, tipo) {
       <button onclick="girar()">🔄 Girar</button>
       <button onclick="baixar('${url}')">⬇️ Download</button>
     `;
-  }
 
-  // 📄 PDF
-  else if (tipo === "pdf") {
+  } else {
 
-    viewer.innerHTML = `
-      <iframe src="${url}"></iframe>
-    `;
+    viewer.innerHTML = `<iframe src="${url}"></iframe>`;
 
     controls.innerHTML = `
       <button onclick="window.open('${url}','_blank')">🔗 Abrir PDF</button>
@@ -244,7 +255,6 @@ async function carregar() {
   try {
 
     const res = await fetchComTimeout(`/api/pedido?nunota=${nunota}&token=${token}`);
-
     const texto = await res.text();
 
     let data;
@@ -270,15 +280,22 @@ async function carregar() {
 
     div.innerHTML = `
       <div class="card">
-        <p><b>Separação (Minuta):</b> ${p.MINUTA || "-"}</p>
-        <p><b>Pedido:</b> ${p.NUNOTA}</p>
-        <p><b>Cliente:</b> ${p.NOMEPARC}</p>
-        <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
-        <p><b>Transportadora:</b> ${p.TRANSPORTADORA || "-"}</p>
+
+        <p><b>📅 Data:</b> ${formatarData(p.DTNEG)}</p>
+        <p><b>🚚 Ordem de Carga:</b> ${p.ORDEMCARGA || "-"}</p>
+
+        <hr>
+
+        <p><b>🧾 Pedido:</b> ${p.NUNOTA}</p>
+        <p><b>👤 Cliente:</b> ${p.NOMEPARC}</p>
+        <p><b>📄 Documento:</b> ${p.CGC_CPF || "-"}</p>
+        <p><b>🚛 Transportadora:</b> ${p.TRANSPORTADORA || "-"}</p>
+
+        <hr>
 
         <p class="status">${p.ST_ENTREGAS}</p>
 
-        <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
+        <p><b>📎 Comprovante:</b> ${p.STATUS_FOTO}</p>
 
         ${
           arq
@@ -288,6 +305,7 @@ async function carregar() {
             </p>`
           : `<p>📷 Sem comprovante disponível</p>`
         }
+
       </div>
     `;
 
