@@ -11,9 +11,7 @@ body {
   background: #f5f5f5;
 }
 
-h2 {
-  margin-bottom: 15px;
-}
+h2 { margin-bottom: 15px; }
 
 input, button {
   padding: 10px;
@@ -21,9 +19,7 @@ input, button {
   font-size: 14px;
 }
 
-button {
-  cursor: pointer;
-}
+button { cursor: pointer; }
 
 #status {
   margin-top: 10px;
@@ -52,7 +48,6 @@ button {
   font-size: 12px;
 }
 </style>
-
 </head>
 
 <body>
@@ -63,6 +58,8 @@ button {
 <input type="text" id="ordemCarga" placeholder="Ordem de Carga">
 <input type="date" id="data">
 
+<br>
+
 <button onclick="gerar()">Gerar Links</button>
 
 <div id="status"></div>
@@ -71,35 +68,35 @@ button {
 <script>
 
 // =========================
-// 🔥 CONTROLE EXCLUSIVO CAMPOS
-// =========================
-const campoCNPJ = document.getElementById('cnpj');
-const campoOC = document.getElementById('ordemCarga');
-
-campoCNPJ.addEventListener('input', () => {
-  if (campoCNPJ.value.trim()) {
-    campoOC.disabled = true;
-    campoOC.value = "";
-  } else {
-    campoOC.disabled = false;
-  }
-});
-
-campoOC.addEventListener('input', () => {
-  if (campoOC.value.trim()) {
-    campoCNPJ.disabled = true;
-    campoCNPJ.value = "";
-  } else {
-    campoCNPJ.disabled = false;
-  }
-});
-
-// =========================
-// 🔥 NORMALIZAR DOCUMENTO
+// 🔥 NORMALIZA
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
 }
+
+// =========================
+// 🔁 CONTROLE EXCLUSIVO
+// =========================
+const campoDoc = document.getElementById('cnpj');
+const campoOrdem = document.getElementById('ordemCarga');
+
+campoDoc.addEventListener('input', () => {
+  if (campoDoc.value.trim()) {
+    campoOrdem.value = "";
+    campoOrdem.disabled = true;
+  } else {
+    campoOrdem.disabled = false;
+  }
+});
+
+campoOrdem.addEventListener('input', () => {
+  if (campoOrdem.value.trim()) {
+    campoDoc.value = "";
+    campoDoc.disabled = true;
+  } else {
+    campoDoc.disabled = false;
+  }
+});
 
 // =========================
 // ⏱️ FETCH COM TIMEOUT
@@ -108,32 +105,29 @@ function fetchComTimeout(url, options, timeout = 20000) {
   return Promise.race([
     fetch(url, options),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
+      setTimeout(() => reject(new Error("Tempo esgotado")), timeout)
     )
   ]);
 }
 
 // =========================
-// 🔍 GERAR LINKS
+// 🚀 GERAR LINKS
 // =========================
 async function gerar() {
 
-  const cnpjRaw = campoCNPJ.value;
-  const ocRaw = campoOC.value;
+  const cnpj = limparDoc(campoDoc.value);
+  const ordemCarga = campoOrdem.value.trim();
   const data = document.getElementById('data').value;
-
-  const cnpj = limparDoc(cnpjRaw);
-  const ordemCarga = limparDoc(ocRaw);
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // 🔥 VALIDAÇÃO
+  // 🔒 VALIDAÇÃO EXCLUSIVA
   if (!cnpj && !ordemCarga) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
+    status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga";
     return;
   }
 
@@ -145,19 +139,19 @@ async function gerar() {
 
   if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
     status.className = "erro";
-    status.innerHTML = "❌ CPF deve ter 11 ou CNPJ 14 dígitos";
+    status.innerHTML = "❌ CPF (11) ou CNPJ (14)";
     return;
   }
 
   status.className = "";
-  status.innerHTML = "⏳ Gerando links...";
+  status.innerHTML = "⏳ Buscando pedidos...";
 
   try {
 
     const payload = {
       cnpj: cnpj || null,
       ordemCarga: ordemCarga || null,
-      data
+      data: data || null
     };
 
     console.log("📤 Enviando:", payload);
@@ -170,34 +164,31 @@ async function gerar() {
 
     const texto = await res.text();
 
-    let dataRes;
+    let json;
 
     try {
-      dataRes = JSON.parse(texto);
+      json = JSON.parse(texto);
     } catch {
       console.error("❌ Resposta inválida:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
-    console.log("📦 Retorno:", dataRes);
-
     if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro HTTP");
+      throw new Error(json.erro || "Erro no servidor");
     }
 
-    if (!dataRes.links || !dataRes.links.length) {
+    console.log("📦 Retorno:", json);
+
+    if (!json.links || json.links.length === 0) {
       status.className = "warn";
       status.innerHTML = "⚠️ Nenhum pedido encontrado";
       return;
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
+    status.innerHTML = `✅ ${json.total} pedido(s) encontrado(s)`;
 
-    // 🔥 PERFORMANCE: limita render
-    const limite = 200;
-
-    dataRes.links.slice(0, limite).forEach(l => {
+    json.links.forEach(l => {
 
       const el = document.createElement('div');
       el.className = "link-box";
@@ -215,13 +206,6 @@ async function gerar() {
 
       div.appendChild(el);
     });
-
-    if (dataRes.links.length > limite) {
-      const aviso = document.createElement('div');
-      aviso.className = "warn";
-      aviso.innerHTML = `⚠️ Exibindo apenas ${limite} de ${dataRes.links.length} resultados`;
-      div.appendChild(aviso);
-    }
 
   } catch (err) {
 

@@ -55,40 +55,45 @@ body {
   display:none;
   justify-content:center;
   align-items:center;
-  z-index:9999;
+  z-index: 9999;
+  flex-direction: column;
 }
 
 .viewer {
-  position: relative;
-  max-width: 95%;
-  max-height: 95%;
+  max-width: 90%;
+  max-height: 80%;
+  overflow: hidden;
 }
 
-.viewer img, .viewer iframe {
+.viewer img {
   max-width: 100%;
   max-height: 100%;
   transform-origin: center;
+  transition: transform 0.2s;
 }
 
-/* CONTROLES */
+.viewer iframe {
+  width: 90vw;
+  height: 80vh;
+  border: none;
+}
+
 .controls {
-  position: absolute;
-  top: -45px;
-  left: 0;
+  margin-top: 10px;
 }
 
 .controls button {
-  padding: 5px 10px;
-  margin-right: 5px;
+  margin: 5px;
+  padding: 8px 12px;
   cursor: pointer;
 }
 
 .close {
   position: absolute;
-  top: -45px;
-  right: 0;
+  top: 15px;
+  right: 20px;
   color: white;
-  font-size: 22px;
+  font-size: 28px;
   cursor: pointer;
 }
 </style>
@@ -102,18 +107,11 @@ body {
 
 <!-- POPUP -->
 <div class="popup" id="popup">
-  <div class="viewer">
+  <span class="close" onclick="fechar()">✖</span>
 
-    <div class="controls">
-      <button onclick="zoomIn()">➕</button>
-      <button onclick="zoomOut()">➖</button>
-      <button onclick="rotate()">🔄</button>
-    </div>
+  <div class="viewer" id="viewer"></div>
 
-    <span class="close" onclick="fechar()">✖</span>
-
-    <div id="viewerBody"></div>
-  </div>
+  <div class="controls" id="controls"></div>
 </div>
 
 <script>
@@ -126,7 +124,7 @@ function getParam(nome) {
 }
 
 // =========================
-// ⏱️ FETCH TIMEOUT
+// ⏱️ FETCH COM TIMEOUT
 // =========================
 function fetchComTimeout(url, timeout = 20000) {
   return Promise.race([
@@ -138,30 +136,30 @@ function fetchComTimeout(url, timeout = 20000) {
 }
 
 // =========================
-// 🔎 CONTROLE VIEWER
+// 🎛️ CONTROLE VISUAL
 // =========================
-let scale = 1;
-let rotation = 0;
+let escala = 1;
+let rotacao = 0;
 
 function zoomIn() {
-  scale += 0.2;
-  aplicarTransform();
+  escala += 0.2;
+  atualizarTransform();
 }
 
 function zoomOut() {
-  scale -= 0.2;
-  aplicarTransform();
+  escala -= 0.2;
+  atualizarTransform();
 }
 
-function rotate() {
-  rotation += 90;
-  aplicarTransform();
+function girar() {
+  rotacao += 90;
+  atualizarTransform();
 }
 
-function aplicarTransform() {
-  const el = document.querySelector('#viewerBody img');
-  if (el) {
-    el.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+function atualizarTransform() {
+  const img = document.getElementById("imgViewer");
+  if (img) {
+    img.style.transform = `scale(${escala}) rotate(${rotacao}deg)`;
   }
 }
 
@@ -171,33 +169,56 @@ function aplicarTransform() {
 function abrirArquivo(arq) {
 
   const popup = document.getElementById('popup');
-  const body = document.getElementById('viewerBody');
+  const viewer = document.getElementById('viewer');
+  const controls = document.getElementById('controls');
 
-  scale = 1;
-  rotation = 0;
+  viewer.innerHTML = "";
+  controls.innerHTML = "";
 
-  // 🔥 limpa
-  body.innerHTML = "";
+  escala = 1;
+  rotacao = 0;
 
+  // =====================
+  // 🖼️ IMAGEM
+  // =====================
   if (arq.tipo === "img") {
 
-    body.innerHTML = `<img src="${arq.url}">`;
+    viewer.innerHTML = `<img id="imgViewer" src="${arq.url}">`;
 
-  } else {
+    controls.innerHTML = `
+      <button onclick="zoomIn()">➕ Zoom</button>
+      <button onclick="zoomOut()">➖ Zoom</button>
+      <button onclick="girar()">🔄 Girar</button>
+      <button onclick="baixar('${arq.url}')">⬇️ Download</button>
+    `;
+  }
 
-    // 🔥 PDF
-    body.innerHTML = `
-      <iframe src="${arq.url}" frameborder="0"></iframe>
-      <p style="color:white;margin-top:10px">
-        Se não visualizar,
-        <a href="${arq.url}" target="_blank" style="color:yellow">
-          clique aqui
-        </a>
-      </p>
+  // =====================
+  // 📄 PDF
+  // =====================
+  else if (arq.tipo === "pdf") {
+
+    viewer.innerHTML = `
+      <iframe src="${arq.url}"></iframe>
+    `;
+
+    controls.innerHTML = `
+      <button onclick="window.open('${arq.url}','_blank')">🔗 Abrir PDF</button>
+      <button onclick="baixar('${arq.url}')">⬇️ Download</button>
     `;
   }
 
   popup.style.display = "flex";
+}
+
+// =========================
+// ⬇️ DOWNLOAD
+// =========================
+function baixar(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = "_blank";
+  a.click();
 }
 
 // =========================
@@ -249,8 +270,6 @@ async function carregar() {
     }
 
     const p = data.rows[0];
-
-    // 🔥 agora vem do backend já correto
     const arq = p.ARQUIVO;
 
     div.innerHTML = `
@@ -265,8 +284,9 @@ async function carregar() {
 
         ${
           arq
-          ? `<p style="color:blue;cursor:pointer" onclick='abrirArquivo(${JSON.stringify(arq)})'>
-              📎 Visualizar comprovante
+          ? `<p style="color:blue;cursor:pointer"
+                onclick='abrirArquivo(${JSON.stringify(arq)})'>
+                📎 Visualizar comprovante
             </p>`
           : `<p>📷 Sem comprovante disponível</p>`
         }
