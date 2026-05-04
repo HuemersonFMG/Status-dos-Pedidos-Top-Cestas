@@ -11,7 +11,9 @@ body {
   background: #f5f5f5;
 }
 
-h2 { margin-bottom: 15px; }
+h2 {
+  margin-bottom: 15px;
+}
 
 input, button {
   padding: 10px;
@@ -19,7 +21,9 @@ input, button {
   font-size: 14px;
 }
 
-button { cursor: pointer; }
+button {
+  cursor: pointer;
+}
 
 #status {
   margin-top: 10px;
@@ -58,8 +62,6 @@ button { cursor: pointer; }
 <input type="text" id="ordemCarga" placeholder="Ordem de Carga">
 <input type="date" id="data">
 
-<br>
-
 <button onclick="gerar()">Gerar Links</button>
 
 <div id="status"></div>
@@ -68,7 +70,7 @@ button { cursor: pointer; }
 <script>
 
 // =========================
-// 🔥 NORMALIZA
+// 🔥 NORMALIZAR DOC
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
@@ -77,24 +79,24 @@ function limparDoc(valor) {
 // =========================
 // 🔁 CONTROLE EXCLUSIVO
 // =========================
-const campoDoc = document.getElementById('cnpj');
-const campoOrdem = document.getElementById('ordemCarga');
+const cnpjInput = document.getElementById('cnpj');
+const ordemInput = document.getElementById('ordemCarga');
 
-campoDoc.addEventListener('input', () => {
-  if (campoDoc.value.trim()) {
-    campoOrdem.value = "";
-    campoOrdem.disabled = true;
+cnpjInput.addEventListener('input', () => {
+  if (cnpjInput.value.trim()) {
+    ordemInput.disabled = true;
+    ordemInput.value = "";
   } else {
-    campoOrdem.disabled = false;
+    ordemInput.disabled = false;
   }
 });
 
-campoOrdem.addEventListener('input', () => {
-  if (campoOrdem.value.trim()) {
-    campoDoc.value = "";
-    campoDoc.disabled = true;
+ordemInput.addEventListener('input', () => {
+  if (ordemInput.value.trim()) {
+    cnpjInput.disabled = true;
+    cnpjInput.value = "";
   } else {
-    campoDoc.disabled = false;
+    cnpjInput.disabled = false;
   }
 });
 
@@ -105,52 +107,57 @@ function fetchComTimeout(url, options, timeout = 20000) {
   return Promise.race([
     fetch(url, options),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo esgotado")), timeout)
+      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
     )
   ]);
 }
 
 // =========================
-// 🚀 GERAR LINKS
+// 🔍 GERAR LINKS
 // =========================
 async function gerar() {
 
-  const cnpj = limparDoc(campoDoc.value);
-  const ordemCarga = campoOrdem.value.trim();
+  const cnpjRaw = cnpjInput.value;
+  const ordemRaw = ordemInput.value;
   const data = document.getElementById('data').value;
+
+  const documento = limparDoc(cnpjRaw);
+  const ordem = ordemRaw ? ordemRaw.trim() : null;
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // 🔒 VALIDAÇÃO EXCLUSIVA
-  if (!cnpj && !ordemCarga) {
+  // =========================
+  // 🔥 VALIDAÇÃO
+  // =========================
+  if (!documento && !ordem) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga";
+    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
     return;
   }
 
-  if (cnpj && ordemCarga) {
+  if (documento && ordem) {
     status.className = "erro";
     status.innerHTML = "❌ Use apenas um filtro por vez";
     return;
   }
 
-  if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
+  if (documento && documento.length !== 11 && documento.length !== 14) {
     status.className = "erro";
     status.innerHTML = "❌ CPF (11) ou CNPJ (14)";
     return;
   }
 
   status.className = "";
-  status.innerHTML = "⏳ Buscando pedidos...";
+  status.innerHTML = "⏳ Gerando links...";
 
   try {
 
     const payload = {
-      cnpj: cnpj || null,
-      ordemCarga: ordemCarga || null,
+      cnpj: documento || null,
+      ordemCarga: ordem || null,
       data: data || null
     };
 
@@ -164,31 +171,34 @@ async function gerar() {
 
     const texto = await res.text();
 
-    let json;
+    let dataRes;
 
     try {
-      json = JSON.parse(texto);
+      dataRes = JSON.parse(texto);
     } catch {
       console.error("❌ Resposta inválida:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
+    console.log("📦 Retorno:", dataRes);
+
     if (!res.ok) {
-      throw new Error(json.erro || "Erro no servidor");
+      throw new Error(dataRes.erro || "Erro ao gerar links");
     }
 
-    console.log("📦 Retorno:", json);
-
-    if (!json.links || json.links.length === 0) {
+    if (!dataRes.links || !dataRes.links.length) {
       status.className = "warn";
       status.innerHTML = "⚠️ Nenhum pedido encontrado";
       return;
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${json.total} pedido(s) encontrado(s)`;
+    status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
 
-    json.links.forEach(l => {
+    // =========================
+    // 🔗 LISTAGEM
+    // =========================
+    dataRes.links.forEach(l => {
 
       const el = document.createElement('div');
       el.className = "link-box";

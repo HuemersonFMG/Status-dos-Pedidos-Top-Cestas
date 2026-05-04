@@ -55,8 +55,8 @@ body {
   display:none;
   justify-content:center;
   align-items:center;
-  z-index: 9999;
   flex-direction: column;
+  z-index: 9999;
 }
 
 .viewer {
@@ -130,13 +130,13 @@ function fetchComTimeout(url, timeout = 20000) {
   return Promise.race([
     fetch(url),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo esgotado")), timeout)
+      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
     )
   ]);
 }
 
 // =========================
-// 🎛️ CONTROLE VISUAL
+// 🎛️ CONTROLE IMAGEM
 // =========================
 let escala = 1;
 let rotacao = 0;
@@ -147,7 +147,7 @@ function zoomIn() {
 }
 
 function zoomOut() {
-  escala -= 0.2;
+  escala = Math.max(0.2, escala - 0.2);
   atualizarTransform();
 }
 
@@ -166,7 +166,7 @@ function atualizarTransform() {
 // =========================
 // 🔍 ABRIR ARQUIVO
 // =========================
-function abrirArquivo(arq) {
+function abrirArquivo(url, tipo) {
 
   const popup = document.getElementById('popup');
   const viewer = document.getElementById('viewer');
@@ -178,33 +178,29 @@ function abrirArquivo(arq) {
   escala = 1;
   rotacao = 0;
 
-  // =====================
   // 🖼️ IMAGEM
-  // =====================
-  if (arq.tipo === "img") {
+  if (tipo === "img") {
 
-    viewer.innerHTML = `<img id="imgViewer" src="${arq.url}">`;
+    viewer.innerHTML = `<img id="imgViewer" src="${url}">`;
 
     controls.innerHTML = `
       <button onclick="zoomIn()">➕ Zoom</button>
       <button onclick="zoomOut()">➖ Zoom</button>
       <button onclick="girar()">🔄 Girar</button>
-      <button onclick="baixar('${arq.url}')">⬇️ Download</button>
+      <button onclick="baixar('${url}')">⬇️ Download</button>
     `;
   }
 
-  // =====================
   // 📄 PDF
-  // =====================
-  else if (arq.tipo === "pdf") {
+  else if (tipo === "pdf") {
 
     viewer.innerHTML = `
-      <iframe src="${arq.url}"></iframe>
+      <iframe src="${url}"></iframe>
     `;
 
     controls.innerHTML = `
-      <button onclick="window.open('${arq.url}','_blank')">🔗 Abrir PDF</button>
-      <button onclick="baixar('${arq.url}')">⬇️ Download</button>
+      <button onclick="window.open('${url}','_blank')">🔗 Abrir PDF</button>
+      <button onclick="baixar('${url}')">⬇️ Download</button>
     `;
   }
 
@@ -243,7 +239,7 @@ async function carregar() {
     return;
   }
 
-  div.innerHTML = "⏳ Carregando...";
+  div.innerHTML = "⏳ Carregando pedido...";
 
   try {
 
@@ -256,12 +252,12 @@ async function carregar() {
     try {
       data = JSON.parse(texto);
     } catch {
-      console.error("❌ HTML retornado:", texto);
-      throw new Error("Resposta inválida do servidor");
+      console.error("❌ Resposta inválida:", texto);
+      throw new Error("Servidor retornou resposta inválida");
     }
 
     if (!res.ok) {
-      throw new Error(data.erro || "Erro ao consultar");
+      throw new Error(data.erro || "Erro ao consultar pedido");
     }
 
     if (!data.rows || !data.rows.length) {
@@ -285,7 +281,7 @@ async function carregar() {
         ${
           arq
           ? `<p style="color:blue;cursor:pointer"
-                onclick='abrirArquivo(${JSON.stringify(arq)})'>
+                onclick="abrirArquivo('${arq.url}','${arq.tipo}')">
                 📎 Visualizar comprovante
             </p>`
           : `<p>📷 Sem comprovante disponível</p>`

@@ -56,7 +56,9 @@ async function login() {
   const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  if (!cookie) throw new Error("Erro login Sankhya");
+  if (!cookie) {
+    throw new Error("Erro ao autenticar no Sankhya");
+  }
 
   return cookie;
 }
@@ -72,29 +74,55 @@ function gerarToken(nunota) {
 }
 
 // =========================
-// 🔧 NORMALIZAR
+// 📦 DEFINIR ARQUIVO
 // =========================
-function limparDoc(valor) {
-  return (valor || "").replace(/\D/g, '');
+function montarArquivo(nunota, registro) {
+
+  const temFoto =
+    registro.FOTO_ENTREGA &&
+    registro.FOTO_ENTREGA.$ &&
+    registro.FOTO_ENTREGA.$ !== "";
+
+  const temComprov =
+    registro.FOTO_COMPROV &&
+    registro.FOTO_COMPROV.$ &&
+    registro.FOTO_COMPROV.$ !== "";
+
+  // 🔥 PRIORIDADE: FOTO APP
+  if (temFoto) {
+    return {
+      url: `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`,
+      tipo: "img"
+    };
+  }
+
+  // 🔥 FALLBACK: PDF
+  if (temComprov) {
+    return {
+      url: `${BASE_URL}/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${nunota}.dbimage`,
+      tipo: "pdf"
+    };
+  }
+
+  return null;
 }
 
 // =========================
-// 🔍 GERAR LINKS (LIGHT)
+// 🔍 GERAR LINKS
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
   try {
 
-    let { cnpj, ordemCarga, data } = req.body;
+    const { cnpj, ordemCarga, data } = req.body;
 
-    cnpj = limparDoc(cnpj);
-    ordemCarga = limparDoc(ordemCarga);
+    const documento = (cnpj || "").replace(/\D/g, '');
+    const ordem = ordemCarga ? String(ordemCarga) : null;
 
-    if (!cnpj && !ordemCarga) {
-      return res.status(400).json({ erro: "Informe CPF/CNPJ ou Ordem de Carga" });
-    }
-
-    if (cnpj && ordemCarga) {
-      return res.status(400).json({ erro: "Use apenas um filtro" });
+    // 🔥 validação exclusiva
+    if ((!documento && !ordem) || (documento && ordem)) {
+      return res.status(400).json({
+        erro: "Informe CPF/CNPJ OU Ordem de Carga (apenas um)"
+      });
     }
 
     const cookie = await login();
@@ -123,18 +151,20 @@ app.post('/api/gerar-links', async (req, res) => {
     const json = await response.json();
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
+    const rec = json?.responseBody?.records?.record;
+
+    if (rec) {
+      lista = Array.isArray(rec) ? rec : [rec];
     }
 
+    // 🔥 FILTRO CORRETO
     const filtrados = lista.filter(r => {
 
-      const doc = limparDoc(r.CGC_CPF?.$);
-      const oc = limparDoc(r.ORDEMCARGA?.$);
+      const doc = (r.CGC_CPF?.$ || "").replace(/\D/g, '');
+      const oc = r.ORDEMCARGA?.$ ? String(r.ORDEMCARGA.$) : "";
 
-      if (cnpj && doc !== cnpj) return false;
-      if (ordemCarga && oc !== ordemCarga) return false;
+      if (documento && doc !== documento) return false;
+      if (ordem && oc !== ordem) return false;
 
       if (data) {
         return new Date(r.DTNEG?.$) >= new Date(data);
@@ -146,20 +176,20 @@ app.post('/api/gerar-links', async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const links = filtrados.map(r => ({
-      nunota: r.NUNOTA?.$,
-      link: `${baseUrl}/index.html?nunota=${r.NUNOTA?.$}&token=${gerarToken(r.NUNOTA?.$)}`
+      nunota: r.NUNOTA.$,
+      link: `${baseUrl}/index.html?nunota=${r.NUNOTA.$}&token=${gerarToken(r.NUNOTA.$)}`
     }));
 
     res.json({ total: links.length, links });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ ERRO gerar-links:", err);
     res.status(500).json({ erro: err.message });
   }
 });
 
 // =========================
-// 🔎 PEDIDO (COMPLETO)
+// 🔎 CONSULTA PEDIDO (CORRIGIDO)
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -171,7 +201,7 @@ app.get('/api/pedido', async (req, res) => {
     }
 
     if (token !== gerarToken(nunota)) {
-      return res.status(403).json({ erro: "Token inválido" });
+      return res.status(403).json({ erro: "Acesso negado" });
     }
 
     const cookie = await login();
@@ -200,119 +230,41 @@ app.get('/api/pedido', async (req, res) => {
     const json = await response.json();
 
     let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
+    const rec = json?.responseBody?.records?.record;
+
+    if (rec) {
+      lista = Array.isArray(rec) ? rec : [rec];
     }
 
-    const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
+    // 🔥 BUSCA EXATA POR NUNOTA
+    const pedido = lista.find(r => String(r.NUNOTA.$) === String(nunota));
 
     if (!pedido) {
       return res.json({ rows: [] });
     }
 
-    // =========================
-    // 📎 ARQUIVO
-    // =========================
-    let arquivo = null;
-
-    if (pedido.FOTO_ENTREGA) {
-      arquivo = {
-        tipo: "img",
-        url: `/api/arquivo?nunota=${nunota}&tipo=1`
-      };
-    } else if (pedido.FOTO_COMPROV) {
-      arquivo = {
-        tipo: "pdf",
-        url: `/api/arquivo?nunota=${nunota}&tipo=2`
-      };
-    }
+    // 🔥 ARQUIVO COM FALLBACK INTELIGENTE
+    const arquivo = montarArquivo(nunota, pedido);
 
     res.json({
       rows: [{
-        NUNOTA: pedido.NUNOTA?.$,
+        NUNOTA: pedido.NUNOTA.$,
+        NUMNOTA: pedido.NUMNOTA?.$,
         NOMEPARC: pedido.NOMEPARC?.$,
         CGC_CPF: pedido.CGC_CPF?.$,
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
+        ARQUIVO: arquivo,
+
         STATUS_FOTO: arquivo
           ? (arquivo.tipo === "img" ? "Foto Entrega" : "Comprovante PDF")
-          : "Sem comprovante",
-
-        ARQUIVO: arquivo
+          : "Sem comprovante"
       }]
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ ERRO pedido:", err);
     res.status(500).json({ erro: err.message });
-  }
-});
-
-// =========================
-// 📎 SERVIR ARQUIVO
-// =========================
-app.get('/api/arquivo', async (req, res) => {
-  try {
-
-    const { nunota, tipo } = req.query;
-
-    const cookie = await login();
-
-    const payload = {
-      serviceName: "CRUDServiceProvider.loadView",
-      requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION"
-        }
-      }
-    };
-
-    const response = await fetch(
-      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": cookie
-        },
-        body: JSON.stringify(payload)
-      }
-    );
-
-    const json = await response.json();
-
-    let lista = [];
-    if (json?.responseBody?.records?.record) {
-      const r = json.responseBody.records.record;
-      lista = Array.isArray(r) ? r : [r];
-    }
-
-    const pedido = lista.find(r => r.NUNOTA?.$ == nunota);
-
-    let base64;
-
-    if (tipo == 1) base64 = pedido.FOTO_ENTREGA?.$;
-    if (tipo == 2) base64 = pedido.FOTO_COMPROV?.$;
-
-    if (!base64) return res.status(404).send("Arquivo não encontrado");
-
-    const buffer = Buffer.from(base64, 'base64');
-
-    // 🔥 DETECÇÃO PDF
-    const header = buffer.slice(0, 4).toString();
-
-    if (header === "%PDF") {
-      res.setHeader("Content-Type", "application/pdf");
-    } else {
-      res.setHeader("Content-Type", "image/jpeg");
-    }
-
-    res.send(buffer);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Erro arquivo");
   }
 });
 
@@ -320,5 +272,5 @@ app.get('/api/arquivo', async (req, res) => {
 // START
 // =========================
 app.listen(PORT, () => {
-  console.log(`🚀 Rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
