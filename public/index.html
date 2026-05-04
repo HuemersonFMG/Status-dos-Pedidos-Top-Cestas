@@ -270,9 +270,11 @@ async function carregar() {
 
     div.innerHTML = `
       <div class="card">
+        <p><b>Separação (Minuta):</b> ${p.MINUTA || "-"}</p>
         <p><b>Pedido:</b> ${p.NUNOTA}</p>
         <p><b>Cliente:</b> ${p.NOMEPARC}</p>
         <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
+        <p><b>Transportadora:</b> ${p.TRANSPORTADORA || "-"}</p>
 
         <p class="status">${p.ST_ENTREGAS}</p>
 
