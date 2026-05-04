@@ -71,33 +71,35 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAR DOC
-// =========================
-function limparDoc(valor) {
-  return (valor || "").replace(/\D/g, '');
-}
-
-// =========================
-// 🔒 BLOQUEIO DE CAMPOS
+// 🔥 CONTROLE EXCLUSIVO CAMPOS
 // =========================
 const campoCNPJ = document.getElementById('cnpj');
-const campoOrdem = document.getElementById('ordemCarga');
+const campoOC = document.getElementById('ordemCarga');
 
 campoCNPJ.addEventListener('input', () => {
   if (campoCNPJ.value.trim()) {
-    campoOrdem.disabled = true;
+    campoOC.disabled = true;
+    campoOC.value = "";
   } else {
-    campoOrdem.disabled = false;
+    campoOC.disabled = false;
   }
 });
 
-campoOrdem.addEventListener('input', () => {
-  if (campoOrdem.value.trim()) {
+campoOC.addEventListener('input', () => {
+  if (campoOC.value.trim()) {
     campoCNPJ.disabled = true;
+    campoCNPJ.value = "";
   } else {
     campoCNPJ.disabled = false;
   }
 });
+
+// =========================
+// 🔥 NORMALIZAR DOCUMENTO
+// =========================
+function limparDoc(valor) {
+  return (valor || "").replace(/\D/g, '');
+}
 
 // =========================
 // ⏱️ FETCH COM TIMEOUT
@@ -112,51 +114,58 @@ function fetchComTimeout(url, options, timeout = 20000) {
 }
 
 // =========================
-// 🚀 GERAR LINKS
+// 🔍 GERAR LINKS
 // =========================
 async function gerar() {
 
-  const cnpjInput = campoCNPJ.value;
-  const ordemInput = campoOrdem.value;
+  const cnpjRaw = campoCNPJ.value;
+  const ocRaw = campoOC.value;
   const data = document.getElementById('data').value;
 
-  const cnpj = limparDoc(cnpjInput);
-  const ordemCarga = ordemInput.trim();
+  const cnpj = limparDoc(cnpjRaw);
+  const ordemCarga = limparDoc(ocRaw);
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // 🔥 validação exclusiva
-  if ((!cnpj && !ordemCarga) || (cnpj && ordemCarga)) {
+  // 🔥 VALIDAÇÃO
+  if (!cnpj && !ordemCarga) {
     status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ OU Ordem de Carga (apenas um)";
+    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
     return;
   }
 
-  // valida CPF/CNPJ
+  if (cnpj && ordemCarga) {
+    status.className = "erro";
+    status.innerHTML = "❌ Use apenas um filtro por vez";
+    return;
+  }
+
   if (cnpj && (cnpj.length !== 11 && cnpj.length !== 14)) {
     status.className = "erro";
-    status.innerHTML = "❌ CPF deve ter 11 dígitos ou CNPJ 14";
+    status.innerHTML = "❌ CPF deve ter 11 ou CNPJ 14 dígitos";
     return;
   }
 
   status.className = "";
-  status.innerHTML = "⏳ Buscando pedidos...";
+  status.innerHTML = "⏳ Gerando links...";
 
   try {
 
-    console.log("📤 Enviando:", { cnpj, ordemCarga, data });
+    const payload = {
+      cnpj: cnpj || null,
+      ordemCarga: ordemCarga || null,
+      data
+    };
+
+    console.log("📤 Enviando:", payload);
 
     const res = await fetchComTimeout('/api/gerar-links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cnpj: cnpj || null,
-        ordemCarga: ordemCarga || null,
-        data
-      })
+      body: JSON.stringify(payload)
     });
 
     const texto = await res.text();
@@ -166,15 +175,15 @@ async function gerar() {
     try {
       dataRes = JSON.parse(texto);
     } catch {
-      console.error("❌ HTML retornado:", texto);
+      console.error("❌ Resposta inválida:", texto);
       throw new Error("Servidor retornou resposta inválida");
     }
 
-    if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro HTTP: " + res.status);
-    }
-
     console.log("📦 Retorno:", dataRes);
+
+    if (!res.ok) {
+      throw new Error(dataRes.erro || "Erro HTTP");
+    }
 
     if (!dataRes.links || !dataRes.links.length) {
       status.className = "warn";
@@ -183,10 +192,10 @@ async function gerar() {
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.links.length} pedido(s) encontrado(s)`;
+    status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
 
-    // 🔥 LIMITADOR (evita travar tela)
-    const limite = 300;
+    // 🔥 PERFORMANCE: limita render
+    const limite = 200;
 
     dataRes.links.slice(0, limite).forEach(l => {
 
@@ -208,9 +217,9 @@ async function gerar() {
     });
 
     if (dataRes.links.length > limite) {
-      const aviso = document.createElement('p');
+      const aviso = document.createElement('div');
       aviso.className = "warn";
-      aviso.innerHTML = `⚠️ Exibindo apenas os primeiros ${limite} resultados`;
+      aviso.innerHTML = `⚠️ Exibindo apenas ${limite} de ${dataRes.links.length} resultados`;
       div.appendChild(aviso);
     }
 

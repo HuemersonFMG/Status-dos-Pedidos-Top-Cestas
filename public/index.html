@@ -44,12 +44,6 @@ body {
 .warn { color: orange; }
 .erro { color: red; }
 
-.btn {
-  margin-top: 10px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
 /* POPUP */
 .popup {
   position: fixed;
@@ -57,31 +51,44 @@ body {
   left:0;
   width:100%;
   height:100%;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.9);
   display:none;
   justify-content:center;
   align-items:center;
-  z-index: 9999;
+  z-index:9999;
 }
 
-.popup-content {
+.viewer {
   position: relative;
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 95%;
+  max-height: 95%;
 }
 
-.popup img, .popup iframe {
+.viewer img, .viewer iframe {
   max-width: 100%;
   max-height: 100%;
-  border-radius: 8px;
+  transform-origin: center;
+}
+
+/* CONTROLES */
+.controls {
+  position: absolute;
+  top: -45px;
+  left: 0;
+}
+
+.controls button {
+  padding: 5px 10px;
+  margin-right: 5px;
+  cursor: pointer;
 }
 
 .close {
   position: absolute;
-  top: -30px;
+  top: -45px;
   right: 0;
   color: white;
-  font-size: 24px;
+  font-size: 22px;
   cursor: pointer;
 }
 </style>
@@ -95,9 +102,17 @@ body {
 
 <!-- POPUP -->
 <div class="popup" id="popup">
-  <div class="popup-content">
+  <div class="viewer">
+
+    <div class="controls">
+      <button onclick="zoomIn()">➕</button>
+      <button onclick="zoomOut()">➖</button>
+      <button onclick="rotate()">🔄</button>
+    </div>
+
     <span class="close" onclick="fechar()">✖</span>
-    <div id="popupBody"></div>
+
+    <div id="viewerBody"></div>
   </div>
 </div>
 
@@ -111,57 +126,71 @@ function getParam(nome) {
 }
 
 // =========================
-// ⏱️ FETCH COM TIMEOUT
+// ⏱️ FETCH TIMEOUT
 // =========================
-function fetchComTimeout(url, timeout = 15000) {
+function fetchComTimeout(url, timeout = 20000) {
   return Promise.race([
     fetch(url),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
+      setTimeout(() => reject(new Error("Tempo esgotado")), timeout)
     )
   ]);
 }
 
 // =========================
-// 📎 ARQUIVO (IMG ou PDF)
+// 🔎 CONTROLE VIEWER
 // =========================
-function getArquivo(p) {
+let scale = 1;
+let rotation = 0;
 
-  if (p.TIPO_FOTO === 1) {
-    return {
-      url: `http://topcesta.fwc.cloud:8180/mge/AD_APPENTFOTO@FOTO@NUNOTA=${p.NUNOTA}@SEQ=1.dbimage`,
-      tipo: "img"
-    };
+function zoomIn() {
+  scale += 0.2;
+  aplicarTransform();
+}
+
+function zoomOut() {
+  scale -= 0.2;
+  aplicarTransform();
+}
+
+function rotate() {
+  rotation += 90;
+  aplicarTransform();
+}
+
+function aplicarTransform() {
+  const el = document.querySelector('#viewerBody img');
+  if (el) {
+    el.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
   }
-
-  if (p.TIPO_FOTO === 2) {
-    return {
-      url: `http://topcesta.fwc.cloud:8180/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${p.NUNOTA}.dbimage`,
-      tipo: "auto" // pode ser PDF ou imagem
-    };
-  }
-
-  return null;
 }
 
 // =========================
-// 🔍 POPUP
+// 🔍 ABRIR ARQUIVO
 // =========================
 function abrirArquivo(arq) {
 
   const popup = document.getElementById('popup');
-  const body = document.getElementById('popupBody');
+  const body = document.getElementById('viewerBody');
 
+  scale = 1;
+  rotation = 0;
+
+  // 🔥 limpa
   body.innerHTML = "";
 
   if (arq.tipo === "img") {
+
     body.innerHTML = `<img src="${arq.url}">`;
+
   } else {
+
+    // 🔥 PDF
     body.innerHTML = `
       <iframe src="${arq.url}" frameborder="0"></iframe>
-      <p style="color:white;margin-top:10px;">
-        Se não abrir,
-        <a href="${arq.url}" target="_blank" style="color:yellow;">
+      <p style="color:white;margin-top:10px">
+        Se não visualizar,
+        <a href="${arq.url}" target="_blank" style="color:yellow">
           clique aqui
         </a>
       </p>
@@ -172,24 +201,10 @@ function abrirArquivo(arq) {
 }
 
 // =========================
-// ❌ FECHAR POPUP
+// ❌ FECHAR
 // =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
-}
-
-// =========================
-// 🎨 COR STATUS
-// =========================
-function getClasseStatus(txt) {
-  if (!txt) return "";
-
-  txt = txt.toUpperCase();
-
-  if (txt.includes("ENTREGUE")) return "ok";
-  if (txt.includes("ENTREGANDO")) return "warn";
-
-  return "";
 }
 
 // =========================
@@ -207,7 +222,7 @@ async function carregar() {
     return;
   }
 
-  div.innerHTML = "⏳ Carregando pedido...";
+  div.innerHTML = "⏳ Carregando...";
 
   try {
 
@@ -221,11 +236,11 @@ async function carregar() {
       data = JSON.parse(texto);
     } catch {
       console.error("❌ HTML retornado:", texto);
-      throw new Error("Servidor retornou resposta inválida");
+      throw new Error("Resposta inválida do servidor");
     }
 
     if (!res.ok) {
-      throw new Error(data.erro || "Erro ao consultar pedido");
+      throw new Error(data.erro || "Erro ao consultar");
     }
 
     if (!data.rows || !data.rows.length) {
@@ -235,7 +250,8 @@ async function carregar() {
 
     const p = data.rows[0];
 
-    const arq = getArquivo(p);
+    // 🔥 agora vem do backend já correto
+    const arq = p.ARQUIVO;
 
     div.innerHTML = `
       <div class="card">
@@ -243,17 +259,15 @@ async function carregar() {
         <p><b>Cliente:</b> ${p.NOMEPARC}</p>
         <p><b>Documento:</b> ${p.CGC_CPF || "-"}</p>
 
-        <p class="status ${getClasseStatus(p.ST_ENTREGAS)}">
-          ${p.ST_ENTREGAS}
-        </p>
+        <p class="status">${p.ST_ENTREGAS}</p>
 
         <p><b>Comprovante:</b> ${p.STATUS_FOTO}</p>
 
         ${
           arq
-          ? `<button class="btn" onclick='abrirArquivo(${JSON.stringify(arq)})'>
-               📎 Ver comprovante
-             </button>`
+          ? `<p style="color:blue;cursor:pointer" onclick='abrirArquivo(${JSON.stringify(arq)})'>
+              📎 Visualizar comprovante
+            </p>`
           : `<p>📷 Sem comprovante disponível</p>`
         }
       </div>
@@ -263,10 +277,7 @@ async function carregar() {
 
     console.error("❌ Erro:", err);
 
-    div.innerHTML = `
-      <p class="erro">❌ ${err.message}</p>
-      <button class="btn" onclick="location.reload()">🔄 Tentar novamente</button>
-    `;
+    div.innerHTML = `<p class="erro">❌ ${err.message}</p>`;
   }
 }
 
