@@ -73,6 +73,20 @@ function gerarToken(nunota) {
     .digest('hex');
 }
 
+//===========================
+//FORMAT DATA
+//===========================
+function formatarDataBR(data) {
+  if (!data) return null;
+
+  try {
+    const d = new Date(data);
+    return d.toLocaleDateString('pt-BR');
+  } catch {
+    return data;
+  }
+}
+
 // =========================
 // 📦 DEFINIR ARQUIVO
 // =========================
@@ -254,15 +268,10 @@ app.get('/api/pedido', async (req, res) => {
         NOMEPARC: pedido.NOMEPARC?.$,
         CGC_CPF: pedido.CGC_CPF?.$,
 
-        // 🔥 NOVOS CAMPOS
-        DTNEG: pedido.DTNEG?.$,
+        DTNEG: formatarDataBR(pedido.DTNEG?.$),
         ORDEMCARGA: pedido.ORDEMCARGA?.$,
 
-        TRANSPORTADORA:
-          pedido.TRANSPORTADORA?.$ ||
-          pedido.NOMEPARC_TRANSP?.$ ||
-          pedido.NOMECONTATO?.$ ||
-          "-",
+        TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || "").trim(),
 
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
 
