@@ -35,7 +35,6 @@ app.use((req, res, next) => {
 // 🔐 LOGIN
 // =========================
 async function login() {
-
   const payload = {
     serviceName: "MobileLoginSP.login",
     requestBody: {
@@ -56,9 +55,7 @@ async function login() {
   const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  if (!cookie) {
-    throw new Error("Erro ao autenticar no Sankhya");
-  }
+  if (!cookie) throw new Error("Erro ao autenticar no Sankhya");
 
   return cookie;
 }
@@ -86,24 +83,6 @@ function formatarDataBR(data) {
 }
 
 // =========================
-// 🛡️ SAFE JSON
-// =========================
-async function fetchJSONSeguro(response) {
-  const text = await response.text();
-
-  if (!text) {
-    throw new Error("Resposta vazia do Sankhya");
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    console.error("Resposta inválida:", text);
-    throw new Error("Erro ao interpretar JSON do Sankhya");
-  }
-}
-
-// =========================
 // 🔍 GERAR LINKS
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
@@ -116,7 +95,7 @@ app.post('/api/gerar-links', async (req, res) => {
 
     if ((!documento && !ordem) || (documento && ordem)) {
       return res.status(400).json({
-        erro: "Informe CPF/CNPJ OU Ordem de Carga (apenas um)"
+        erro: "Informe CPF/CNPJ OU Ordem de Carga"
       });
     }
 
@@ -125,9 +104,7 @@ app.post('/api/gerar-links', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION_LIGHT"
-        }
+        query: { viewName: "VW_NOTAS_FUSION_LIGHT" }
       }
     };
 
@@ -135,25 +112,18 @@ app.post('/api/gerar-links', async (req, res) => {
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": cookie
-        },
+        headers: { "Content-Type": "application/json", "Cookie": cookie },
         body: JSON.stringify(payload)
       }
     );
 
-    const json = await fetchJSONSeguro(response);
+    const json = await response.json();
 
     let lista = [];
     const rec = json?.responseBody?.records?.record;
-
-    if (rec) {
-      lista = Array.isArray(rec) ? rec : [rec];
-    }
+    if (rec) lista = Array.isArray(rec) ? rec : [rec];
 
     const filtrados = lista.filter(r => {
-
       const doc = (r.CGC_CPF?.$ || "").replace(/\D/g, '');
       const oc = r.ORDEMCARGA?.$ ? String(r.ORDEMCARGA.$) : "";
 
@@ -161,7 +131,9 @@ app.post('/api/gerar-links', async (req, res) => {
       if (ordem && oc !== ordem) return false;
 
       if (data) {
-        return new Date(r.DTNEG?.$) >= new Date(data);
+        const [d, m, a] = r.DTNEG.$.split("/");
+        const dt = new Date(`${a}-${m}-${d}`);
+        return dt >= new Date(data);
       }
 
       return true;
@@ -190,10 +162,6 @@ app.get('/api/pedido', async (req, res) => {
 
     const { nunota, token } = req.query;
 
-    if (!nunota || !token) {
-      return res.status(400).json({ erro: "Parâmetros inválidos" });
-    }
-
     if (token !== gerarToken(nunota)) {
       return res.status(403).json({ erro: "Acesso negado" });
     }
@@ -203,9 +171,7 @@ app.get('/api/pedido', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: {
-          viewName: "VW_NOTAS_FUSION"
-        }
+        query: { viewName: "VW_NOTAS_FUSION" }
       }
     };
 
@@ -213,28 +179,20 @@ app.get('/api/pedido', async (req, res) => {
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": cookie
-        },
+        headers: { "Content-Type": "application/json", "Cookie": cookie },
         body: JSON.stringify(payload)
       }
     );
 
-    const json = await fetchJSONSeguro(response);
+    const json = await response.json();
 
     let lista = [];
     const rec = json?.responseBody?.records?.record;
-
-    if (rec) {
-      lista = Array.isArray(rec) ? rec : [rec];
-    }
+    if (rec) lista = Array.isArray(rec) ? rec : [rec];
 
     const pedido = lista.find(r => String(r.NUNOTA.$) === String(nunota));
 
-    if (!pedido) {
-      return res.json({ rows: [] });
-    }
+    if (!pedido) return res.json({ rows: [] });
 
     const tipo = Number(pedido.TIPO_FOTO?.$ || 0);
 
@@ -248,6 +206,7 @@ app.get('/api/pedido', async (req, res) => {
         ORDEMCARGA: pedido.ORDEMCARGA?.$,
         TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || "").trim(),
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
+
         TEM_FOTO: tipo === 1,
         TEM_PDF: tipo === 2
       }]
@@ -260,7 +219,7 @@ app.get('/api/pedido', async (req, res) => {
 });
 
 // =========================
-// 📷 IMAGEM
+// 📷 IMAGEM (dbimage)
 // =========================
 app.get('/api/comprovante/imagem', async (req, res) => {
   try {
@@ -284,9 +243,7 @@ app.get('/api/comprovante/imagem', async (req, res) => {
     }
 
     res.setHeader('Content-Type', 'image/jpeg');
-
-    const buffer = await response.arrayBuffer();
-    res.send(Buffer.from(buffer));
+    response.body.pipe(res);
 
   } catch (err) {
     console.error(err);
@@ -308,33 +265,62 @@ app.get('/api/comprovante/pdf', async (req, res) => {
 
     const cookie = await login();
 
-    const url = `${BASE_URL}/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${nunota}.dbimage`;
+    // 🔥 busca via VIEW
+    const payload = {
+      serviceName: "CRUDServiceProvider.loadView",
+      requestBody: {
+        query: { viewName: "VW_NOTAS_FUSION" }
+      }
+    };
 
-    const response = await fetch(url, {
-      headers: { "Cookie": cookie }
-    });
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Cookie": cookie },
+        body: JSON.stringify(payload)
+      }
+    );
 
-    if (!response.ok) {
+    const json = await response.json();
+
+    let lista = [];
+    const rec = json?.responseBody?.records?.record;
+    if (rec) lista = Array.isArray(rec) ? rec : [rec];
+
+    const pedido = lista.find(r => String(r.NUNOTA.$) === String(nunota));
+
+    if (!pedido || !pedido.AD_COMPROVTRANSP?.$) {
       return res.status(404).send("PDF não encontrado");
     }
 
-    let buffer = Buffer.from(await response.arrayBuffer());
+    let conteudo = pedido.AD_COMPROVTRANSP.$;
 
-    // 🔥 REMOVE LIXO ANTES DO PDF
-    const start = buffer.indexOf(Buffer.from('%PDF'));
+    // 🔥 tenta base64 primeiro
+    try {
+      const bufferBase64 = Buffer.from(conteudo, 'base64');
+      if (bufferBase64.slice(0, 4).toString() === "%PDF") {
+        res.setHeader('Content-Type', 'application/pdf');
+        return res.send(bufferBase64);
+      }
+    } catch {}
 
-    if (start > 0) {
-      buffer = buffer.slice(start);
+    // 🔥 fallback: string com lixo antes do PDF
+    const indexPDF = conteudo.indexOf("%PDF");
+
+    if (indexPDF === -1) {
+      return res.status(500).send("Formato de PDF inválido");
     }
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="comprovante.pdf"');
+    const pdfLimpo = conteudo.substring(indexPDF);
+    const buffer = Buffer.from(pdfLimpo, 'binary');
 
+    res.setHeader('Content-Type', 'application/pdf');
     res.send(buffer);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Erro ao carregar PDF");
+    console.error("❌ ERRO PDF:", err);
+    res.status(500).send("Erro ao processar PDF");
   }
 });
 
