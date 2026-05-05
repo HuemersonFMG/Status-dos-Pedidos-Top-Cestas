@@ -165,7 +165,7 @@ app.post('/api/gerar-links', async (req, res) => {
 });
 
 // =========================
-// 🔎 CONSULTA PEDIDO (SEM BLOB)
+// 🔎 CONSULTA PEDIDO
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -276,12 +276,17 @@ app.get('/api/comprovante/imagem', async (req, res) => {
 });
 
 // =========================
-// 📄 PDF
+// 📄 PDF (FINAL CORRIGIDO)
 // =========================
 app.get('/api/comprovante/pdf', async (req, res) => {
   try {
 
     const { nunota, token } = req.query;
+    const nunotaNum = Number(nunota);
+
+    if (!nunota || isNaN(nunotaNum)) {
+      return res.status(400).send("NUNOTA inválido");
+    }
 
     if (token !== gerarToken(nunota)) {
       return res.status(403).send("Acesso negado");
@@ -289,22 +294,58 @@ app.get('/api/comprovante/pdf', async (req, res) => {
 
     const cookie = await login();
 
-    const url = `${BASE_URL}/mge/TGFCAB@AD_COMPROVTRANSP@NUNOTA=${nunota}.dbimage`;
+    const payload = {
+      serviceName: "DbExplorerSP.executeQuery",
+      requestBody: {
+        sql: `
+          SELECT AD_COMPROVTRANSP
+          FROM TGFCAB
+          WHERE NUNOTA = ${nunotaNum}
+        `
+      }
+    };
 
-    const response = await fetch(url, {
-      headers: { "Cookie": cookie }
-    });
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
 
-    if (!response.ok) {
-      return res.status(404).send("PDF não encontrado");
+    const json = await response.json();
+    const registro = json?.responseBody?.rows?.[0];
+
+    if (!registro || !registro[0]) {
+      return res.status(404).send("PDF não encontrado no banco");
     }
 
+    const base64 = registro[0];
+
+    // 🔥 decode base64
+    const texto = Buffer.from(base64, 'base64').toString('binary');
+
+    // 🔥 localizar PDF
+    const inicio = texto.indexOf('%PDF');
+
+    if (inicio === -1) {
+      console.log("❌ Conteúdo inválido:", texto.substring(0, 200));
+      return res.status(500).send("PDF inválido (header não encontrado)");
+    }
+
+    const pdf = texto.substring(inicio);
+    const buffer = Buffer.from(pdf, 'binary');
+
     res.setHeader('Content-Type', 'application/pdf');
-    response.body.pipe(res);
+    res.send(buffer);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Erro ao carregar PDF");
+    console.error("❌ ERRO PDF:", err);
+    res.status(500).send("Erro ao processar PDF");
   }
 });
 
