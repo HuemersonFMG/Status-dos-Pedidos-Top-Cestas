@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Top - Gerador.</title>
+<title>Top - Gerador</title>
+
 <link rel="stylesheet" href="Styles/Styles.css">
-<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
 
 <style>
 body {
@@ -13,9 +14,7 @@ body {
   background: #f5f5f5;
 }
 
-h2 {
-  margin-bottom: 15px;
-}
+h2 { margin-bottom: 10px; }
 
 input, button {
   padding: 10px;
@@ -23,9 +22,7 @@ input, button {
   font-size: 14px;
 }
 
-button {
-  cursor: pointer;
-}
+button { cursor: pointer; }
 
 #status {
   margin-top: 10px;
@@ -58,15 +55,15 @@ button {
 
 <body>
 
-  <header>
-    <a href="https://topalimentos.shop/produtos/">
-        <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-             alt="LogoTopCestas">
-    </a>
-    <h1>Entregas - Gerador de Links por pedidos.</h1>
-  </header>
+<header>
+  <a href="https://topalimentos.shop/produtos/">
+    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png"
+         alt="Logo Top Cestas">
+  </a>
+  <h1>Gerador de Links de Pedidos</h1>
+</header>
 
-<h2>🔗 Gerar Links de Pedidos</h2>
+<h2>🔗 Gerar Links</h2>
 
 <input type="text" id="cnpj" placeholder="CPF ou CNPJ">
 <input type="text" id="ordemCarga" placeholder="Ordem de Carga">
@@ -80,7 +77,7 @@ button {
 <script>
 
 // =========================
-// 🔥 NORMALIZAR DOC
+// 🔧 HELPERS
 // =========================
 function limparDoc(valor) {
   return (valor || "").replace(/\D/g, '');
@@ -93,33 +90,41 @@ const cnpjInput = document.getElementById('cnpj');
 const ordemInput = document.getElementById('ordemCarga');
 
 cnpjInput.addEventListener('input', () => {
-  if (cnpjInput.value.trim()) {
-    ordemInput.disabled = true;
-    ordemInput.value = "";
-  } else {
-    ordemInput.disabled = false;
-  }
+  ordemInput.disabled = !!cnpjInput.value.trim();
+  if (cnpjInput.value) ordemInput.value = "";
 });
 
 ordemInput.addEventListener('input', () => {
-  if (ordemInput.value.trim()) {
-    cnpjInput.disabled = true;
-    cnpjInput.value = "";
-  } else {
-    cnpjInput.disabled = false;
-  }
+  cnpjInput.disabled = !!ordemInput.value.trim();
+  if (ordemInput.value) cnpjInput.value = "";
 });
 
 // =========================
-// ⏱️ FETCH COM TIMEOUT
+// ⏱️ FETCH SEGURO
 // =========================
-function fetchComTimeout(url, options, timeout = 20000) {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
-    )
-  ]);
+async function fetchSeguro(url, options) {
+
+  const res = await fetch(url, options);
+  const text = await res.text();
+
+  if (!text) {
+    throw new Error("Resposta vazia do servidor");
+  }
+
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.error("❌ Resposta inválida:", text);
+    throw new Error("Erro ao processar resposta do servidor");
+  }
+
+  if (!res.ok) {
+    throw new Error(data.erro || "Erro na requisição");
+  }
+
+  return data;
 }
 
 // =========================
@@ -127,21 +132,16 @@ function fetchComTimeout(url, options, timeout = 20000) {
 // =========================
 async function gerar() {
 
-  const cnpjRaw = cnpjInput.value;
-  const ordemRaw = ordemInput.value;
+  const documento = limparDoc(cnpjInput.value);
+  const ordem = ordemInput.value.trim();
   const data = document.getElementById('data').value;
-
-  const documento = limparDoc(cnpjRaw);
-  const ordem = ordemRaw ? ordemRaw.trim() : null;
 
   const status = document.getElementById('status');
   const div = document.getElementById('resultado');
 
   div.innerHTML = "";
 
-  // =========================
   // 🔥 VALIDAÇÃO
-  // =========================
   if (!documento && !ordem) {
     status.className = "erro";
     status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
@@ -161,7 +161,7 @@ async function gerar() {
   }
 
   status.className = "";
-  status.innerHTML = "⏳ Gerando links...";
+  status.innerHTML = "⏳ Buscando pedidos...";
 
   try {
 
@@ -171,30 +171,11 @@ async function gerar() {
       data: data || null
     };
 
-    console.log("📤 Enviando:", payload);
-
-    const res = await fetchComTimeout('/api/gerar-links', {
+    const dataRes = await fetchSeguro('/api/gerar-links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
-    const texto = await res.text();
-
-    let dataRes;
-
-    try {
-      dataRes = JSON.parse(texto);
-    } catch {
-      console.error("❌ Resposta inválida:", texto);
-      throw new Error("Servidor retornou resposta inválida");
-    }
-
-    console.log("📦 Retorno:", dataRes);
-
-    if (!res.ok) {
-      throw new Error(dataRes.erro || "Erro ao gerar links");
-    }
 
     if (!dataRes.links || !dataRes.links.length) {
       status.className = "warn";
@@ -203,11 +184,9 @@ async function gerar() {
     }
 
     status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.links.length} link(s) gerado(s)`;
+    status.innerHTML = `✅ ${dataRes.total} pedido(s) encontrado(s)`;
 
-    // =========================
     // 🔗 LISTAGEM
-    // =========================
     dataRes.links.forEach(l => {
 
       const el = document.createElement('div');
@@ -263,7 +242,9 @@ function whatsapp(link) {
 </script>
 
 <footer>
-  <p style="text-align: center;">&copy; Top Cestas - 2025 - Sistema de rastreio de pedidos</p>
+  <p style="text-align:center;">
+    © Top Cestas - 2026 - Sistema de rastreio de pedidos
+  </p>
 </footer>
 
 </body>

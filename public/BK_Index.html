@@ -15,7 +15,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Tracker de Pedidos</title>
+<title>Status do Pedido</title>
+
 <link rel="stylesheet" href="Styles/Styles.css">
 <link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
 
@@ -31,7 +32,7 @@ body {
   border: 1px solid #ddd;
   padding: 20px;
   margin: 20px auto;
-  max-width: 500px;
+  max-width: 520px;
   border-radius: 10px;
   background: #fff;
 }
@@ -68,14 +69,11 @@ hr {
 .viewer {
   max-width: 90%;
   max-height: 80%;
-  overflow: hidden;
 }
 
 .viewer img {
   max-width: 100%;
   max-height: 100%;
-  transform-origin: center;
-  transition: transform 0.2s;
 }
 
 .viewer iframe {
@@ -103,29 +101,26 @@ hr {
   cursor: pointer;
 }
 </style>
-
 </head>
 
 <body>
 
-  <header>
-    <a href="https://topalimentos.shop/produtos/">
-        <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-             alt="LogoTopCestas">
-    </a>
-    <h1>Sistema de rastreio de pedidos.</h1>
-  </header>
+<header>
+  <a href="https://topalimentos.shop/produtos/">
+    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png"
+         alt="Logo Top Cestas">
+  </a>
+  <h1>Status do Pedido</h1>
+</header>
 
-<h2>📦 Status do Pedido</h2>
+<h2>📦 Acompanhamento</h2>
 
 <div id="conteudo"></div>
 
 <!-- POPUP -->
 <div class="popup" id="popup">
   <span class="close" onclick="fechar()">✖</span>
-
   <div class="viewer" id="viewer"></div>
-
   <div class="controls" id="controls"></div>
 </div>
 
@@ -139,15 +134,31 @@ function getParam(nome) {
 }
 
 // =========================
-// ⏱️ FETCH COM TIMEOUT
+// 🛡️ FETCH SEGURO
 // =========================
-function fetchComTimeout(url, timeout = 20000) {
-  return Promise.race([
-    fetch(url),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Tempo de resposta esgotado")), timeout)
-    )
-  ]);
+async function fetchSeguro(url) {
+
+  const res = await fetch(url);
+  const text = await res.text();
+
+  if (!text) {
+    throw new Error("Resposta vazia do servidor");
+  }
+
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.error("Resposta inválida:", text);
+    throw new Error("Erro ao processar resposta do servidor");
+  }
+
+  if (!res.ok) {
+    throw new Error(data.erro || "Erro na requisição");
+  }
+
+  return data;
 }
 
 // =========================
@@ -163,70 +174,37 @@ function formatarData(data) {
 }
 
 // =========================
-// 🎛️ CONTROLE IMAGEM
+// 📷 ABRIR IMAGEM
 // =========================
-let escala = 1;
-let rotacao = 0;
+function abrirImagem(nunota, token) {
 
-function zoomIn() {
-  escala += 0.2;
-  atualizarTransform();
-}
+  const url = `/api/comprovante/imagem?nunota=${nunota}&token=${token}`;
 
-function zoomOut() {
-  escala = Math.max(0.2, escala - 0.2);
-  atualizarTransform();
-}
+  document.getElementById('viewer').innerHTML = `<img src="${url}">`;
 
-function girar() {
-  rotacao += 90;
-  atualizarTransform();
-}
+  document.getElementById('controls').innerHTML = `
+    <button onclick="window.open('${url}','_blank')">🔗 Abrir</button>
+    <button onclick="baixar('${url}')">⬇️ Download</button>
+  `;
 
-function atualizarTransform() {
-  const img = document.getElementById("imgViewer");
-  if (img) {
-    img.style.transform = `scale(${escala}) rotate(${rotacao}deg)`;
-  }
+  document.getElementById('popup').style.display = "flex";
 }
 
 // =========================
-// 🔍 ABRIR ARQUIVO
+// 📄 ABRIR PDF
 // =========================
-function abrirArquivo(url, tipo) {
+function abrirPDF(nunota, token) {
 
-  const popup = document.getElementById('popup');
-  const viewer = document.getElementById('viewer');
-  const controls = document.getElementById('controls');
+  const url = `/api/comprovante/pdf?nunota=${nunota}&token=${token}`;
 
-  viewer.innerHTML = "";
-  controls.innerHTML = "";
+  document.getElementById('viewer').innerHTML = `<iframe src="${url}"></iframe>`;
 
-  escala = 1;
-  rotacao = 0;
+  document.getElementById('controls').innerHTML = `
+    <button onclick="window.open('${url}','_blank')">🔗 Abrir PDF</button>
+    <button onclick="baixar('${url}')">⬇️ Download</button>
+  `;
 
-  if (tipo === "img") {
-
-    viewer.innerHTML = `<img id="imgViewer" src="${url}">`;
-
-    controls.innerHTML = `
-      <button onclick="zoomIn()">➕ Zoom</button>
-      <button onclick="zoomOut()">➖ Zoom</button>
-      <button onclick="girar()">🔄 Girar</button>
-      <button onclick="baixar('${url}')">⬇️ Download</button>
-    `;
-
-  } else {
-
-    viewer.innerHTML = `<iframe src="${url}"></iframe>`;
-
-    controls.innerHTML = `
-      <button onclick="window.open('${url}','_blank')">🔗 Abrir PDF</button>
-      <button onclick="baixar('${url}')">⬇️ Download</button>
-    `;
-  }
-
-  popup.style.display = "flex";
+  document.getElementById('popup').style.display = "flex";
 }
 
 // =========================
@@ -240,14 +218,14 @@ function baixar(url) {
 }
 
 // =========================
-// ❌ FECHAR
+// ❌ FECHAR POPUP
 // =========================
 function fechar() {
   document.getElementById('popup').style.display = "none";
 }
 
 // =========================
-// 🚀 CARREGAR
+// 🚀 CARREGAR DADOS
 // =========================
 async function carregar() {
 
@@ -265,21 +243,7 @@ async function carregar() {
 
   try {
 
-    const res = await fetchComTimeout(`/api/pedido?nunota=${nunota}&token=${token}`);
-    const texto = await res.text();
-
-    let data;
-
-    try {
-      data = JSON.parse(texto);
-    } catch {
-      console.error("❌ Resposta inválida:", texto);
-      throw new Error("Servidor retornou resposta inválida");
-    }
-
-    if (!res.ok) {
-      throw new Error(data.erro || "Erro ao consultar pedido");
-    }
+    const data = await fetchSeguro(`/api/pedido?nunota=${nunota}&token=${token}`);
 
     if (!data.rows || !data.rows.length) {
       div.innerHTML = "<p class='warn'>⚠️ Pedido não encontrado</p>";
@@ -287,7 +251,6 @@ async function carregar() {
     }
 
     const p = data.rows[0];
-    const arq = p.ARQUIVO;
 
     div.innerHTML = `
       <div class="card">
@@ -306,15 +269,30 @@ async function carregar() {
 
         <p class="status">${p.ST_ENTREGAS}</p>
 
-        <p><b>📎 Comprovante:</b> ${p.STATUS_FOTO}</p>
+        <hr>
 
         ${
-          arq
-          ? `<p style="color:blue;cursor:pointer"
-                onclick="abrirArquivo('${arq.url}','${arq.tipo}')">
-                📎 Visualizar comprovante
-            </p>`
-          : `<p>📷 Sem comprovante disponível</p>`
+          p.TEM_FOTO
+            ? `<p style="color:blue;cursor:pointer"
+                 onclick="abrirImagem('${p.NUNOTA}','${token}')">
+                 📷 Visualizar Foto
+               </p>`
+            : ''
+        }
+
+        ${
+          p.TEM_PDF
+            ? `<p style="color:blue;cursor:pointer"
+                 onclick="abrirPDF('${p.NUNOTA}','${token}')">
+                 📄 Visualizar PDF
+               </p>`
+            : ''
+        }
+
+        ${
+          !p.TEM_FOTO && !p.TEM_PDF
+            ? `<p>📷 Sem comprovante disponível</p>`
+            : ''
         }
 
       </div>
@@ -322,7 +300,7 @@ async function carregar() {
 
   } catch (err) {
 
-    console.error("❌ Erro:", err);
+    console.error("Erro:", err);
 
     div.innerHTML = `<p class="erro">❌ ${err.message}</p>`;
   }
@@ -334,12 +312,13 @@ carregar();
 </script>
 
 <footer>
-  <p style="text-align: center;">&copy; Top Cestas - 2025 - Monitoramento em Tempo Real de Pedidos.</p>
+  <p style="text-align:center;">
+    © Top Cestas - 2026 - Monitoramento de pedidos
+  </p>
 </footer>
 
 </body>
 </html>
-
 
 
 <!--

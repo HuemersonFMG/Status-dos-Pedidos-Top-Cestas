@@ -86,6 +86,24 @@ function formatarDataBR(data) {
 }
 
 // =========================
+// 🛡️ SAFE JSON
+// =========================
+async function fetchJSONSeguro(response) {
+  const text = await response.text();
+
+  if (!text) {
+    throw new Error("Resposta vazia do Sankhya");
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Resposta inválida:", text);
+    throw new Error("Erro ao interpretar JSON do Sankhya");
+  }
+}
+
+// =========================
 // 🔍 GERAR LINKS
 // =========================
 app.post('/api/gerar-links', async (req, res) => {
@@ -125,7 +143,7 @@ app.post('/api/gerar-links', async (req, res) => {
       }
     );
 
-    const json = await response.json();
+    const json = await fetchJSONSeguro(response);
 
     let lista = [];
     const rec = json?.responseBody?.records?.record;
@@ -165,7 +183,7 @@ app.post('/api/gerar-links', async (req, res) => {
 });
 
 // =========================
-// 🔎 CONSULTA PEDIDO (SEM BLOB)
+// 🔎 CONSULTA PEDIDO
 // =========================
 app.get('/api/pedido', async (req, res) => {
   try {
@@ -203,7 +221,7 @@ app.get('/api/pedido', async (req, res) => {
       }
     );
 
-    const json = await response.json();
+    const json = await fetchJSONSeguro(response);
 
     let lista = [];
     const rec = json?.responseBody?.records?.record;
@@ -230,7 +248,6 @@ app.get('/api/pedido', async (req, res) => {
         ORDEMCARGA: pedido.ORDEMCARGA?.$,
         TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || "").trim(),
         ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
-
         TEM_FOTO: tipo === 1,
         TEM_PDF: tipo === 2
       }]
@@ -267,7 +284,9 @@ app.get('/api/comprovante/imagem', async (req, res) => {
     }
 
     res.setHeader('Content-Type', 'image/jpeg');
-    response.body.pipe(res);
+
+    const buffer = await response.arrayBuffer();
+    res.send(Buffer.from(buffer));
 
   } catch (err) {
     console.error(err);
@@ -276,7 +295,7 @@ app.get('/api/comprovante/imagem', async (req, res) => {
 });
 
 // =========================
-// 📄 PDF
+// 📄 PDF (CORRIGIDO)
 // =========================
 app.get('/api/comprovante/pdf', async (req, res) => {
   try {
@@ -299,8 +318,19 @@ app.get('/api/comprovante/pdf', async (req, res) => {
       return res.status(404).send("PDF não encontrado");
     }
 
+    let buffer = Buffer.from(await response.arrayBuffer());
+
+    // 🔥 REMOVE LIXO ANTES DO PDF
+    const start = buffer.indexOf(Buffer.from('%PDF'));
+
+    if (start > 0) {
+      buffer = buffer.slice(start);
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
-    response.body.pipe(res);
+    res.setHeader('Content-Disposition', 'inline; filename="comprovante.pdf"');
+
+    res.send(buffer);
 
   } catch (err) {
     console.error(err);
