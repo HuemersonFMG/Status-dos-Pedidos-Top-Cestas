@@ -243,7 +243,7 @@ app.get('/api/pedido', async (req, res) => {
 });
 
 // =========================
-// 📷 IMAGEM (OK)
+// 📷 IMAGEM
 // =========================
 app.get('/api/comprovante/imagem', async (req, res) => {
   try {
@@ -276,13 +276,12 @@ app.get('/api/comprovante/imagem', async (req, res) => {
 });
 
 // =========================
-// 📄 PDF (CORRIGIDO)
+// 📄 PDF (FINAL CORRIGIDO)
 // =========================
 app.get('/api/comprovante/pdf', async (req, res) => {
   try {
 
     const { nunota, token } = req.query;
-
     const nunotaNum = Number(nunota);
 
     if (!nunota || isNaN(nunotaNum)) {
@@ -319,32 +318,27 @@ app.get('/api/comprovante/pdf', async (req, res) => {
     );
 
     const json = await response.json();
-
     const registro = json?.responseBody?.rows?.[0];
 
     if (!registro || !registro[0]) {
       return res.status(404).send("PDF não encontrado no banco");
     }
 
-    let conteudo = registro[0];
+    const base64 = registro[0];
 
-    // 🔥 tenta base64
-    try {
-      const buffer = Buffer.from(conteudo, 'base64');
-      if (buffer.slice(0, 4).toString() === "%PDF") {
-        res.setHeader('Content-Type', 'application/pdf');
-        return res.send(buffer);
-      }
-    } catch {}
+    // 🔥 decode base64
+    const texto = Buffer.from(base64, 'base64').toString('binary');
 
-    // 🔥 fallback texto/binário
-    const idx = conteudo.indexOf("%PDF");
+    // 🔥 localizar PDF
+    const inicio = texto.indexOf('%PDF');
 
-    if (idx === -1) {
-      return res.status(500).send("Formato de PDF inválido");
+    if (inicio === -1) {
+      console.log("❌ Conteúdo inválido:", texto.substring(0, 200));
+      return res.status(500).send("PDF inválido (header não encontrado)");
     }
 
-    const buffer = Buffer.from(conteudo.substring(idx), 'binary');
+    const pdf = texto.substring(inicio);
+    const buffer = Buffer.from(pdf, 'binary');
 
     res.setHeader('Content-Type', 'application/pdf');
     res.send(buffer);
