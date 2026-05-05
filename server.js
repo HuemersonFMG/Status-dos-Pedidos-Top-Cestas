@@ -35,6 +35,7 @@ app.use((req, res, next) => {
 // 🔐 LOGIN
 // =========================
 async function login() {
+
   const payload = {
     serviceName: "MobileLoginSP.login",
     requestBody: {
@@ -55,7 +56,9 @@ async function login() {
   const rawCookie = response.headers.get("set-cookie") || "";
   const cookie = rawCookie.split(";")[0];
 
-  if (!cookie) throw new Error("Erro ao autenticar no Sankhya");
+  if (!cookie) {
+    throw new Error("Erro ao autenticar no Sankhya");
+  }
 
   return cookie;
 }
@@ -95,7 +98,7 @@ app.post('/api/gerar-links', async (req, res) => {
 
     if ((!documento && !ordem) || (documento && ordem)) {
       return res.status(400).json({
-        erro: "Informe CPF/CNPJ OU Ordem de Carga"
+        erro: "Informe CPF/CNPJ OU Ordem de Carga (apenas um)"
       });
     }
 
@@ -104,7 +107,9 @@ app.post('/api/gerar-links', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: { viewName: "VW_NOTAS_FUSION_LIGHT" }
+        query: {
+          viewName: "VW_NOTAS_FUSION_LIGHT"
+        }
       }
     };
 
@@ -112,7 +117,10 @@ app.post('/api/gerar-links', async (req, res) => {
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Cookie": cookie },
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
         body: JSON.stringify(payload)
       }
     );
@@ -121,9 +129,13 @@ app.post('/api/gerar-links', async (req, res) => {
 
     let lista = [];
     const rec = json?.responseBody?.records?.record;
-    if (rec) lista = Array.isArray(rec) ? rec : [rec];
+
+    if (rec) {
+      lista = Array.isArray(rec) ? rec : [rec];
+    }
 
     const filtrados = lista.filter(r => {
+
       const doc = (r.CGC_CPF?.$ || "").replace(/\D/g, '');
       const oc = r.ORDEMCARGA?.$ ? String(r.ORDEMCARGA.$) : "";
 
@@ -131,9 +143,7 @@ app.post('/api/gerar-links', async (req, res) => {
       if (ordem && oc !== ordem) return false;
 
       if (data) {
-        const [d, m, a] = r.DTNEG.$.split("/");
-        const dt = new Date(`${a}-${m}-${d}`);
-        return dt >= new Date(data);
+        return new Date(r.DTNEG?.$) >= new Date(data);
       }
 
       return true;
@@ -162,6 +172,10 @@ app.get('/api/pedido', async (req, res) => {
 
     const { nunota, token } = req.query;
 
+    if (!nunota || !token) {
+      return res.status(400).json({ erro: "Parâmetros inválidos" });
+    }
+
     if (token !== gerarToken(nunota)) {
       return res.status(403).json({ erro: "Acesso negado" });
     }
@@ -171,7 +185,9 @@ app.get('/api/pedido', async (req, res) => {
     const payload = {
       serviceName: "CRUDServiceProvider.loadView",
       requestBody: {
-        query: { viewName: "VW_NOTAS_FUSION" }
+        query: {
+          viewName: "VW_NOTAS_FUSION"
+        }
       }
     };
 
@@ -179,7 +195,10 @@ app.get('/api/pedido', async (req, res) => {
       `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Cookie": cookie },
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
         body: JSON.stringify(payload)
       }
     );
@@ -188,11 +207,16 @@ app.get('/api/pedido', async (req, res) => {
 
     let lista = [];
     const rec = json?.responseBody?.records?.record;
-    if (rec) lista = Array.isArray(rec) ? rec : [rec];
+
+    if (rec) {
+      lista = Array.isArray(rec) ? rec : [rec];
+    }
 
     const pedido = lista.find(r => String(r.NUNOTA.$) === String(nunota));
 
-    if (!pedido) return res.json({ rows: [] });
+    if (!pedido) {
+      return res.json({ rows: [] });
+    }
 
     const tipo = Number(pedido.TIPO_FOTO?.$ || 0);
 
@@ -219,7 +243,7 @@ app.get('/api/pedido', async (req, res) => {
 });
 
 // =========================
-// 📷 IMAGEM (dbimage)
+// 📷 IMAGEM (OK)
 // =========================
 app.get('/api/comprovante/imagem', async (req, res) => {
   try {
@@ -259,61 +283,68 @@ app.get('/api/comprovante/pdf', async (req, res) => {
 
     const { nunota, token } = req.query;
 
+    const nunotaNum = Number(nunota);
+
+    if (!nunota || isNaN(nunotaNum)) {
+      return res.status(400).send("NUNOTA inválido");
+    }
+
     if (token !== gerarToken(nunota)) {
       return res.status(403).send("Acesso negado");
     }
 
     const cookie = await login();
 
-    // 🔥 busca via VIEW
     const payload = {
-      serviceName: "CRUDServiceProvider.loadView",
+      serviceName: "DbExplorerSP.executeQuery",
       requestBody: {
-        query: { viewName: "VW_NOTAS_FUSION" }
+        sql: `
+          SELECT AD_COMPROVTRANSP
+          FROM TGFCAB
+          WHERE NUNOTA = ${nunotaNum}
+        `
       }
     };
 
     const response = await fetch(
-      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Cookie": cookie },
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookie
+        },
         body: JSON.stringify(payload)
       }
     );
 
     const json = await response.json();
 
-    let lista = [];
-    const rec = json?.responseBody?.records?.record;
-    if (rec) lista = Array.isArray(rec) ? rec : [rec];
+    const registro = json?.responseBody?.rows?.[0];
 
-    const pedido = lista.find(r => String(r.NUNOTA.$) === String(nunota));
-
-    if (!pedido || !pedido.AD_COMPROVTRANSP?.$) {
-      return res.status(404).send("PDF não encontrado");
+    if (!registro || !registro[0]) {
+      return res.status(404).send("PDF não encontrado no banco");
     }
 
-    let conteudo = pedido.AD_COMPROVTRANSP.$;
+    let conteudo = registro[0];
 
-    // 🔥 tenta base64 primeiro
+    // 🔥 tenta base64
     try {
-      const bufferBase64 = Buffer.from(conteudo, 'base64');
-      if (bufferBase64.slice(0, 4).toString() === "%PDF") {
+      const buffer = Buffer.from(conteudo, 'base64');
+      if (buffer.slice(0, 4).toString() === "%PDF") {
         res.setHeader('Content-Type', 'application/pdf');
-        return res.send(bufferBase64);
+        return res.send(buffer);
       }
     } catch {}
 
-    // 🔥 fallback: string com lixo antes do PDF
-    const indexPDF = conteudo.indexOf("%PDF");
+    // 🔥 fallback texto/binário
+    const idx = conteudo.indexOf("%PDF");
 
-    if (indexPDF === -1) {
+    if (idx === -1) {
       return res.status(500).send("Formato de PDF inválido");
     }
 
-    const pdfLimpo = conteudo.substring(indexPDF);
-    const buffer = Buffer.from(pdfLimpo, 'binary');
+    const buffer = Buffer.from(conteudo.substring(idx), 'binary');
 
     res.setHeader('Content-Type', 'application/pdf');
     res.send(buffer);
