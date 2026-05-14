@@ -1,251 +1,836 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<title>Top - Gerador</title>
 
-<link rel="stylesheet" href="Styles/Styles.css">
-<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
+  <meta charset="UTF-8">
 
-<style>
-body {
-  font-family: Arial;
-  padding: 20px;
-  background: #f5f5f5;
-}
+  <title>Top - Gerador</title>
 
-h2 { margin-bottom: 10px; }
+  <link
+    rel="stylesheet"
+    href="Styles/Styles.css">
 
-input, button {
-  padding: 10px;
-  margin: 5px;
-  font-size: 14px;
-}
+  <link
+    rel="icon"
+    href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
 
-button { cursor: pointer; }
+  <style>
 
-#status {
-  margin-top: 10px;
-  font-weight: bold;
-}
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f5f5f5;
+    }
 
-.ok { color: green; }
-.erro { color: red; }
-.warn { color: orange; }
+    h2 {
+      margin-bottom: 10px;
+    }
 
-.link-box {
-  background: #fff;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 6px;
-  box-shadow: 0 0 5px rgba(0,0,0,0.1);
-  word-break: break-all;
-}
+    input,
+    button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 14px;
+    }
 
-.actions {
-  margin-top: 8px;
-}
+    button {
+      cursor: pointer;
+    }
+    
 
-.actions button {
-  margin-right: 5px;
-  font-size: 12px;
-}
-</style>
+    #status {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .ok {
+      color: green;
+    }
+
+    .erro {
+      color: red;
+    }
+
+    .warn {
+      color: orange;
+    }
+
+    .link-box {
+      background: #fff;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      word-break: break-all;
+    }
+
+    .actions {
+      margin-top: 8px;
+    }
+
+    .actions button {
+      margin-right: 5px;
+      font-size: 12px;
+    }
+
+    .btndw{
+      background-color: rgb(252, 138, 45);
+      width: 170px;    /* Largura fixa */
+      height: 25px;    /* Altura fixa */
+      font-size: 7px; /* Tamanho da fonte */
+      padding: 2px 20px; /* Espaçamento interno alternativo */
+      text-align: center;
+    }
+
+    .btn-gerar{
+    background:#4a87fa;
+    color:#fff;
+    border:1px solid #2d67d6;
+  }
+
+  </style>
+
 </head>
 
 <body>
 
-<header>
-  <a href="https://topalimentos.shop/produtos/">
-    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png"
-         alt="Logo Top Cestas">
-  </a>
-  <h1>Gerador de Links de Pedidos</h1>
-</header>
+  <header>
 
-<h2>🔗 Gerar Links</h2>
+    <a href="https://topalimentos.shop/produtos/">
 
-<input type="text" id="cnpj" placeholder="CPF ou CNPJ">
-<input type="text" id="ordemCarga" placeholder="Ordem de Carga">
-<input type="date" id="data">
+      <img
+        src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+        alt="Logo Top Cestas">
 
-<button onclick="gerar()">Gerar Links</button>
+    </a>
 
-<div id="status"></div>
-<div id="resultado"></div>
+    <h1>Gerador de Links de Pedidos</h1>
 
-<script>
+    <button onclick="baixarTodos()" class="btndw">
+      🔝 Baixar Todos Comprovantes
+    </button>
 
-// =========================
-// 🔧 HELPERS
-// =========================
-function limparDoc(valor) {
-  return (valor || "").replace(/\D/g, '');
-}
+    <button onclick="window.open('/docs/manual.html', '_blank')"
+      class="btndw">📘 nanual</button>
 
-// =========================
-// 🔁 CONTROLE EXCLUSIVO
-// =========================
-const cnpjInput = document.getElementById('cnpj');
-const ordemInput = document.getElementById('ordemCarga');
+  </header>
 
-cnpjInput.addEventListener('input', () => {
-  ordemInput.disabled = !!cnpjInput.value.trim();
-  if (cnpjInput.value) ordemInput.value = "";
-});
+  <h2>🔗 Gerar Links</h2>
 
-ordemInput.addEventListener('input', () => {
-  cnpjInput.disabled = !!ordemInput.value.trim();
-  if (ordemInput.value) cnpjInput.value = "";
-});
+  <input
+    type="text"
+    id="cnpj"
+    placeholder="CPF ou CNPJ">
 
-// =========================
-// ⏱️ FETCH SEGURO
-// =========================
-async function fetchSeguro(url, options) {
+  <input
+    type="text"
+    id="ordemCarga"
+    placeholder="Ordem de Carga">
 
-  const res = await fetch(url, options);
-  const text = await res.text();
+  <input
+    type="text"
+    id="pedidos"
+    placeholder="Pedidos (ex: 123,456,789)">
 
-  if (!text) {
-    throw new Error("Resposta vazia do servidor");
-  }
+  <input
+    type="date"
+    id="data">
 
-  let data;
+  <button onclick="gerar()" class="btn-gerar">
+    Gerar Links Clientes
+  </button>
 
-  try {
-    data = JSON.parse(text);
-  } catch {
-    console.error("❌ Resposta inválida:", text);
-    throw new Error("Erro ao processar resposta do servidor");
-  }
+  <div id="status"></div>
 
-  if (!res.ok) {
-    throw new Error(data.erro || "Erro na requisição");
-  }
+  <div id="resultado"></div>
 
-  return data;
-}
+  <script>
 
-// =========================
-// 🔍 GERAR LINKS
-// =========================
-async function gerar() {
+    // =========================
+    // 🔒 BLOQUEIOS
+    // =========================
+    document.addEventListener('keydown', function (e) {
 
-  const documento = limparDoc(cnpjInput.value);
-  const ordem = ordemInput.value.trim();
-  const data = document.getElementById('data').value;
+      // F12
+      if (e.key === 'F12') {
 
-  const status = document.getElementById('status');
-  const div = document.getElementById('resultado');
+        e.preventDefault();
 
-  div.innerHTML = "";
+        return false;
+      }
 
-  // 🔥 VALIDAÇÃO
-  if (!documento && !ordem) {
-    status.className = "erro";
-    status.innerHTML = "❌ Informe CPF/CNPJ ou Ordem de Carga";
-    return;
-  }
+      // CTRL + SHIFT + I/J
+      if (
+        e.ctrlKey &&
+        e.shiftKey &&
+        (
+          e.key === 'I' ||
+          e.key === 'J'
+        )
+      ) {
 
-  if (documento && ordem) {
-    status.className = "erro";
-    status.innerHTML = "❌ Use apenas um filtro por vez";
-    return;
-  }
+        e.preventDefault();
 
-  if (documento && documento.length !== 11 && documento.length !== 14) {
-    status.className = "erro";
-    status.innerHTML = "❌ CPF (11) ou CNPJ (14)";
-    return;
-  }
+        return false;
+      }
 
-  status.className = "";
-  status.innerHTML = "⏳ Buscando pedidos...";
+      // CTRL + U
+      if (
+        e.ctrlKey &&
+        e.key.toLowerCase() === 'u'
+      ) {
 
-  try {
+        e.preventDefault();
 
-    const payload = {
-      cnpj: documento || null,
-      ordemCarga: ordem || null,
-      data: data || null
-    };
-
-    const dataRes = await fetchSeguro('/api/gerar-links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+        return false;
+      }
     });
 
-    if (!dataRes.links || !dataRes.links.length) {
-      status.className = "warn";
-      status.innerHTML = "⚠️ Nenhum pedido encontrado";
-      return;
+    // =========================
+    // 📦 VARIÁVEIS GLOBAIS
+    // =========================
+    let pedidosGerados = [];
+
+    let linksGerados = [];
+
+    // =========================
+    // 🔧 HELPERS
+    // =========================
+    function limparDoc(valor) {
+
+      return (valor || '')
+        .replace(/\D/g, '');
     }
 
-    status.className = "ok";
-    status.innerHTML = `✅ ${dataRes.total} pedido(s) encontrado(s)`;
+    // =========================
+    // 🎯 ELEMENTOS
+    // =========================
+    const cnpjInput =
+      document.getElementById('cnpj');
 
-    // 🔗 LISTAGEM
-    dataRes.links.forEach(l => {
+    const ordemInput =
+      document.getElementById('ordemCarga');
 
-      const el = document.createElement('div');
-      el.className = "link-box";
+    const pedidosInput =
+      document.getElementById('pedidos');
 
-      el.innerHTML = `
-        <b>Pedido:</b> ${l.nunota}<br>
-        <a href="${l.link}" target="_blank">${l.link}</a>
+    const dataInput =
+      document.getElementById('data');
 
-        <div class="actions">
-          <button onclick="copiar('${l.link}')">📋 Copiar</button>
-          <button onclick="abrir('${l.link}')">🔗 Abrir</button>
-          <button onclick="whatsapp('${l.link}')">📲 WhatsApp</button>
-        </div>
-      `;
+    const statusDiv =
+      document.getElementById('status');
 
-      div.appendChild(el);
-    });
+    const resultadoDiv =
+      document.getElementById('resultado');
 
-  } catch (err) {
+    // =========================
+    // 🔁 CONTROLE FILTROS
+    // =========================
+    function atualizarFiltros() {
 
-    console.error("❌ Erro:", err);
+      const temCnpj =
+        !!cnpjInput.value.trim();
 
-    status.className = "erro";
-    status.innerHTML = `❌ ${err.message}`;
-  }
-}
+      const temOrdem =
+        !!ordemInput.value.trim();
 
-// =========================
-// 📋 COPIAR
-// =========================
-function copiar(link) {
-  navigator.clipboard.writeText(link)
-    .then(() => alert("Link copiado!"))
-    .catch(() => alert("Erro ao copiar"));
-}
+      const temPedidos =
+        !!pedidosInput.value.trim();
 
-// =========================
-// 🔗 ABRIR
-// =========================
-function abrir(link) {
-  window.open(link, "_blank");
-}
+      const temData =
+        !!dataInput.value;
 
-// =========================
-// 📲 WHATSAPP
-// =========================
-function whatsapp(link) {
-  const texto = encodeURIComponent("Acompanhe seu pedido:\n" + link);
-  window.open(`https://wa.me/?text=${texto}`, "_blank");
-}
+      // CPF/CNPJ
+      cnpjInput.disabled =
+        temOrdem ||
+        temPedidos ||
+        temData;
 
-</script>
+      // ORDEM
+      ordemInput.disabled =
+        temCnpj ||
+        temPedidos ||
+        temData;
 
-<footer>
-  <p style="text-align:center;">
-    © Top Cestas - 2026 - Sistema de rastreio de pedidos
-  </p>
-</footer>
+      // PEDIDOS
+      pedidosInput.disabled =
+        temCnpj ||
+        temOrdem ||
+        temData;
+
+      // DATA
+      dataInput.disabled =
+        temCnpj ||
+        temOrdem ||
+        temPedidos;
+    }
+
+    // =========================
+    // 🎧 EVENTOS
+    // =========================
+    cnpjInput.addEventListener(
+      'input',
+      atualizarFiltros
+    );
+
+    ordemInput.addEventListener(
+      'input',
+      atualizarFiltros
+    );
+
+    pedidosInput.addEventListener(
+      'input',
+      atualizarFiltros
+    );
+
+    dataInput.addEventListener(
+      'input',
+      atualizarFiltros
+    );
+
+    // =========================
+    // 🛡️ FETCH SEGURO
+    // =========================
+    async function fetchSeguro(
+      url,
+      options = {}
+    ) {
+
+      try {
+
+        const res =
+          await fetch(url, options);
+
+        const text =
+          await res.text();
+
+        if (!text) {
+
+          throw new Error(
+            'Resposta vazia do servidor'
+          );
+        }
+
+        let data;
+
+        try {
+
+          data = JSON.parse(text);
+
+        } catch {
+
+          console.error(
+            '❌ JSON inválido:',
+            text
+          );
+
+          throw new Error(
+            'Erro ao processar resposta'
+          );
+        }
+
+        if (!res.ok) {
+
+          throw new Error(
+            data.erro ||
+            'Erro na requisição'
+          );
+        }
+
+        return data;
+
+      } catch (err) {
+
+        console.error(
+          '❌ FETCH:',
+          err
+        );
+
+        throw err;
+      }
+    }
+
+    // =========================
+    // 🧹 LIMPAR RESULTADO
+    // =========================
+    function limparResultado() {
+
+      resultadoDiv.innerHTML = '';
+
+      pedidosGerados = [];
+
+      linksGerados = [];
+    }
+
+    // =========================
+    // 🔍 GERAR LINKS
+    // =========================
+    async function gerar() {
+
+      limparResultado();
+
+      const documento =
+        limparDoc(cnpjInput.value);
+
+      const ordem =
+        ordemInput.value.trim();
+
+      const pedidos =
+        pedidosInput.value.trim();
+
+      const data =
+        dataInput.value;
+
+      // =========================
+      // VALIDAÇÃO
+      // =========================
+      const filtros = [
+
+        documento,
+        ordem,
+        pedidos,
+        data
+
+      ].filter(Boolean);
+
+      if (!filtros.length) {
+
+        statusDiv.className =
+          'erro';
+
+        statusDiv.innerHTML =
+          '❌ Informe um filtro';
+
+        return;
+      }
+
+      if (filtros.length > 1) {
+
+        statusDiv.className =
+          'erro';
+
+        statusDiv.innerHTML =
+          '❌ Utilize apenas um filtro';
+
+        return;
+      }
+
+      // CPF/CNPJ
+      if (
+        documento &&
+        documento.length !== 11 &&
+        documento.length !== 14
+      ) {
+
+        statusDiv.className =
+          'erro';
+
+        statusDiv.innerHTML =
+          '❌ CPF/CNPJ inválido';
+
+        return;
+      }
+
+      // STATUS
+      statusDiv.className = '';
+
+      statusDiv.innerHTML =
+        '⏳ Buscando pedidos...';
+
+      try {
+
+        // =========================
+        // PAYLOAD
+        // =========================
+        const payload = {
+
+          cnpj:
+            documento || null,
+
+          ordemCarga:
+            ordem || null,
+
+          pedidos:
+            pedidos || null,
+
+          data:
+            data || null
+        };
+
+        // =========================
+        // API
+        // =========================
+        const dataRes =
+          await fetchSeguro(
+            '/api/gerar-links',
+            {
+              method: 'POST',
+
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+
+              body:
+                JSON.stringify(payload)
+            }
+          );
+
+        // =========================
+        // SEM RESULTADO
+        // =========================
+        if (
+          !dataRes.links ||
+          !dataRes.links.length
+        ) {
+
+          statusDiv.className =
+            'warn';
+
+          statusDiv.innerHTML =
+            '⚠️ Nenhum pedido encontrado';
+
+          return;
+        }
+
+        // =========================
+        // SALVA PEDIDOS/LINKS
+        // =========================
+        pedidosGerados =
+          dataRes.links.map(
+            l => l.nunota
+          );
+
+        linksGerados =
+          dataRes.links;
+
+        // =========================
+        // STATUS
+        // =========================
+        statusDiv.className =
+          'ok';
+
+        statusDiv.innerHTML = `
+          ✅ ${dataRes.total}
+          pedido(s) encontrado(s)
+        `;
+
+        // =========================
+        // LISTAGEM
+        // =========================
+        dataRes.links.forEach(l => {
+
+          const el =
+            document.createElement('div');
+
+          el.className =
+            'link-box';
+
+          el.innerHTML = `
+
+            <b>Pedido:</b>
+            ${l.nunota}
+
+            <br><br>
+
+            <a
+              href="${l.link}"
+              target="_blank"
+            >
+              ${l.link}
+            </a>
+
+            <div class="actions">
+
+              <button
+                onclick="copiar('${l.link}')"
+              >
+                📋 Copiar
+              </button>
+
+              <button
+                onclick="abrir('${l.link}')"
+              >
+                🔗 Abrir
+              </button>
+
+              <button
+                onclick="whatsapp('${l.link}')"
+              >
+                📲 WhatsApp
+              </button>
+
+            </div>
+          `;
+
+          resultadoDiv.appendChild(el);
+        });
+
+      } catch (err) {
+
+        console.error(
+          '❌ ERRO:',
+          err
+        );
+
+        statusDiv.className =
+          'erro';
+
+        statusDiv.innerHTML = `
+          ❌ ${err.message}
+        `;
+      }
+    }
+
+    // =========================
+    // 📋 COPIAR
+    // =========================
+    async function copiar(link) {
+
+      try {
+
+        await navigator.clipboard
+          .writeText(link);
+
+        alert(
+          '✅ Link copiado'
+        );
+
+      } catch (err) {
+
+        console.error(err);
+
+        alert(
+          '❌ Erro ao copiar'
+        );
+      }
+    }
+
+    // =========================
+    // 🔗 ABRIR
+    // =========================
+    function abrir(link) {
+
+      window.open(
+        link,
+        '_blank'
+      );
+    }
+
+    // =========================
+    // 📲 WHATSAPP
+    // =========================
+    function whatsapp(link) {
+
+      const texto =
+        encodeURIComponent(
+          `Acompanhe seu pedido:\n${link}`
+        );
+
+      window.open(
+        `https://wa.me/?text=${texto}`,
+        '_blank'
+      );
+    }
+
+    // =========================
+    // ⬇️ BAIXAR TODOS
+    // =========================
+    async function baixarTodos() {
+
+      if (!linksGerados.length) {
+
+        alert(
+          '⚠️ Nenhum pedido gerado'
+        );
+
+        return;
+      }
+
+      try {
+
+        statusDiv.className = '';
+
+        statusDiv.innerHTML = `
+          ⏳ Preparando downloads...
+        `;
+
+        let totalBaixados = 0;
+
+        // =========================
+        // LOOP
+        // =========================
+        for (const item of linksGerados) {
+
+          const token =
+            item.link.split('token=')[1];
+
+          // =========================
+          // TESTA IMAGEM
+          // =========================
+          const imgUrl =
+            `/api/comprovante/imagem?nunota=${item.nunota}&token=${token}`;
+
+          try {
+
+            const imgRes =
+              await fetch(imgUrl);
+
+            if (imgRes.ok) {
+
+              const blob =
+                await imgRes.blob();
+
+              if (blob.size > 1000) {
+
+                const url =
+                  window.URL.createObjectURL(blob);
+
+                const a =
+                  document.createElement('a');
+
+                a.href = url;
+
+                a.download =
+                  `Comprovante_${item.nunota}.jpg`;
+
+                document.body.appendChild(a);
+
+                a.click();
+
+                a.remove();
+
+                window.URL.revokeObjectURL(url);
+
+                totalBaixados++;
+
+                // Delay anti bloqueio
+                await new Promise(r =>
+                  setTimeout(r, 800)
+                );
+
+                // Se encontrou imagem,
+                // não tenta PDF
+                continue;
+              }
+            }
+
+          } catch (err) {
+
+            console.error(
+              `Erro imagem ${item.nunota}`,
+              err
+            );
+          }
+
+          // =========================
+          // TESTA PDF
+          // =========================
+          const pdfUrl =
+            `/api/comprovante/pdf?nunota=${item.nunota}&token=${token}`;
+
+          try {
+
+            const pdfRes =
+              await fetch(pdfUrl);
+
+            if (pdfRes.ok) {
+
+              const blob =
+                await pdfRes.blob();
+
+              if (blob.size > 1000) {
+
+                const url =
+                  window.URL.createObjectURL(blob);
+
+                const a =
+                  document.createElement('a');
+
+                a.href = url;
+
+                a.download =
+                  `Comprovante_${item.nunota}.pdf`;
+
+                document.body.appendChild(a);
+
+                a.click();
+
+                a.remove();
+
+                window.URL.revokeObjectURL(url);
+
+                totalBaixados++;
+
+                await new Promise(r =>
+                  setTimeout(r, 800)
+                );
+              }
+            }
+
+          } catch (err) {
+
+            console.error(
+              `Erro PDF ${item.nunota}`,
+              err
+            );
+          }
+        }
+
+        // =========================
+        // FINAL
+        // =========================
+        statusDiv.className =
+          'ok';
+
+        statusDiv.innerHTML = `
+          ✅ ${totalBaixados}
+          download(s) iniciado(s)
+        `;
+
+        alert(`
+
+✅ Downloads iniciados
+
+📂 Os arquivos foram enviados
+para a pasta padrão de Downloads
+do navegador.
+
+💡 Dica:
+configure o Chrome para perguntar
+onde salvar os arquivos.
+
+        `);
+
+      } catch (err) {
+
+        console.error(err);
+
+        statusDiv.className =
+          'erro';
+
+        statusDiv.innerHTML = `
+          ❌ ${err.message}
+        `;
+      }
+    }
+
+    // =========================
+    // 🚀 START
+    // =========================
+    atualizarFiltros();
+
+  </script>
+
+  <footer>
+
+    <p style="text-align:center;">
+      © Top Cestas - 2026 - Sistema de rastreio de pedidos
+    </p>
+
+  </footer>
 
 </body>
+
 </html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Guia de Implantação - API Status de Pedidos</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f4f6f8;
+  color: #333;
+}
+
+header {
+  background: linear-gradient(90deg, #c62828, #ef6c00);
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+}
+
+.container {
+  width: 97%;
+  margin: 20px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+h2 {
+  border-left: 5px solid #ef6c00;
+  padding-left: 10px;
+  margin-top: 30px;
+}
+
+code {
+  display: block;
+  background: #272822;
+  color: #f8f8f2;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-family: Consolas, monospace;
+  font-size: 14px;
+}
+
+ul {
+  margin-left: 20px;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.footer {
+  text-align: center;
+  padding: 15px;
+  font-size: 13px;
+  color: #777;
+}
+
+.highlight {
+  background: #fff3e0;
+  padding: 10px;
+  border-left: 4px solid #ff9800;
+  border-radius: 5px;
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+  <h1>🚀 Guia de Implantação</h1>
+  <p>API de Monitoramento de Pedidos - Windows Server 2022</p>
+</header>
+
+<div class="container">
+
+<h2>📌 Objetivo</h2>
+<p>Implantar a aplicação Node.js de monitoramento de pedidos em ambiente de produção com estabilidade e segurança.</p>
+
+<h2>🧠 Arquitetura</h2>
+<code>
+Usuário (Browser)
+    ↓
+Node.js (Express)
+    ↓
+API Sankhya
+</code>
+
+<h2>⚙️ Pré-requisitos</h2>
+<ul>
+<li>Acesso administrativo ao servidor</li>
+<li>Portas liberadas (ex: 5050)</li>
+<li>Acesso ao Sankhya</li>
+<li>Internet para instalação</li>
+</ul>
+
+<h2>📦 Instalar Node.js</h2>
+<p>Baixe em: https://nodejs.org</p>
+
+<code>
+node -v
+npm -v
+</code>
+
+<h2>📁 Publicar Projeto</h2>
+<code>
+C:\apps\status-pedidos
+</code>
+
+<p>Copiar arquivos:</p>
+<code>
+server.js
+package.json
+/public
+</code>
+
+<h2>📥 Instalar Dependências</h2>
+<code>
+cd C:\apps\status-pedidos
+npm install
+</code>
+
+<h2>🔐 Variáveis de Ambiente</h2>
+<code>
+SECRET=chave_super_secreta
+USER=usuario
+PASS=senha
+PORT=5050
+</code>
+
+<h2>🔄 Executar com PM2</h2>
+<code>
+npm install -g pm2
+pm2 start server.js --name status-pedidos
+pm2 save
+pm2 startup
+</code>
+
+<h2>🔍 Monitoramento</h2>
+<code>
+pm2 list
+pm2 logs
+pm2 restart status-pedidos
+</code>
+
+<h2>🌐 Acesso</h2>
+<code>
+http://IP_DO_SERVIDOR:5050
+</code>
+
+<h2>🧪 Testes</h2>
+<code>
+http://IP:5050/gerador.html
+http://IP:5050/index.html?nunota=XXXX&token=XXXX
+</code>
+
+<h2>🔐 Segurança</h2>
+<ul>
+<li>Não deixar credenciais no código</li>
+<li>Usar .env</li>
+<li>Monitorar logs</li>
+</ul>
+
+<h2>📦 Estrutura</h2>
+<code>
+C:\apps\status-pedidos
+│
+├── server.js
+├── package.json
+├── .env
+└── public
+</code>
+
+<h2>🚨 Problemas Comuns</h2>
+
+<div class="highlight">
+<b>Porta não responde:</b><br>
+Verifique PM2 e firewall
+</div>
+
+<div class="highlight">
+<b>Erro 500:</b>
+<code>pm2 logs</code>
+</div>
+
+<div class="highlight">
+<b>Erro Sankhya:</b><br>
+Validar credenciais e URL
+</div>
+
+<h2>🚀 Melhorias Futuras</h2>
+<ul>
+<li>HTTPS (SSL)</li>
+<li>NGINX ou IIS</li>
+<li>Docker</li>
+<li>Monitoramento avançado</li>
+</ul>
+
+<h2>✅ Conclusão</h2>
+<p>
+Sistema pronto para produção, com execução contínua, integração com Sankhya e acesso via rede interna.
+</p>
+
+</div>
+
+<div class="footer">
+© Top Cestas - Guia Técnico de Implantação
+</div>
+
+</body>
+</html>

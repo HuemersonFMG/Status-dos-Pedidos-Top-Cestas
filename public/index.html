@@ -13,311 +13,47 @@
 
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Status do Pedido</title>
+  <head>
+    <meta charset="UTF-8">
+    <title>Status do Pedido</title>
 
-<link rel="stylesheet" href="Styles/Styles.css">
-<link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+    <link rel="stylesheet" href="Styles/Styles.css">
+    <link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+  </head>
 
-<style>
-body {
-  font-family: Arial;
-  text-align: center;
-  padding: 20px;
-  background: #f5f5f5;
-}
+  <body>
+    <header>
+      <a href="https://topalimentos.shop/produtos/">
+        <img
+          src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+          alt="Logo Top Cestas">
+      </a>
 
-.card {
-  border: 1px solid #ddd;
-  padding: 20px;
-  margin: 20px auto;
-  max-width: 520px;
-  border-radius: 10px;
-  background: #fff;
-}
+      <h1>Status do Pedido</h1>
+    </header>
 
-.status {
-  font-size: 20px;
-  font-weight: bold;
-  margin: 10px 0;
-}
+    <h2>📦 Acompanhamento</h2>
 
-.ok { color: green; }
-.warn { color: orange; }
-.erro { color: red; }
+    <div id="conteudo"></div>
 
-hr {
-  margin: 15px 0;
-}
+    <!-- POPUP -->
+    <div class="popup" id="popup">
 
-/* POPUP */
-.popup {
-  position: fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background: rgba(0,0,0,0.9);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  flex-direction: column;
-  z-index: 9999;
-}
+      <span class="close" onclick="fechar()">✖</span>
 
-.viewer {
-  max-width: 90%;
-  max-height: 80%;
-}
+      <div class="viewer" id="viewer"></div>
 
-.viewer img {
-  max-width: 100%;
-  max-height: 100%;
-}
+      <div class="controls" id="controls"></div>
 
-.viewer iframe {
-  width: 90vw;
-  height: 80vh;
-  border: none;
-}
+    </div>
 
-.controls {
-  margin-top: 10px;
-}
-
-.controls button {
-  margin: 5px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.close {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  color: white;
-  font-size: 28px;
-  cursor: pointer;
-}
-</style>
-</head>
-
-<body>
-
-<header>
-  <a href="https://topalimentos.shop/produtos/">
-    <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo.png"
-         alt="Logo Top Cestas">
-  </a>
-  <h1>Status do Pedido</h1>
-</header>
-
-<h2>📦 Acompanhamento</h2>
-
-<div id="conteudo"></div>
-
-<!-- POPUP -->
-<div class="popup" id="popup">
-  <span class="close" onclick="fechar()">✖</span>
-  <div class="viewer" id="viewer"></div>
-  <div class="controls" id="controls"></div>
-</div>
-
-<script>
-
-// =========================
-// 🔗 PARAMS
-// =========================
-function getParam(nome) {
-  return new URLSearchParams(window.location.search).get(nome);
-}
-
-// =========================
-// 🛡️ FETCH SEGURO
-// =========================
-async function fetchSeguro(url) {
-
-  const res = await fetch(url);
-  const text = await res.text();
-
-  if (!text) {
-    throw new Error("Resposta vazia do servidor");
-  }
-
-  let data;
-
-  try {
-    data = JSON.parse(text);
-  } catch {
-    console.error("Resposta inválida:", text);
-    throw new Error("Erro ao processar resposta do servidor");
-  }
-
-  if (!res.ok) {
-    throw new Error(data.erro || "Erro na requisição");
-  }
-
-  return data;
-}
-
-// =========================
-// 📅 FORMATAR DATA
-// =========================
-function formatarData(data) {
-  if (!data) return "-";
-  try {
-    return new Date(data).toLocaleDateString('pt-BR');
-  } catch {
-    return data;
-  }
-}
-
-// =========================
-// 📷 ABRIR IMAGEM
-// =========================
-function abrirImagem(nunota, token) {
-
-  const url = `/api/comprovante/imagem?nunota=${nunota}&token=${token}`;
-
-  document.getElementById('viewer').innerHTML = `<img src="${url}">`;
-
-  document.getElementById('controls').innerHTML = `
-    <button onclick="window.open('${url}','_blank')">🔗 Abrir</button>
-    <button onclick="baixar('${url}')">⬇️ Download</button>
-  `;
-
-  document.getElementById('popup').style.display = "flex";
-}
-
-// =========================
-// 📄 ABRIR PDF
-// =========================
-function abrirPDF(nunota, token) {
-
-  const url = `/api/comprovante/pdf?nunota=${nunota}&token=${token}`;
-
-  document.getElementById('viewer').innerHTML = `<iframe src="${url}"></iframe>`;
-
-  document.getElementById('controls').innerHTML = `
-    <button onclick="window.open('${url}','_blank')">🔗 Abrir PDF</button>
-    <button onclick="baixar('${url}')">⬇️ Download</button>
-  `;
-
-  document.getElementById('popup').style.display = "flex";
-}
-
-// =========================
-// ⬇️ DOWNLOAD
-// =========================
-function baixar(url) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.target = "_blank";
-  a.click();
-}
-
-// =========================
-// ❌ FECHAR POPUP
-// =========================
-function fechar() {
-  document.getElementById('popup').style.display = "none";
-}
-
-// =========================
-// 🚀 CARREGAR DADOS
-// =========================
-async function carregar() {
-
-  const nunota = getParam('nunota');
-  const token = getParam('token');
-
-  const div = document.getElementById('conteudo');
-
-  if (!nunota || !token) {
-    div.innerHTML = "<p class='erro'>❌ Link inválido</p>";
-    return;
-  }
-
-  div.innerHTML = "⏳ Carregando pedido...";
-
-  try {
-
-    const data = await fetchSeguro(`/api/pedido?nunota=${nunota}&token=${token}`);
-
-    if (!data.rows || !data.rows.length) {
-      div.innerHTML = "<p class='warn'>⚠️ Pedido não encontrado</p>";
-      return;
-    }
-
-    const p = data.rows[0];
-
-    div.innerHTML = `
-      <div class="card">
-
-        <p><b>📅 Data:</b> ${formatarData(p.DTNEG)}</p>
-        <p><b>🚚 Ordem de Carga:</b> ${p.ORDEMCARGA || "-"}</p>
-
-        <hr>
-
-        <p><b>🧾 Pedido:</b> ${p.NUNOTA}</p>
-        <p><b>👤 Cliente:</b> ${p.NOMEPARC}</p>
-        <p><b>📄 Documento:</b> ${p.CGC_CPF || "-"}</p>
-        <p><b>🚛 Transportadora:</b> ${p.TRANSPORTADORA || "-"}</p>
-
-        <hr>
-
-        <p class="status">${p.ST_ENTREGAS}</p>
-
-        <hr>
-
-        ${
-          p.TEM_FOTO
-            ? `<p style="color:blue;cursor:pointer"
-                 onclick="abrirImagem('${p.NUNOTA}','${token}')">
-                 📷 Visualizar Foto
-               </p>`
-            : ''
-        }
-
-        ${
-          p.TEM_PDF
-            ? `<p style="color:blue;cursor:pointer"
-                 onclick="abrirPDF('${p.NUNOTA}','${token}')">
-                 📄 Visualizar PDF
-               </p>`
-            : ''
-        }
-
-        ${
-          !p.TEM_FOTO && !p.TEM_PDF
-            ? `<p>📷 Sem comprovante disponível</p>`
-            : ''
-        }
-
-      </div>
-    `;
-
-  } catch (err) {
-
-    console.error("Erro:", err);
-
-    div.innerHTML = `<p class="erro">❌ ${err.message}</p>`;
-  }
-}
-
-// START
-carregar();
-
-</script>
-
-<footer>
-  <p style="text-align:center;">
-    © Top Cestas - 2026 - Monitoramento de pedidos
-  </p>
-</footer>
-
-</body>
+    <footer>
+      <p style="text-align:center;">
+        © Top Cestas - 2026 - Monitoramento de pedidos
+      </p>
+    </footer>
+    <script src="Styles/script.js"></script>
+  </body>
 </html>
 
 
