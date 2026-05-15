@@ -1,10 +1,17 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
-const archiver = require('archiver');
+
+const archiverPkg = require('archiver');
+
+const archiver =
+  typeof archiverPkg === 'function'
+    ? archiverPkg
+    : archiverPkg.default;
 
 const fetch = (...args) =>
-  import('node-fetch').then(({ default: fetch }) => fetch(...args));
+  import('node-fetch')
+    .then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 
@@ -15,13 +22,25 @@ app.use(express.static('public'));
 
 const PORT = process.env.PORT || 5050;
 
-const SECRET = process.env.SECRET || 'chave_super_secreta';
+const SECRET =
+  process.env.SECRET ||
+  'chave_super_secreta';
 
-const BASE_URL = 'http://topcesta.fwc.cloud:8180';
-const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
+const BASE_URL =
+  'http://topcesta.fwc.cloud:8180';
 
-const USER = process.env.SANKHYA_USER || process.env.USER || 'HUEMERSON';
-const PASS = process.env.SANKHYA_PASS || process.env.PASS || '654321';
+const SERVICE_URL =
+  `${BASE_URL}/mge/service.sbr`;
+
+const USER =
+  process.env.SANKHYA_USER ||
+  process.env.USER ||
+  'HUEMERSON';
+
+const PASS =
+  process.env.SANKHYA_PASS ||
+  process.env.PASS ||
+  '654321';
 
 let cachedCookie = null;
 let cookieTime = 0;
@@ -41,12 +60,8 @@ async function login() {
   const payload = {
     serviceName: 'MobileLoginSP.login',
     requestBody: {
-      NOMUSU: {
-        $: USER
-      },
-      INTERNO: {
-        $: PASS
-      }
+      NOMUSU: { $: USER },
+      INTERNO: { $: PASS }
     }
   };
 
@@ -61,8 +76,11 @@ async function login() {
     }
   );
 
-  const rawCookie = response.headers.get('set-cookie') || '';
-  const cookie = rawCookie.split(';')[0];
+  const rawCookie =
+    response.headers.get('set-cookie') || '';
+
+  const cookie =
+    rawCookie.split(';')[0];
 
   if (!cookie) {
     throw new Error('Erro ao autenticar no Sankhya');
@@ -117,24 +135,31 @@ app.post('/api/gerar-links', async (req, res) => {
       nfes
     } = req.body;
 
-    const documento = (cnpj || '').replace(/\D/g, '');
-    const ordem = ordemCarga ? String(ordemCarga).trim() : null;
+    const documento =
+      (cnpj || '').replace(/\D/g, '');
+
+    const ordem =
+      ordemCarga
+        ? String(ordemCarga).trim()
+        : null;
 
     let listaPedidos = [];
     let listaNfes = [];
 
     if (pedidos) {
-      listaPedidos = String(pedidos)
-        .split(',')
-        .map(p => p.trim())
-        .filter(Boolean);
+      listaPedidos =
+        String(pedidos)
+          .split(',')
+          .map(p => p.trim())
+          .filter(Boolean);
     }
 
     if (nfes) {
-      listaNfes = String(nfes)
-        .split(',')
-        .map(n => n.trim())
-        .filter(Boolean);
+      listaNfes =
+        String(nfes)
+          .split(',')
+          .map(n => n.trim())
+          .filter(Boolean);
     }
 
     let tipoFiltro = null;
@@ -182,7 +207,8 @@ app.post('/api/gerar-links', async (req, res) => {
 
     const json = await response.json();
 
-    const rec = json?.responseBody?.records?.record;
+    const rec =
+      json?.responseBody?.records?.record;
 
     let lista = [];
 
@@ -198,44 +224,63 @@ app.post('/api/gerar-links', async (req, res) => {
       fim = new Date(`${data}T23:59:59`);
     }
 
-    const filtrados = lista.filter(r => {
-      const doc = (r.CGC_CPF?.$ || '').replace(/\D/g, '');
-      const oc = r.ORDEMCARGA?.$ ? String(r.ORDEMCARGA.$).trim() : '';
-      const nunota = String(r.NUNOTA?.$ || '').trim();
-      const numNota = String(r.NUMNOTA?.$ || '').trim();
+    const filtrados =
+      lista.filter(r => {
+        const doc =
+          (r.CGC_CPF?.$ || '').replace(/\D/g, '');
 
-      switch (tipoFiltro) {
-        case 'PEDIDOS':
-          return listaPedidos.includes(nunota);
+        const oc =
+          r.ORDEMCARGA?.$
+            ? String(r.ORDEMCARGA.$).trim()
+            : '';
 
-        case 'NFES':
-          return listaNfes.includes(numNota);
+        const nunota =
+          String(r.NUNOTA?.$ || '').trim();
 
-        case 'DOCUMENTO':
-          return doc === documento;
+        const numNota =
+          String(r.NUMNOTA?.$ || '').trim();
 
-        case 'ORDEM':
-          return oc === ordem;
+        switch (tipoFiltro) {
+          case 'PEDIDOS':
+            return listaPedidos.includes(nunota);
 
-        case 'DATA': {
-          const dataPedido = parseDataBR(r.DTNEG?.$);
-          return dataPedido && dataPedido >= inicio && dataPedido <= fim;
+          case 'NFES':
+            return listaNfes.includes(numNota);
+
+          case 'DOCUMENTO':
+            return doc === documento;
+
+          case 'ORDEM':
+            return oc === ordem;
+
+          case 'DATA': {
+            const dataPedido =
+              parseDataBR(r.DTNEG?.$);
+
+            return (
+              dataPedido &&
+              dataPedido >= inicio &&
+              dataPedido <= fim
+            );
+          }
+
+          default:
+            return false;
         }
+      });
 
-        default:
-          return false;
-      }
-    });
+    const baseUrl =
+      `${req.protocol}://${req.get('host')}`;
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-
-    const links = filtrados.map(r => ({
-      nunota: r.NUNOTA?.$ || '',
-      NUNOTA: r.NUNOTA?.$ || '',
-      numNota: r.NUMNOTA?.$ || '',
-      NUMNOTA: r.NUMNOTA?.$ || '',
-      link: `${baseUrl}/index.html?nunota=${r.NUNOTA?.$}&token=${gerarToken(r.NUNOTA?.$)}`
-    }));
+    const links =
+      filtrados.map(r => ({
+        nunota: r.NUNOTA?.$ || '',
+        NUNOTA: r.NUNOTA?.$ || '',
+        numNota: r.NUMNOTA?.$ || '',
+        NUMNOTA: r.NUMNOTA?.$ || '',
+        link:
+          `${baseUrl}/index.html?nunota=${r.NUNOTA?.$}&token=${gerarToken(r.NUNOTA?.$)}`
+      }));
 
     res.json({
       total: links.length,
@@ -292,7 +337,8 @@ app.get('/api/pedido', async (req, res) => {
 
     const json = await response.json();
 
-    const rec = json?.responseBody?.records?.record;
+    const rec =
+      json?.responseBody?.records?.record;
 
     let lista = [];
 
@@ -300,9 +346,10 @@ app.get('/api/pedido', async (req, res) => {
       lista = Array.isArray(rec) ? rec : [rec];
     }
 
-    const pedido = lista.find(
-      r => String(r.NUNOTA?.$) === String(nunota)
-    );
+    const pedido =
+      lista.find(
+        r => String(r.NUNOTA?.$) === String(nunota)
+      );
 
     if (!pedido) {
       return res.json({
@@ -310,7 +357,8 @@ app.get('/api/pedido', async (req, res) => {
       });
     }
 
-    const tipo = Number(pedido.TIPO_FOTO?.$ || 0);
+    const tipo =
+      Number(pedido.TIPO_FOTO?.$ || 0);
 
     res.json({
       rows: [
@@ -321,7 +369,8 @@ app.get('/api/pedido', async (req, res) => {
           CGC_CPF: pedido.CGC_CPF?.$,
           DTNEG: pedido.DTNEG?.$,
           ORDEMCARGA: pedido.ORDEMCARGA?.$,
-          TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || '').trim(),
+          TRANSPORTADORA:
+            (pedido.TRANSPORTADORA?.$ || '').trim(),
           ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
           TEM_FOTO: tipo === 1,
           TEM_PDF: tipo === 2
@@ -342,18 +391,20 @@ app.get('/api/comprovante/imagem', async (req, res) => {
   try {
     const { nunota, token } = req.query;
 
-    if (!nunota || !token) {
-      return res.status(400).send('Parâmetros inválidos');
+    const nunotaNum = Number(nunota);
+
+    if (!nunota || isNaN(nunotaNum)) {
+      return res.status(400).send('NUNOTA inválido');
     }
 
-    if (token !== gerarToken(nunota)) {
+    if (!token || token !== gerarToken(nunota)) {
       return res.status(403).send('Acesso negado');
     }
 
     const cookie = await login();
 
     const url =
-      `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${Number(nunota)}@SEQ=1.dbimage`;
+      `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunotaNum}@SEQ=1.dbimage`;
 
     const response = await fetch(url, {
       headers: {
@@ -387,7 +438,7 @@ app.get('/api/comprovante/pdf', async (req, res) => {
       return res.status(400).send('NUNOTA inválido');
     }
 
-    if (token !== gerarToken(nunota)) {
+    if (!token || token !== gerarToken(nunota)) {
       return res.status(403).send('Acesso negado');
     }
 
@@ -418,13 +469,15 @@ app.get('/api/comprovante/pdf', async (req, res) => {
 
     const json = await response.json();
 
-    const registro = json?.responseBody?.rows?.[0];
+    const registro =
+      json?.responseBody?.rows?.[0];
 
     if (!registro || !registro[0]) {
       return res.status(404).send('PDF não encontrado');
     }
 
-    const buffer = Buffer.from(registro[0], 'base64');
+    const buffer =
+      Buffer.from(registro[0], 'base64');
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -451,14 +504,19 @@ app.post('/api/baixar-comprovantes', async (req, res) => {
       });
     }
 
-    const listaPedidos = pedidos
-      .map(p => Number(p))
-      .filter(p => p && !isNaN(p));
+    const listaPedidos =
+      pedidos
+        .map(p => Number(p))
+        .filter(p => p && !isNaN(p));
 
     if (!listaPedidos.length) {
       return res.status(400).json({
         erro: 'Nenhum pedido válido informado'
       });
+    }
+
+    if (typeof archiver !== 'function') {
+      throw new Error('Archiver não carregado corretamente');
     }
 
     const cookie = await login();
@@ -469,11 +527,12 @@ app.post('/api/baixar-comprovantes', async (req, res) => {
       'attachment; filename=comprovantes.zip'
     );
 
-    const archive = archiver('zip', {
-      zlib: {
-        level: 9
-      }
-    });
+    const archive =
+      archiver('zip', {
+        zlib: {
+          level: 9
+        }
+      });
 
     archive.on('error', err => {
       console.error('❌ ERRO ZIP:', err);
@@ -492,14 +551,16 @@ app.post('/api/baixar-comprovantes', async (req, res) => {
         const imgUrl =
           `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
 
-        const imgResponse = await fetch(imgUrl, {
-          headers: {
-            Cookie: cookie
-          }
-        });
+        const imgResponse =
+          await fetch(imgUrl, {
+            headers: {
+              Cookie: cookie
+            }
+          });
 
         if (imgResponse.ok) {
-          const buffer = await responseToBuffer(imgResponse);
+          const buffer =
+            await responseToBuffer(imgResponse);
 
           if (buffer && buffer.length > 0) {
             archive.append(buffer, {
@@ -522,24 +583,27 @@ app.post('/api/baixar-comprovantes', async (req, res) => {
           }
         };
 
-        const responsePdf = await fetch(
-          `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Cookie: cookie
-            },
-            body: JSON.stringify(payload)
-          }
-        );
+        const responsePdf =
+          await fetch(
+            `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Cookie: cookie
+              },
+              body: JSON.stringify(payload)
+            }
+          );
 
         const json = await responsePdf.json();
 
-        const registro = json?.responseBody?.rows?.[0];
+        const registro =
+          json?.responseBody?.rows?.[0];
 
         if (registro && registro[0]) {
-          const pdfBuffer = Buffer.from(registro[0], 'base64');
+          const pdfBuffer =
+            Buffer.from(registro[0], 'base64');
 
           if (pdfBuffer.length > 0) {
             archive.append(pdfBuffer, {
