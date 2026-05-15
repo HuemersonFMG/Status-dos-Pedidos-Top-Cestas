@@ -44,31 +44,29 @@ document.addEventListener('keydown', function (e) {
       .replace(/\D/g, '');
   }
 
+  function extrairValor(valor) {
+
+    if (valor && typeof valor === 'object' && '$' in valor) {
+      return valor.$ || '';
+    }
+
+    return valor || '';
+  }
+
   function getNunota(item) {
 
-    return (
-      item?.nunota ||
-      item?.NUNOTA ||
-      item?.NUNOTA?.$ ||
+    return String(
+      extrairValor(item?.nunota) ||
+      extrairValor(item?.NUNOTA) ||
       ''
     );
   }
 
   function getNumNota(item) {
 
-    return (
-      item?.numNota ||
-      item?.NUMNOTA ||
-      item?.NUMNOTA?.$ ||
-      ''
-    );
-  }
-
-  function getLink(item) {
-
-    return (
-      item?.link ||
-      item?.LINK ||
+    return String(
+      extrairValor(item?.numNota) ||
+      extrairValor(item?.NUMNOTA) ||
       ''
     );
   }
@@ -76,11 +74,11 @@ document.addEventListener('keydown', function (e) {
   function getNomeCliente(item) {
 
     const nome =
-      item?.NOMEPARC ||
-      item?.nomeparc ||
-      item?.NOMEPARC?.$ ||
-      item?.cliente ||
-      item?.CLIENTE ||
+      extrairValor(item?.nomeParc) ||
+      extrairValor(item?.NOMEPARC) ||
+      extrairValor(item?.nomeparc) ||
+      extrairValor(item?.cliente) ||
+      extrairValor(item?.CLIENTE) ||
       '';
 
     const nomeLimpo =
@@ -94,6 +92,28 @@ document.addEventListener('keydown', function (e) {
         .toUpperCase();
 
     return nomeLimpo || 'CLIENTE';
+  }
+
+  function getNomeClienteExibicao(item) {
+
+    const nome =
+      extrairValor(item?.nomeParc) ||
+      extrairValor(item?.NOMEPARC) ||
+      extrairValor(item?.nomeparc) ||
+      extrairValor(item?.cliente) ||
+      extrairValor(item?.CLIENTE) ||
+      '';
+
+    return String(nome).trim() || 'CLIENTE';
+  }
+
+  function getLink(item) {
+
+    return (
+      extrairValor(item?.link) ||
+      extrairValor(item?.LINK) ||
+      ''
+    );
   }
 
   function montarNomeArquivo(item, extensao) {
@@ -226,41 +246,19 @@ document.addEventListener('keydown', function (e) {
   // =========================
   // 🎧 EVENTOS
   // =========================
-  cnpjInput.addEventListener(
-    'input',
-    atualizarFiltros
-  );
-
-  ordemInput.addEventListener(
-    'input',
-    atualizarFiltros
-  );
-
-  pedidosInput.addEventListener(
-    'input',
-    atualizarFiltros
-  );
+  cnpjInput.addEventListener('input', atualizarFiltros);
+  ordemInput.addEventListener('input', atualizarFiltros);
+  pedidosInput.addEventListener('input', atualizarFiltros);
+  dataInput.addEventListener('input', atualizarFiltros);
 
   if (nfesInput) {
-
-    nfesInput.addEventListener(
-      'input',
-      atualizarFiltros
-    );
+    nfesInput.addEventListener('input', atualizarFiltros);
   }
-
-  dataInput.addEventListener(
-    'input',
-    atualizarFiltros
-  );
 
   // =========================
   // 🛡️ FETCH SEGURO
   // =========================
-  async function fetchSeguro(
-    url,
-    options = {}
-  ) {
+  async function fetchSeguro(url, options = {}) {
 
     try {
 
@@ -294,10 +292,7 @@ document.addEventListener('keydown', function (e) {
 
     } catch (err) {
 
-      console.error(
-        '❌ FETCH:',
-        err
-      );
+      console.error('❌ FETCH:', err);
 
       throw err;
     }
@@ -334,12 +329,11 @@ document.addEventListener('keydown', function (e) {
     cnpjInput.disabled = false;
     ordemInput.disabled = false;
     pedidosInput.disabled = false;
+    dataInput.disabled = false;
 
     if (nfesInput) {
       nfesInput.disabled = false;
     }
-
-    dataInput.disabled = false;
 
     setStatus('', '');
   }
@@ -369,13 +363,11 @@ document.addEventListener('keydown', function (e) {
       dataInput.value;
 
     const filtros = [
-
       documento,
       ordem,
       pedidos,
       nfes,
       data
-
     ].filter(Boolean);
 
     if (!filtros.length) {
@@ -420,7 +412,6 @@ document.addEventListener('keydown', function (e) {
     try {
 
       const payload = {
-
         cnpj:
           documento || null,
 
@@ -488,7 +479,7 @@ document.addEventListener('keydown', function (e) {
           getNumNota(l);
 
         const nomeCliente =
-          getNomeCliente(l);
+          getNomeClienteExibicao(l);
 
         const link =
           getLink(l);
@@ -513,14 +504,9 @@ document.addEventListener('keydown', function (e) {
             : ''
           }
 
-          ${nomeCliente
-            ? `
-              <br>
-              <b>Cliente:</b>
-              ${nomeCliente.replace(/_/g, ' ')}
-            `
-            : ''
-          }
+          <br>
+          <b>Cliente:</b>
+          ${nomeCliente}
 
           <br><br>
 
@@ -533,21 +519,15 @@ document.addEventListener('keydown', function (e) {
 
           <div class="actions">
 
-            <button
-              onclick="copiar('${link}')"
-            >
+            <button onclick="copiar('${link}')">
               📋 Copiar
             </button>
 
-            <button
-              onclick="abrir('${link}')"
-            >
+            <button onclick="abrir('${link}')">
               🔗 Abrir
             </button>
 
-            <button
-              onclick="whatsapp('${link}')"
-            >
+            <button onclick="whatsapp('${link}')">
               📲 WhatsApp
             </button>
 
@@ -559,10 +539,7 @@ document.addEventListener('keydown', function (e) {
 
     } catch (err) {
 
-      console.error(
-        '❌ ERRO:',
-        err
-      );
+      console.error('❌ ERRO:', err);
 
       setStatus(
         'erro',
@@ -581,17 +558,13 @@ document.addEventListener('keydown', function (e) {
       await navigator.clipboard
         .writeText(link);
 
-      alert(
-        '✅ Link copiado'
-      );
+      alert('✅ Link copiado');
 
     } catch (err) {
 
       console.error(err);
 
-      alert(
-        '❌ Erro ao copiar'
-      );
+      alert('❌ Erro ao copiar');
     }
   }
 
@@ -629,9 +602,7 @@ document.addEventListener('keydown', function (e) {
 
     if (!linksGerados.length) {
 
-      alert(
-        '⚠️ Nenhum pedido gerado'
-      );
+      alert('⚠️ Nenhum pedido gerado');
 
       return;
     }
