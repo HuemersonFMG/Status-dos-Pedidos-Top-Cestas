@@ -102,6 +102,18 @@ header {
     background: #e0a800;
 }
 
+.btn-comercial {
+
+    background: #6f42c1;
+
+    color: white;
+}
+
+.btn-comercial:hover {
+
+    background: #59359c;
+}
+
 /* =========================
     CONTAINER
 ========================== */

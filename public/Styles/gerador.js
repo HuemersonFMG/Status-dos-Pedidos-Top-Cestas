@@ -579,6 +579,17 @@ document.addEventListener('keydown', function (e) {
     );
   }
 
+    // =========================
+  // 🔗 ABRIR GERADOR COMERCIAL
+  // =========================
+  function abrirGeradorComercial() {
+
+    window.open(
+      '/geradorcomercial.html',
+      '_blank'
+    );
+  }
+
   // =========================
   // 📲 WHATSAPP
   // =========================
