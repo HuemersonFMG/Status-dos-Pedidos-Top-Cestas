@@ -2,59 +2,147 @@
 <html lang="pt-BR">
 
 <head>
-
   <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0" />
-
-  <title>Gerador de Links</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top Cestas Track - Gerador</title>
+  <link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
 
   <style>
 
+    * {
+      box-sizing: border-box;
+    }
+
     body {
 
-      font-family: Arial, sans-serif;
+      margin: 0;
+
+      font-family:
+        Arial,
+        sans-serif;
+
       background: #f5f5f5;
 
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      min-height: 100vh;
 
-      padding: 40px;
+      display: flex;
+      flex-direction: column;
     }
+
+    /* =========================
+       HEADER
+    ========================== */
+
+    header {
+      background: linear-gradient(to right, rgb(243, 54, 54), orange);
+      color: white;
+      padding: 18px 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+
+    .header-left {
+
+      display: flex;
+
+      flex-direction: column;
+    }
+
+    .header-left h1 {
+
+      margin: 0;
+
+      font-size: 24px;
+    }
+
+    .header-left span {
+
+      font-size: 13px;
+
+      opacity: 0.8;
+    }
+
+    .header-actions {
+
+      display: flex;
+
+      gap: 10px;
+
+      flex-wrap: wrap;
+    }
+
+    .header-actions button {
+
+      border: none;
+
+      padding:
+        10px 16px;
+
+      border-radius: 8px;
+
+      cursor: pointer;
+
+      font-weight: bold;
+
+      transition: 0.2s;
+    }
+
+    .btn-download {
+
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-download:hover {
+
+      background: #218838;
+    }
+
+    .btn-manual {
+
+      background: #ffc107;
+      color: #333;
+    }
+
+    .btn-manual:hover {
+
+      background: #e0a800;
+    }
+
+    /* =========================
+       CONTAINER
+    ========================== */
 
     .container {
 
+      width: 100%;
+      width: 92%;
+
+      margin: 40px auto;
+
       background: white;
+
+      border-radius: 14px;
 
       padding: 30px;
 
-      border-radius: 12px;
-
-      width: 100%;
-      max-width: 700px;
-
       box-shadow:
-        0 0 10px rgba(0,0,0,0.1);
-    }
-
-    h1 {
-
-      margin-top: 0;
-      text-align: center;
+        0 0 20px rgba(0,0,0,0.08);
     }
 
     .descricao {
 
-      margin-bottom: 25px;
+      text-align: center;
 
       color: #666;
 
-      text-align: center;
+      margin-bottom: 25px;
 
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
     input,
@@ -64,44 +152,83 @@
 
       padding: 12px;
 
-      margin-bottom: 15px;
-
       border-radius: 8px;
 
       border: 1px solid #ccc;
 
       font-size: 15px;
+    }
 
-      box-sizing: border-box;
+    input {
+
+      margin-bottom: 15px;
     }
 
     input:disabled {
 
-      background: #f1f1f1;
+      background: #efefef;
+
       cursor: not-allowed;
     }
 
-    button {
+    .acoes {
 
-      background: #007bff;
+      display: flex;
 
-      color: white;
+      gap: 10px;
+
+      margin-top: 10px;
+    }
+
+    .acoes button {
 
       border: none;
 
       cursor: pointer;
 
       font-weight: bold;
+
+      transition: 0.2s;
     }
 
-    button:hover {
+    .btn-gerar {
+
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-gerar:hover {
 
       background: #0056b3;
     }
 
+    .btn-limpar {
+
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-limpar:hover {
+
+      background: #545b62;
+    }
+
+    /* =========================
+       RESULTADOS
+    ========================== */
+
     .resultado {
 
-      margin-top: 25px;
+      margin-top: 30px;
+    }
+
+    .resultado-topo {
+
+      margin-bottom: 20px;
+
+      font-size: 15px;
+
+      color: #444;
     }
 
     .link-item {
@@ -110,30 +237,86 @@
 
       border: 1px solid #ddd;
 
-      border-radius: 8px;
+      border-radius: 10px;
 
-      padding: 12px;
+      padding: 15px;
 
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+
+      transition: 0.2s;
+    }
+
+    .link-item:hover {
+
+      transform: translateY(-2px);
+
+      box-shadow:
+        0 4px 12px rgba(0,0,0,0.08);
     }
 
     .link-item a {
 
-      word-break: break-all;
       color: #007bff;
+
+      text-decoration: none;
+
+      word-break: break-all;
     }
 
-    .top-actions {
+    .link-item a:hover {
 
-      display: flex;
-      gap: 10px;
-
-      margin-bottom: 20px;
+      text-decoration: underline;
     }
 
-    .top-actions button {
+    /* =========================
+       FOOTER
+    ========================== */
 
-      margin-bottom: 0;
+    footer {
+      margin-top: auto;
+      background: linear-gradient(to right, rgb(243, 54, 54), orange);
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 13px;
+    }
+
+    /* =========================
+       RESPONSIVO
+    ========================== */
+
+    @media (max-width: 768px) {
+
+      .container {
+
+        margin: 20px;
+        padding: 20px;
+      }
+
+      .acoes {
+
+        flex-direction: column;
+      }
+
+      .header-actions {
+
+        width: 100%;
+      }
+
+      .header-actions button {
+
+        width: 100%;
+      }
+    }
+
+    .highlight2 {
+        background-color: #e9ecfa;
+        padding: 10px;
+        padding-left: 10px;
+        padding-right: 10px;
+        border: 4px solid #7d93f5;
+        margin: 0.5px 0;
+        border-radius: 10px;
     }
 
   </style>
@@ -142,15 +325,39 @@
 
 <body>
 
+  <!-- =========================
+       HEADER
+  ========================== -->
+
+  <header>
+    <div class="header-left">
+      <a href="https://topalimentos.shop/produtos/">
+        <img
+          src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+          alt="Logo Top Cestas" width="20%" height="auto">
+      </a>
+
+      <h1>Top Cestas</h1>
+
+      <span>
+        Gerador de Links de Rastreamento de pedidos
+      </span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-download" onclick="baixarTodos()">Baixar Todos Comprovantes</button>
+      <button class="btn-manual" onclick="abrirManual()">Manual</button>
+    </div>
+  </header>
+
+  <!-- =========================
+       CONTAINER
+  ========================== -->
+
   <div class="container">
 
-    <h1>Gerador de Links</h1>
-
     <div class="descricao">
-
-      Utilize apenas UM filtro por vez.<br>
-
-      Você pode pesquisar múltiplos pedidos ou NFes separados por vírgula.
+      <p class="highlight2">Utilize apenas <strong>um filtro</strong> por vez. | Pedidos e NFes aceitam múltiplos valores separados por vírgula.</p>
     </div>
 
     <input
@@ -177,14 +384,22 @@
       type="date"
       id="data">
 
-    <div class="top-actions">
+    <div class="acoes">
 
-      <button onclick="gerar()">
+      <button
+        class="btn-gerar"
+        onclick="gerar()">
+
         Gerar Links
+
       </button>
 
-      <button onclick="limpar()">
+      <button
+        class="btn-limpar"
+        onclick="limpar()">
+
         Limpar
+
       </button>
 
     </div>
@@ -195,6 +410,14 @@
     </div>
 
   </div>
+
+  <!-- =========================
+       FOOTER
+  ========================== -->
+
+  <footer>
+    Top Cestas Track © 2026 - Sistema de rastreamento integrado Sankhya ERP
+  </footer>
 
   <script>
 
@@ -216,9 +439,12 @@
     const resultado =
       document.getElementById('resultado');
 
+    let listaAtual = [];
+
     // =========================
-    // 🔒 CONTROLE FILTROS
+    // FILTROS
     // =========================
+
     function atualizarFiltros() {
 
       const temCnpj =
@@ -236,35 +462,30 @@
       const temData =
         !!dataInput.value;
 
-      // CPF/CNPJ
       cnpjInput.disabled =
         temOrdem ||
         temPedidos ||
         temNfes ||
         temData;
 
-      // ORDEM
       ordemInput.disabled =
         temCnpj ||
         temPedidos ||
         temNfes ||
         temData;
 
-      // PEDIDOS
       pedidosInput.disabled =
         temCnpj ||
         temOrdem ||
         temNfes ||
         temData;
 
-      // NFES
       nfesInput.disabled =
         temCnpj ||
         temOrdem ||
         temPedidos ||
         temData;
 
-      // DATA
       dataInput.disabled =
         temCnpj ||
         temOrdem ||
@@ -272,9 +493,6 @@
         temNfes;
     }
 
-    // =========================
-    // 🔄 EVENTOS
-    // =========================
     cnpjInput.addEventListener(
       'input',
       atualizarFiltros
@@ -301,8 +519,9 @@
     );
 
     // =========================
-    // 🧹 LIMPAR
+    // LIMPAR
     // =========================
+
     function limpar() {
 
       cnpjInput.value = '';
@@ -313,6 +532,8 @@
 
       resultado.innerHTML = '';
 
+      listaAtual = [];
+
       cnpjInput.disabled = false;
       ordemInput.disabled = false;
       pedidosInput.disabled = false;
@@ -321,8 +542,9 @@
     }
 
     // =========================
-    // 🔗 GERAR LINKS
+    // GERAR
     // =========================
+
     async function gerar() {
 
       resultado.innerHTML =
@@ -400,7 +622,10 @@
         const json =
           await response.json();
 
-        if (!json.links?.length) {
+        listaAtual =
+          json.links || [];
+
+        if (!listaAtual.length) {
 
           resultado.innerHTML =
             '<p>Nenhum resultado encontrado.</p>';
@@ -410,19 +635,18 @@
 
         resultado.innerHTML = `
 
-          <p>
+          <div class="resultado-topo">
+
             Total encontrado:
             <strong>${json.total}</strong>
-          </p>
 
-          ${json.links.map(link => `
+          </div>
+
+          ${listaAtual.map(link => `
 
             <div class="link-item">
 
-              <strong>
-                Pedido:
-              </strong>
-
+              <strong>Pedido:</strong>
               ${link.nunota}
 
               ${link.numNota
@@ -452,6 +676,99 @@
         resultado.innerHTML =
           '<p style=\"color:red\">Erro ao gerar links.</p>';
       }
+    }
+
+    // =========================
+    // BAIXAR TODOS
+    // =========================
+
+    async function baixarTodos() {
+
+      if (!listaAtual.length) {
+
+        alert(
+          'Nenhum pedido gerado.'
+        );
+
+        return;
+      }
+
+      try {
+
+        const pedidos =
+          listaAtual.map(
+            item => item.nunota
+          );
+
+        const response =
+          await fetch(
+            '/api/baixar-comprovantes',
+            {
+
+              method: 'POST',
+
+              headers: {
+
+                'Content-Type':
+                  'application/json'
+              },
+
+              body:
+                JSON.stringify({
+                  pedidos
+                })
+            }
+          );
+
+        if (!response.ok) {
+
+          throw new Error(
+            'Erro ao baixar comprovantes'
+          );
+        }
+
+        const blob =
+          await response.blob();
+
+        const url =
+          window.URL.createObjectURL(blob);
+
+        const a =
+          document.createElement('a');
+
+        a.href = url;
+
+        a.download =
+          'comprovantes.zip';
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+        window.URL.revokeObjectURL(url);
+
+      } catch (err) {
+
+        console.error(err);
+
+        alert(
+          'Erro ao baixar comprovantes.'
+        );
+      }
+    }
+
+    // =========================
+    // MANUAL
+    // =========================
+
+    function abrirManual() {
+
+      window.open(
+        '/manual.html',
+        '_blank'
+      );
     }
 
   </script>
