@@ -1,109 +1,51 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Top Cestas Track - Gerador</title>
+    <link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+    <link rel="stylesheet" href="Styles/gerador.css">
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Top Cestas Track - Gerador</title>
-  <link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
-  <link rel="stylesheet" href="Styles/gerador.css">
+  <body>
+    <header>
+      <div class="header-left">
+        <a href="https://topalimentos.shop/produtos/">
+          <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0" alt="Logo Top Cestas" width="20%" height="auto"></a>
 
-</head>
+        <h1>Top Cestas</h1>
+        <span>Gerador de Links de Rastreamento de pedidos</span>
+      </div>
 
-<body>
-  <!-- =========================
-       HEADER
-  ========================== -->
-  <header>
-    <div class="header-left">
-      <a href="https://topalimentos.shop/produtos/">
-        <img
-          src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-          alt="Logo Top Cestas" width="20%" height="auto">
-      </a>
+      <div class="header-actions">
+        <button class="btn-download" onclick="baixarTodos()">Baixar Todos Comprovantes</button>
+        <button class="btn-manual" onclick="abrirManual()">Manual</button>
+      </div>
+    </header>
 
-      <h1>Top Cestas</h1>
+    <div class="container">
+      <div class="descricao">
+        <p class="highlight2">Utilize apenas <strong>um filtro</strong> por vez. | Pedidos e NFes aceitam múltiplos valores separados por vírgula.</p>
+      </div>
 
-      <span>
-        Gerador de Links de Rastreamento de pedidos
-      </span>
+      <input type="text" id="cnpj" placeholder="CPF/CNPJ">
+      <input type="text" id="ordem" placeholder="Ordem de Carga">
+      <input type="text" id="pedidos" placeholder="Pedidos (ex: 123,456,789)">
+      <input type="text" id="nfes" placeholder="NFes (ex: 1001,1002,1003)">
+      <input type="date" id="data">
+
+      <div class="acoes">
+        <button class="btn-gerar" onclick="gerar()"> Gerar Links </button>
+        <button class="btn-limpar" onclick="limpar()"> Limpar </button>
+      </div>
+
+      <div
+        class="resultado" id="resultado">
+      </div>
     </div>
 
-    <div class="header-actions">
-      <button class="btn-download" onclick="baixarTodos()">Baixar Todos Comprovantes</button>
-      <button class="btn-manual" onclick="abrirManual()">Manual</button>
-    </div>
-  </header>
-
-  <!-- =========================
-       CONTAINER
-  ========================== -->
-
-  <div class="container">
-
-    <div class="descricao">
-      <p class="highlight2">Utilize apenas <strong>um filtro</strong> por vez. | Pedidos e NFes aceitam múltiplos valores separados por vírgula.</p>
-    </div>
-
-    <input
-      type="text"
-      id="cnpj"
-      placeholder="CPF/CNPJ">
-
-    <input
-      type="text"
-      id="ordem"
-      placeholder="Ordem de Carga">
-
-    <input
-      type="text"
-      id="pedidos"
-      placeholder="Pedidos (ex: 123,456,789)">
-
-    <input
-      type="text"
-      id="nfes"
-      placeholder="NFes (ex: 1001,1002,1003)">
-
-    <input
-      type="date"
-      id="data">
-
-    <div class="acoes">
-
-      <button
-        class="btn-gerar"
-        onclick="gerar()">
-
-        Gerar Links
-
-      </button>
-
-      <button
-        class="btn-limpar"
-        onclick="limpar()">
-
-        Limpar
-
-      </button>
-
-    </div>
-
-    <div
-      class="resultado"
-      id="resultado">
-    </div>
-
-  </div>
-
-  <!-- =========================
-       FOOTER
-  ========================== -->
-
-  <footer>
-    Top Cestas Track © 2026 - Sistema de rastreamento integrado Sankhya ERP
-  </footer>
-  <script src="Styles/gerador.js"></script>
-</body>
-
+    <footer>Top Cestas Track © 2026 - Sistema de rastreamento integrado Sankhya ERP</footer>
+    <script src="Styles/gerador.js"></script>
+  </body>
 </html>

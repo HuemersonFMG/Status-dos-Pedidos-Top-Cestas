@@ -19,55 +19,97 @@ const resultado =
 let listaAtual = [];
 
 // =========================
+// HELPERS
+// =========================
+
+function getNunota(item) {
+
+    return (
+        item?.nunota ||
+        item?.NUNOTA ||
+        item?.NUNOTA?.$ ||
+        ''
+    );
+}
+
+function getNumNota(item) {
+
+    return (
+        item?.numNota ||
+        item?.NUMNOTA ||
+        item?.NUMNOTA?.$ ||
+        ''
+    );
+}
+
+function getLink(item) {
+
+    return (
+        item?.link ||
+        item?.LINK ||
+        ''
+    );
+}
+
+function mostrarMensagem(texto, tipo = '') {
+
+    resultado.innerHTML = `
+        <div class="mensagem ${tipo}">
+            ${texto}
+        </div>
+    `;
+}
+
+// =========================
 // FILTROS
 // =========================
 
 function atualizarFiltros() {
 
     const temCnpj =
-    !!cnpjInput.value.trim();
+        !!cnpjInput.value.trim();
 
     const temOrdem =
-    !!ordemInput.value.trim();
+        !!ordemInput.value.trim();
 
     const temPedidos =
-    !!pedidosInput.value.trim();
+        !!pedidosInput.value.trim();
 
     const temNfes =
-    !!nfesInput.value.trim();
+        !!nfesInput.value.trim();
 
     const temData =
-    !!dataInput.value;
+        !!dataInput.value;
 
     cnpjInput.disabled =
-    temOrdem ||
-    temPedidos ||
-    temNfes ||
-    temData;
+        temOrdem ||
+        temPedidos ||
+        temNfes ||
+        temData;
 
     ordemInput.disabled =
-    temCnpj ||
-    temPedidos ||
-    temNfes ||
-    temData;
+        temCnpj ||
+        temPedidos ||
+        temNfes ||
+        temData;
 
     pedidosInput.disabled =
-    temCnpj ||
-    temOrdem ||
-    temNfes ||
-    temData;
+        temCnpj ||
+        temOrdem ||
+        temNfes ||
+        temData;
 
     nfesInput.disabled =
-    temCnpj ||
-    temOrdem ||
-    temPedidos ||
-    temData;
+        temCnpj ||
+        temOrdem ||
+        temPedidos ||
+        temData;
 
     dataInput.disabled =
-    temCnpj ||
-    temOrdem ||
-    temPedidos ||
-    temNfes;
+        temCnpj ||
+        temOrdem ||
+        temPedidos ||
+        temNfes;
 }
 
 cnpjInput.addEventListener(
@@ -124,134 +166,160 @@ function limpar() {
 
 async function gerar() {
 
-    resultado.innerHTML =
-    'Carregando...';
+    mostrarMensagem(
+        'Carregando...'
+    );
 
     const documento =
-    cnpjInput.value.trim();
+        cnpjInput.value.trim();
 
     const ordemCarga =
-    ordemInput.value.trim();
+        ordemInput.value.trim();
 
     const pedidos =
-    pedidosInput.value.trim();
+        pedidosInput.value.trim();
 
     const nfes =
-    nfesInput.value.trim();
+        nfesInput.value.trim();
 
     const data =
-    dataInput.value;
+        dataInput.value;
 
     const filtros = [
-
-    documento,
-    ordemCarga,
-    pedidos,
-    nfes,
-    data
-
+        documento,
+        ordemCarga,
+        pedidos,
+        nfes,
+        data
     ].filter(Boolean);
 
     if (filtros.length !== 1) {
 
-    resultado.innerHTML =
-        '<p style=\"color:red\">Utilize apenas UM filtro.</p>';
-
-    return;
-    }
-
-    try {
-
-    const response =
-        await fetch(
-        '/api/gerar-links',
-        {
-
-            method: 'POST',
-
-            headers: {
-
-            'Content-Type':
-                'application/json'
-            },
-
-            body:
-            JSON.stringify({
-
-                cnpj:
-                documento || null,
-
-                ordemCarga:
-                ordemCarga || null,
-
-                pedidos:
-                pedidos || null,
-
-                nfes:
-                nfes || null,
-
-                data:
-                data || null
-            })
-        }
+        mostrarMensagem(
+            'Utilize apenas UM filtro.',
+            'erro'
         );
-
-    const json =
-        await response.json();
-
-    listaAtual =
-        json.links || [];
-
-    if (!listaAtual.length) {
-
-        resultado.innerHTML =
-        '<p>Nenhum resultado encontrado.</p>';
 
         return;
     }
 
-    resultado.innerHTML = `
+    try {
 
-        <div class="resultado-topo">
+        const response =
+            await fetch(
+                '/api/gerar-links',
+                {
+                    method: 'POST',
 
-        Total encontrado:
-        <strong>${json.total}</strong>
+                    headers: {
+                        'Content-Type':
+                            'application/json'
+                    },
 
-        </div>
+                    body:
+                        JSON.stringify({
+                            cnpj:
+                                documento || null,
 
-        ${listaAtual.map(link => `
+                            ordemCarga:
+                                ordemCarga || null,
 
-        <div class="link-item">
+                            pedidos:
+                                pedidos || null,
 
-            <strong>Pedido:</strong>
-            ${link.nunota}
+                            nfes:
+                                nfes || null,
 
-            ${link.numNota
-            ? `<br><strong>NF-e:</strong> ${link.numNota}`
-            : ''
-            }
+                            data:
+                                data || null
+                        })
+                }
+            );
 
-            <br><br>
+        const json =
+            await response.json();
 
-            <a
-            href="${link.link}"
-            target="_blank">
+        if (!response.ok) {
 
-            ${link.link}
+            throw new Error(
+                json?.erro ||
+                'Erro ao gerar links'
+            );
+        }
 
-            </a>
+        listaAtual =
+            json.links || [];
 
-        </div>
+        if (!listaAtual.length) {
 
-        `).join('')}
-    `;
+            mostrarMensagem(
+                'Nenhum resultado encontrado.',
+                'erro'
+            );
+
+            return;
+        }
+
+        resultado.innerHTML = `
+
+            <div class="resultado-topo">
+                Total encontrado:
+                <strong>${json.total || listaAtual.length}</strong>
+            </div>
+
+            ${listaAtual.map(item => {
+
+                const nunota =
+                    getNunota(item);
+
+                const numNota =
+                    getNumNota(item);
+
+                const link =
+                    getLink(item);
+
+                return `
+
+                    <div class="link-item">
+
+                        <strong>Pedido:</strong>
+                        ${nunota || '-'}
+
+                        ${numNota
+                            ? `
+                                <br>
+                                <strong>NF-e:</strong>
+                                ${numNota}
+                            `
+                            : ''
+                        }
+
+                        <br><br>
+
+                        <a
+                            href="${link}"
+                            target="_blank">
+
+                            ${link}
+
+                        </a>
+
+                    </div>
+                `;
+            }).join('')}
+        `;
 
     } catch (err) {
 
-    console.error(err);
+        console.error(
+            'Erro gerar links:',
+            err
+        );
 
-    resultado.innerHTML =
-        '<p style=\"color:red\">Erro ao gerar links.</p>';
+        mostrarMensagem(
+            'Erro ao gerar links.',
+            'erro'
+        );
     }
 }
 
@@ -263,76 +331,103 @@ async function baixarTodos() {
 
     if (!listaAtual.length) {
 
-    alert(
-        'Nenhum pedido gerado.'
-    );
+        alert(
+            'Nenhum pedido gerado.'
+        );
 
-    return;
+        return;
     }
 
     try {
 
-    const pedidos =
-        listaAtual.map(
-        item => item.nunota
-        );
+        const pedidos =
+            listaAtual
+                .map(item =>
+                    getNunota(item)
+                )
+                .filter(Boolean);
 
-    const response =
-        await fetch(
-        '/api/baixar-comprovantes',
-        {
+        if (!pedidos.length) {
 
-            method: 'POST',
+            alert(
+                'Nenhum pedido válido encontrado para download.'
+            );
 
-            headers: {
-
-            'Content-Type':
-                'application/json'
-            },
-
-            body:
-            JSON.stringify({
-                pedidos
-            })
+            return;
         }
-        );
 
-    if (!response.ok) {
+        const response =
+            await fetch(
+                '/api/baixar-comprovantes',
+                {
+                    method: 'POST',
 
-        throw new Error(
-        'Erro ao baixar comprovantes'
-        );
-    }
+                    headers: {
+                        'Content-Type':
+                            'application/json'
+                    },
 
-    const blob =
-        await response.blob();
+                    body:
+                        JSON.stringify({
+                            pedidos
+                        })
+                }
+            );
 
-    const url =
-        window.URL.createObjectURL(blob);
+        if (!response.ok) {
 
-    const a =
-        document.createElement('a');
+            const erro =
+                await response.text();
 
-    a.href = url;
+            console.error(
+                'Erro backend baixar comprovantes:',
+                erro
+            );
 
-    a.download =
-        'comprovantes.zip';
+            throw new Error(
+                'Erro ao baixar comprovantes'
+            );
+        }
 
-    document.body.appendChild(a);
+        const blob =
+            await response.blob();
 
-    a.click();
+        if (!blob || blob.size === 0) {
 
-    a.remove();
+            throw new Error(
+                'Arquivo ZIP vazio'
+            );
+        }
 
-    window.URL.revokeObjectURL(url);
+        const url =
+            window.URL.createObjectURL(blob);
+
+        const a =
+            document.createElement('a');
+
+        a.href = url;
+
+        a.download =
+            'comprovantes.zip';
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+        window.URL.revokeObjectURL(url);
 
     } catch (err) {
 
-    console.error(err);
+        console.error(
+            'Erro baixar comprovantes:',
+            err
+        );
 
-    alert(
-        'Erro ao baixar comprovantes.'
-    );
+        alert(
+            'Erro ao baixar comprovantes.'
+        );
     }
 }
 
@@ -343,7 +438,7 @@ async function baixarTodos() {
 function abrirManual() {
 
     window.open(
-    '/manual.html',
-    '_blank'
+        '/manual.html',
+        '_blank'
     );
 }
