@@ -4,9 +4,7 @@
 document.addEventListener('keydown', function (e) {
 
     if (e.key === 'F12') {
-
       e.preventDefault();
-
       return false;
     }
 
@@ -18,9 +16,7 @@ document.addEventListener('keydown', function (e) {
         e.key === 'J'
       )
     ) {
-
       e.preventDefault();
-
       return false;
     }
 
@@ -28,9 +24,7 @@ document.addEventListener('keydown', function (e) {
       e.ctrlKey &&
       e.key.toLowerCase() === 'u'
     ) {
-
       e.preventDefault();
-
       return false;
     }
   });
@@ -39,7 +33,6 @@ document.addEventListener('keydown', function (e) {
   // 📦 VARIÁVEIS GLOBAIS
   // =========================
   let pedidosGerados = [];
-
   let linksGerados = [];
 
   // =========================
@@ -80,6 +73,40 @@ document.addEventListener('keydown', function (e) {
     );
   }
 
+  function getNomeCliente(item) {
+
+    const nome =
+      item?.NOMEPARC ||
+      item?.nomeparc ||
+      item?.NOMEPARC?.$ ||
+      item?.cliente ||
+      item?.CLIENTE ||
+      '';
+
+    const nomeLimpo =
+      String(nome)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .trim()
+        .toUpperCase();
+
+    return nomeLimpo || 'CLIENTE';
+  }
+
+  function montarNomeArquivo(item, extensao) {
+
+    const nunota =
+      getNunota(item) || 'PEDIDO';
+
+    const nomeCliente =
+      getNomeCliente(item);
+
+    return `Comprovante_${nunota}_${nomeCliente}.${extensao}`;
+  }
+
   function getTokenFromLink(link) {
 
     try {
@@ -95,7 +122,6 @@ document.addEventListener('keydown', function (e) {
     } catch {
 
       if (link && link.includes('token=')) {
-
         return link.split('token=')[1] || '';
       }
 
@@ -106,7 +132,6 @@ document.addEventListener('keydown', function (e) {
   function setStatus(tipo, mensagem) {
 
     if (!statusDiv) {
-
       return;
     }
 
@@ -246,33 +271,19 @@ document.addEventListener('keydown', function (e) {
         await res.text();
 
       if (!text) {
-
-        throw new Error(
-          'Resposta vazia do servidor'
-        );
+        throw new Error('Resposta vazia do servidor');
       }
 
       let data;
 
       try {
-
-        data =
-          JSON.parse(text);
-
+        data = JSON.parse(text);
       } catch {
-
-        console.error(
-          '❌ JSON inválido:',
-          text
-        );
-
-        throw new Error(
-          'Erro ao processar resposta'
-        );
+        console.error('❌ JSON inválido:', text);
+        throw new Error('Erro ao processar resposta');
       }
 
       if (!res.ok) {
-
         throw new Error(
           data.erro ||
           'Erro na requisição'
@@ -300,7 +311,6 @@ document.addEventListener('keydown', function (e) {
     resultadoDiv.innerHTML = '';
 
     pedidosGerados = [];
-
     linksGerados = [];
   }
 
@@ -314,7 +324,6 @@ document.addEventListener('keydown', function (e) {
     pedidosInput.value = '';
 
     if (nfesInput) {
-
       nfesInput.value = '';
     }
 
@@ -327,7 +336,6 @@ document.addEventListener('keydown', function (e) {
     pedidosInput.disabled = false;
 
     if (nfesInput) {
-
       nfesInput.disabled = false;
     }
 
@@ -479,6 +487,9 @@ document.addEventListener('keydown', function (e) {
         const numNota =
           getNumNota(l);
 
+        const nomeCliente =
+          getNomeCliente(l);
+
         const link =
           getLink(l);
 
@@ -498,6 +509,15 @@ document.addEventListener('keydown', function (e) {
               <br>
               <b>NF-e:</b>
               ${numNota}
+            `
+            : ''
+          }
+
+          ${nomeCliente
+            ? `
+              <br>
+              <b>Cliente:</b>
+              ${nomeCliente.replace(/_/g, ' ')}
             `
             : ''
           }
@@ -670,7 +690,7 @@ document.addEventListener('keydown', function (e) {
               a.href = url;
 
               a.download =
-                `Comprovante_${nunota}.jpg`;
+                montarNomeArquivo(item, 'jpg');
 
               document.body.appendChild(a);
 
@@ -722,7 +742,7 @@ document.addEventListener('keydown', function (e) {
               a.href = url;
 
               a.download =
-                `Comprovante_${nunota}.pdf`;
+                montarNomeArquivo(item, 'pdf');
 
               document.body.appendChild(a);
 
