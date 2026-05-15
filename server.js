@@ -191,7 +191,8 @@ app.post(
         cnpj,
         ordemCarga,
         data,
-        pedidos
+        pedidos,
+        nfes
       } = req.body;
 
       const documento =
@@ -204,6 +205,7 @@ app.post(
           : null;
 
       let listaPedidos = [];
+      let listaNfes = [];
 
       if (pedidos) {
 
@@ -211,6 +213,15 @@ app.post(
           pedidos
             .split(',')
             .map(p => p.trim())
+            .filter(Boolean);
+      }
+
+      if (nfes) {
+
+        listaNfes =
+          nfes
+            .split(',')
+            .map(n => n.trim())
             .filter(Boolean);
       }
 
@@ -222,6 +233,10 @@ app.post(
       if (listaPedidos.length) {
 
         tipoFiltro = 'PEDIDOS';
+
+      } else if (listaNfes.length) {
+
+        tipoFiltro = 'NFES';
 
       } else if (documento) {
 
@@ -340,12 +355,22 @@ app.post(
               r.NUNOTA?.$ || ''
             );
 
+          const numNota =
+            String(
+              r.NUMNOTA?.$ || ''
+            );
+
           switch (tipoFiltro) {
 
             case 'PEDIDOS':
 
               return listaPedidos
                 .includes(nunota);
+
+            case 'NFES':
+
+              return listaNfes
+                .includes(numNota);
 
             case 'DOCUMENTO':
 
@@ -385,6 +410,9 @@ app.post(
 
           nunota:
             r.NUNOTA.$,
+
+          numNota:
+            r.NUMNOTA?.$ || '',
 
           link:
             `${baseUrl}/index.html?nunota=${r.NUNOTA.$}&token=${gerarToken(r.NUNOTA.$)}`
@@ -816,9 +844,6 @@ app.post(
       const cookie =
         await login();
 
-      // =========================
-      // HEADERS ZIP
-      // =========================
       res.setHeader(
         'Content-Type',
         'application/zip'
@@ -847,9 +872,6 @@ app.post(
 
       archive.pipe(res);
 
-      // =========================
-      // LOOP PEDIDOS
-      // =========================
       for (const nunota of pedidos) {
 
         try {
@@ -858,9 +880,6 @@ app.post(
             `🔍 PROCESSANDO ${nunota}`
           );
 
-          // =========================
-          // IMAGEM
-          // =========================
           const imgUrl =
             `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
 
@@ -894,9 +913,6 @@ app.post(
             continue;
           }
 
-          // =========================
-          // PDF
-          // =========================
           const payload = {
 
             serviceName:
@@ -960,6 +976,7 @@ app.post(
               `✅ PDF ${nunota}`
             );
           }
+
         } catch (err) {
 
           console.error(
@@ -1008,3 +1025,4 @@ app.listen(
     );
   }
 );
+

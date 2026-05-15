@@ -3,91 +3,138 @@
 
 <head>
 
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
 
-  <title>Top - Gerador</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0" />
 
-  <link
-    rel="stylesheet"
-    href="Styles/Styles.css">
-
-  <link
-    rel="icon"
-    href="https://tutoriaissankhya.netlify.app/img/IcoTop.png">
+  <title>Gerador de Links</title>
 
   <style>
 
     body {
-      font-family: Arial;
-      padding: 20px;
+
+      font-family: Arial, sans-serif;
       background: #f5f5f5;
+
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+
+      padding: 40px;
     }
 
-    h2 {
-      margin-bottom: 10px;
+    .container {
+
+      background: white;
+
+      padding: 30px;
+
+      border-radius: 12px;
+
+      width: 100%;
+      max-width: 700px;
+
+      box-shadow:
+        0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .descricao {
+
+      margin-bottom: 25px;
+
+      color: #666;
+
+      text-align: center;
+
+      line-height: 1.5;
     }
 
     input,
     button {
-      padding: 10px;
-      margin: 5px;
-      font-size: 14px;
+
+      width: 100%;
+
+      padding: 12px;
+
+      margin-bottom: 15px;
+
+      border-radius: 8px;
+
+      border: 1px solid #ccc;
+
+      font-size: 15px;
+
+      box-sizing: border-box;
+    }
+
+    input:disabled {
+
+      background: #f1f1f1;
+      cursor: not-allowed;
     }
 
     button {
-      cursor: pointer;
-    }
-    
 
-    #status {
-      margin-top: 10px;
+      background: #007bff;
+
+      color: white;
+
+      border: none;
+
+      cursor: pointer;
+
       font-weight: bold;
     }
 
-    .ok {
-      color: green;
+    button:hover {
+
+      background: #0056b3;
     }
 
-    .erro {
-      color: red;
+    .resultado {
+
+      margin-top: 25px;
     }
 
-    .warn {
-      color: orange;
-    }
+    .link-item {
 
-    .link-box {
-      background: #fff;
+      background: #fafafa;
+
+      border: 1px solid #ddd;
+
+      border-radius: 8px;
+
       padding: 12px;
-      margin: 8px 0;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+
+      margin-bottom: 10px;
+    }
+
+    .link-item a {
+
       word-break: break-all;
+      color: #007bff;
     }
 
-    .actions {
-      margin-top: 8px;
+    .top-actions {
+
+      display: flex;
+      gap: 10px;
+
+      margin-bottom: 20px;
     }
 
-    .actions button {
-      margin-right: 5px;
-      font-size: 12px;
-    }
+    .top-actions button {
 
-    .btndw{
-      background-color: rgb(252, 138, 45);
-      width: 170px;    /* Largura fixa */
-      height: 25px;    /* Altura fixa */
-      font-size: 7px; /* Tamanho da fonte */
-      padding: 2px 20px; /* Espaçamento interno alternativo */
-      text-align: center;
+      margin-bottom: 0;
     }
-
-    .btn-gerar{
-    background:#4a87fa;
-    color:#fff;
-    border:1px solid #2d67d6;
-  }
 
   </style>
 
@@ -95,137 +142,82 @@
 
 <body>
 
-  <header>
+  <div class="container">
 
-    <a href="https://topalimentos.shop/produtos/">
+    <h1>Gerador de Links</h1>
 
-      <img
-        src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-        alt="Logo Top Cestas">
+    <div class="descricao">
 
-    </a>
+      Utilize apenas UM filtro por vez.<br>
 
-    <h1>Gerador de Links de Pedidos</h1>
+      Você pode pesquisar múltiplos pedidos ou NFes separados por vírgula.
+    </div>
 
-    <button onclick="baixarTodos()" class="btndw">
-      🔝 Baixar Todos Comprovantes
-    </button>
+    <input
+      type="text"
+      id="cnpj"
+      placeholder="CPF/CNPJ">
 
-    <button onclick="window.open('/docs/manual.html', '_blank')"
-      class="btndw">📘 nanual</button>
+    <input
+      type="text"
+      id="ordem"
+      placeholder="Ordem de Carga">
 
-  </header>
+    <input
+      type="text"
+      id="pedidos"
+      placeholder="Pedidos (ex: 123,456,789)">
 
-  <h2>🔗 Gerar Links</h2>
+    <input
+      type="text"
+      id="nfes"
+      placeholder="NFes (ex: 1001,1002,1003)">
 
-  <input
-    type="text"
-    id="cnpj"
-    placeholder="CPF ou CNPJ">
+    <input
+      type="date"
+      id="data">
 
-  <input
-    type="text"
-    id="ordemCarga"
-    placeholder="Ordem de Carga">
+    <div class="top-actions">
 
-  <input
-    type="text"
-    id="pedidos"
-    placeholder="Pedidos (ex: 123,456,789)">
+      <button onclick="gerar()">
+        Gerar Links
+      </button>
 
-  <input
-    type="date"
-    id="data">
+      <button onclick="limpar()">
+        Limpar
+      </button>
 
-  <button onclick="gerar()" class="btn-gerar">
-    Gerar Links Clientes
-  </button>
+    </div>
 
-  <div id="status"></div>
+    <div
+      class="resultado"
+      id="resultado">
+    </div>
 
-  <div id="resultado"></div>
+  </div>
 
   <script>
 
-    // =========================
-    // 🔒 BLOQUEIOS
-    // =========================
-    document.addEventListener('keydown', function (e) {
-
-      // F12
-      if (e.key === 'F12') {
-
-        e.preventDefault();
-
-        return false;
-      }
-
-      // CTRL + SHIFT + I/J
-      if (
-        e.ctrlKey &&
-        e.shiftKey &&
-        (
-          e.key === 'I' ||
-          e.key === 'J'
-        )
-      ) {
-
-        e.preventDefault();
-
-        return false;
-      }
-
-      // CTRL + U
-      if (
-        e.ctrlKey &&
-        e.key.toLowerCase() === 'u'
-      ) {
-
-        e.preventDefault();
-
-        return false;
-      }
-    });
-
-    // =========================
-    // 📦 VARIÁVEIS GLOBAIS
-    // =========================
-    let pedidosGerados = [];
-
-    let linksGerados = [];
-
-    // =========================
-    // 🔧 HELPERS
-    // =========================
-    function limparDoc(valor) {
-
-      return (valor || '')
-        .replace(/\D/g, '');
-    }
-
-    // =========================
-    // 🎯 ELEMENTOS
-    // =========================
     const cnpjInput =
       document.getElementById('cnpj');
 
     const ordemInput =
-      document.getElementById('ordemCarga');
+      document.getElementById('ordem');
 
     const pedidosInput =
       document.getElementById('pedidos');
 
+    const nfesInput =
+      document.getElementById('nfes');
+
     const dataInput =
       document.getElementById('data');
 
-    const statusDiv =
-      document.getElementById('status');
-
-    const resultadoDiv =
+    const resultado =
       document.getElementById('resultado');
 
     // =========================
-    // 🔁 CONTROLE FILTROS
+    // 🔒 CONTROLE FILTROS
     // =========================
     function atualizarFiltros() {
 
@@ -238,6 +230,9 @@
       const temPedidos =
         !!pedidosInput.value.trim();
 
+      const temNfes =
+        !!nfesInput.value.trim();
+
       const temData =
         !!dataInput.value;
 
@@ -245,29 +240,40 @@
       cnpjInput.disabled =
         temOrdem ||
         temPedidos ||
+        temNfes ||
         temData;
 
       // ORDEM
       ordemInput.disabled =
         temCnpj ||
         temPedidos ||
+        temNfes ||
         temData;
 
       // PEDIDOS
       pedidosInput.disabled =
         temCnpj ||
         temOrdem ||
+        temNfes ||
+        temData;
+
+      // NFES
+      nfesInput.disabled =
+        temCnpj ||
+        temOrdem ||
+        temPedidos ||
         temData;
 
       // DATA
       dataInput.disabled =
         temCnpj ||
         temOrdem ||
-        temPedidos;
+        temPedidos ||
+        temNfes;
     }
 
     // =========================
-    // 🎧 EVENTOS
+    // 🔄 EVENTOS
     // =========================
     cnpjInput.addEventListener(
       'input',
@@ -284,552 +290,171 @@
       atualizarFiltros
     );
 
+    nfesInput.addEventListener(
+      'input',
+      atualizarFiltros
+    );
+
     dataInput.addEventListener(
       'input',
       atualizarFiltros
     );
 
     // =========================
-    // 🛡️ FETCH SEGURO
+    // 🧹 LIMPAR
     // =========================
-    async function fetchSeguro(
-      url,
-      options = {}
-    ) {
+    function limpar() {
 
-      try {
+      cnpjInput.value = '';
+      ordemInput.value = '';
+      pedidosInput.value = '';
+      nfesInput.value = '';
+      dataInput.value = '';
 
-        const res =
-          await fetch(url, options);
+      resultado.innerHTML = '';
 
-        const text =
-          await res.text();
-
-        if (!text) {
-
-          throw new Error(
-            'Resposta vazia do servidor'
-          );
-        }
-
-        let data;
-
-        try {
-
-          data = JSON.parse(text);
-
-        } catch {
-
-          console.error(
-            '❌ JSON inválido:',
-            text
-          );
-
-          throw new Error(
-            'Erro ao processar resposta'
-          );
-        }
-
-        if (!res.ok) {
-
-          throw new Error(
-            data.erro ||
-            'Erro na requisição'
-          );
-        }
-
-        return data;
-
-      } catch (err) {
-
-        console.error(
-          '❌ FETCH:',
-          err
-        );
-
-        throw err;
-      }
+      cnpjInput.disabled = false;
+      ordemInput.disabled = false;
+      pedidosInput.disabled = false;
+      nfesInput.disabled = false;
+      dataInput.disabled = false;
     }
 
     // =========================
-    // 🧹 LIMPAR RESULTADO
-    // =========================
-    function limparResultado() {
-
-      resultadoDiv.innerHTML = '';
-
-      pedidosGerados = [];
-
-      linksGerados = [];
-    }
-
-    // =========================
-    // 🔍 GERAR LINKS
+    // 🔗 GERAR LINKS
     // =========================
     async function gerar() {
 
-      limparResultado();
+      resultado.innerHTML =
+        'Carregando...';
 
       const documento =
-        limparDoc(cnpjInput.value);
+        cnpjInput.value.trim();
 
-      const ordem =
+      const ordemCarga =
         ordemInput.value.trim();
 
       const pedidos =
         pedidosInput.value.trim();
 
+      const nfes =
+        nfesInput.value.trim();
+
       const data =
         dataInput.value;
 
-      // =========================
-      // VALIDAÇÃO
-      // =========================
       const filtros = [
 
         documento,
-        ordem,
+        ordemCarga,
         pedidos,
+        nfes,
         data
 
       ].filter(Boolean);
 
-      if (!filtros.length) {
+      if (filtros.length !== 1) {
 
-        statusDiv.className =
-          'erro';
-
-        statusDiv.innerHTML =
-          '❌ Informe um filtro';
+        resultado.innerHTML =
+          '<p style=\"color:red\">Utilize apenas UM filtro.</p>';
 
         return;
       }
-
-      if (filtros.length > 1) {
-
-        statusDiv.className =
-          'erro';
-
-        statusDiv.innerHTML =
-          '❌ Utilize apenas um filtro';
-
-        return;
-      }
-
-      // CPF/CNPJ
-      if (
-        documento &&
-        documento.length !== 11 &&
-        documento.length !== 14
-      ) {
-
-        statusDiv.className =
-          'erro';
-
-        statusDiv.innerHTML =
-          '❌ CPF/CNPJ inválido';
-
-        return;
-      }
-
-      // STATUS
-      statusDiv.className = '';
-
-      statusDiv.innerHTML =
-        '⏳ Buscando pedidos...';
 
       try {
 
-        // =========================
-        // PAYLOAD
-        // =========================
-        const payload = {
-
-          cnpj:
-            documento || null,
-
-          ordemCarga:
-            ordem || null,
-
-          pedidos:
-            pedidos || null,
-
-          data:
-            data || null
-        };
-
-        // =========================
-        // API
-        // =========================
-        const dataRes =
-          await fetchSeguro(
+        const response =
+          await fetch(
             '/api/gerar-links',
             {
+
               method: 'POST',
 
               headers: {
+
                 'Content-Type':
                   'application/json'
               },
 
               body:
-                JSON.stringify(payload)
+                JSON.stringify({
+
+                  cnpj:
+                    documento || null,
+
+                  ordemCarga:
+                    ordemCarga || null,
+
+                  pedidos:
+                    pedidos || null,
+
+                  nfes:
+                    nfes || null,
+
+                  data:
+                    data || null
+                })
             }
           );
 
-        // =========================
-        // SEM RESULTADO
-        // =========================
-        if (
-          !dataRes.links ||
-          !dataRes.links.length
-        ) {
+        const json =
+          await response.json();
 
-          statusDiv.className =
-            'warn';
+        if (!json.links?.length) {
 
-          statusDiv.innerHTML =
-            '⚠️ Nenhum pedido encontrado';
+          resultado.innerHTML =
+            '<p>Nenhum resultado encontrado.</p>';
 
           return;
         }
 
-        // =========================
-        // SALVA PEDIDOS/LINKS
-        // =========================
-        pedidosGerados =
-          dataRes.links.map(
-            l => l.nunota
-          );
+        resultado.innerHTML = `
 
-        linksGerados =
-          dataRes.links;
+          <p>
+            Total encontrado:
+            <strong>${json.total}</strong>
+          </p>
 
-        // =========================
-        // STATUS
-        // =========================
-        statusDiv.className =
-          'ok';
+          ${json.links.map(link => `
 
-        statusDiv.innerHTML = `
-          ✅ ${dataRes.total}
-          pedido(s) encontrado(s)
-        `;
+            <div class="link-item">
 
-        // =========================
-        // LISTAGEM
-        // =========================
-        dataRes.links.forEach(l => {
+              <strong>
+                Pedido:
+              </strong>
 
-          const el =
-            document.createElement('div');
+              ${link.nunota}
 
-          el.className =
-            'link-box';
+              ${link.numNota
+                ? `<br><strong>NF-e:</strong> ${link.numNota}`
+                : ''
+              }
 
-          el.innerHTML = `
+              <br><br>
 
-            <b>Pedido:</b>
-            ${l.nunota}
+              <a
+                href="${link.link}"
+                target="_blank">
 
-            <br><br>
+                ${link.link}
 
-            <a
-              href="${l.link}"
-              target="_blank"
-            >
-              ${l.link}
-            </a>
-
-            <div class="actions">
-
-              <button
-                onclick="copiar('${l.link}')"
-              >
-                📋 Copiar
-              </button>
-
-              <button
-                onclick="abrir('${l.link}')"
-              >
-                🔗 Abrir
-              </button>
-
-              <button
-                onclick="whatsapp('${l.link}')"
-              >
-                📲 WhatsApp
-              </button>
+              </a>
 
             </div>
-          `;
 
-          resultadoDiv.appendChild(el);
-        });
-
-      } catch (err) {
-
-        console.error(
-          '❌ ERRO:',
-          err
-        );
-
-        statusDiv.className =
-          'erro';
-
-        statusDiv.innerHTML = `
-          ❌ ${err.message}
+          `).join('')}
         `;
-      }
-    }
-
-    // =========================
-    // 📋 COPIAR
-    // =========================
-    async function copiar(link) {
-
-      try {
-
-        await navigator.clipboard
-          .writeText(link);
-
-        alert(
-          '✅ Link copiado'
-        );
 
       } catch (err) {
 
         console.error(err);
 
-        alert(
-          '❌ Erro ao copiar'
-        );
+        resultado.innerHTML =
+          '<p style=\"color:red\">Erro ao gerar links.</p>';
       }
     }
-
-    // =========================
-    // 🔗 ABRIR
-    // =========================
-    function abrir(link) {
-
-      window.open(
-        link,
-        '_blank'
-      );
-    }
-
-    // =========================
-    // 📲 WHATSAPP
-    // =========================
-    function whatsapp(link) {
-
-      const texto =
-        encodeURIComponent(
-          `Acompanhe seu pedido:\n${link}`
-        );
-
-      window.open(
-        `https://wa.me/?text=${texto}`,
-        '_blank'
-      );
-    }
-
-    // =========================
-    // ⬇️ BAIXAR TODOS
-    // =========================
-    async function baixarTodos() {
-
-      if (!linksGerados.length) {
-
-        alert(
-          '⚠️ Nenhum pedido gerado'
-        );
-
-        return;
-      }
-
-      try {
-
-        statusDiv.className = '';
-
-        statusDiv.innerHTML = `
-          ⏳ Preparando downloads...
-        `;
-
-        let totalBaixados = 0;
-
-        // =========================
-        // LOOP
-        // =========================
-        for (const item of linksGerados) {
-
-          const token =
-            item.link.split('token=')[1];
-
-          // =========================
-          // TESTA IMAGEM
-          // =========================
-          const imgUrl =
-            `/api/comprovante/imagem?nunota=${item.nunota}&token=${token}`;
-
-          try {
-
-            const imgRes =
-              await fetch(imgUrl);
-
-            if (imgRes.ok) {
-
-              const blob =
-                await imgRes.blob();
-
-              if (blob.size > 1000) {
-
-                const url =
-                  window.URL.createObjectURL(blob);
-
-                const a =
-                  document.createElement('a');
-
-                a.href = url;
-
-                a.download =
-                  `Comprovante_${item.nunota}.jpg`;
-
-                document.body.appendChild(a);
-
-                a.click();
-
-                a.remove();
-
-                window.URL.revokeObjectURL(url);
-
-                totalBaixados++;
-
-                // Delay anti bloqueio
-                await new Promise(r =>
-                  setTimeout(r, 800)
-                );
-
-                // Se encontrou imagem,
-                // não tenta PDF
-                continue;
-              }
-            }
-
-          } catch (err) {
-
-            console.error(
-              `Erro imagem ${item.nunota}`,
-              err
-            );
-          }
-
-          // =========================
-          // TESTA PDF
-          // =========================
-          const pdfUrl =
-            `/api/comprovante/pdf?nunota=${item.nunota}&token=${token}`;
-
-          try {
-
-            const pdfRes =
-              await fetch(pdfUrl);
-
-            if (pdfRes.ok) {
-
-              const blob =
-                await pdfRes.blob();
-
-              if (blob.size > 1000) {
-
-                const url =
-                  window.URL.createObjectURL(blob);
-
-                const a =
-                  document.createElement('a');
-
-                a.href = url;
-
-                a.download =
-                  `Comprovante_${item.nunota}.pdf`;
-
-                document.body.appendChild(a);
-
-                a.click();
-
-                a.remove();
-
-                window.URL.revokeObjectURL(url);
-
-                totalBaixados++;
-
-                await new Promise(r =>
-                  setTimeout(r, 800)
-                );
-              }
-            }
-
-          } catch (err) {
-
-            console.error(
-              `Erro PDF ${item.nunota}`,
-              err
-            );
-          }
-        }
-
-        // =========================
-        // FINAL
-        // =========================
-        statusDiv.className =
-          'ok';
-
-        statusDiv.innerHTML = `
-          ✅ ${totalBaixados}
-          download(s) iniciado(s)
-        `;
-
-        alert(`
-
-✅ Downloads iniciados
-
-📂 Os arquivos foram enviados
-para a pasta padrão de Downloads
-do navegador.
-
-💡 Dica:
-configure o Chrome para perguntar
-onde salvar os arquivos.
-
-        `);
-
-      } catch (err) {
-
-        console.error(err);
-
-        statusDiv.className =
-          'erro';
-
-        statusDiv.innerHTML = `
-          ❌ ${err.message}
-        `;
-      }
-    }
-
-    // =========================
-    // 🚀 START
-    // =========================
-    atualizarFiltros();
 
   </script>
-
-  <footer>
-
-    <p style="text-align:center;">
-      © Top Cestas - 2026 - Sistema de rastreio de pedidos
-    </p>
-
-  </footer>
 
 </body>
 
