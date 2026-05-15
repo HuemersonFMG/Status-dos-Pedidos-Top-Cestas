@@ -1,444 +1,785 @@
-const cnpjInput =
+// =========================
+// 🔒 BLOQUEIOS
+// =========================
+document.addEventListener('keydown', function (e) {
+
+    if (e.key === 'F12') {
+
+      e.preventDefault();
+
+      return false;
+    }
+
+    if (
+      e.ctrlKey &&
+      e.shiftKey &&
+      (
+        e.key === 'I' ||
+        e.key === 'J'
+      )
+    ) {
+
+      e.preventDefault();
+
+      return false;
+    }
+
+    if (
+      e.ctrlKey &&
+      e.key.toLowerCase() === 'u'
+    ) {
+
+      e.preventDefault();
+
+      return false;
+    }
+  });
+
+  // =========================
+  // 📦 VARIÁVEIS GLOBAIS
+  // =========================
+  let pedidosGerados = [];
+
+  let linksGerados = [];
+
+  // =========================
+  // 🔧 HELPERS
+  // =========================
+  function limparDoc(valor) {
+
+    return (valor || '')
+      .replace(/\D/g, '');
+  }
+
+  function getNunota(item) {
+
+    return (
+      item?.nunota ||
+      item?.NUNOTA ||
+      item?.NUNOTA?.$ ||
+      ''
+    );
+  }
+
+  function getNumNota(item) {
+
+    return (
+      item?.numNota ||
+      item?.NUMNOTA ||
+      item?.NUMNOTA?.$ ||
+      ''
+    );
+  }
+
+  function getLink(item) {
+
+    return (
+      item?.link ||
+      item?.LINK ||
+      ''
+    );
+  }
+
+  function getTokenFromLink(link) {
+
+    try {
+
+      const url =
+        new URL(
+          link,
+          window.location.origin
+        );
+
+      return url.searchParams.get('token') || '';
+
+    } catch {
+
+      if (link && link.includes('token=')) {
+
+        return link.split('token=')[1] || '';
+      }
+
+      return '';
+    }
+  }
+
+  function setStatus(tipo, mensagem) {
+
+    if (!statusDiv) {
+
+      return;
+    }
+
+    statusDiv.className =
+      tipo || '';
+
+    statusDiv.innerHTML =
+      mensagem || '';
+  }
+
+  // =========================
+  // 🎯 ELEMENTOS
+  // =========================
+  const cnpjInput =
     document.getElementById('cnpj');
 
-const ordemInput =
-    document.getElementById('ordem');
+  const ordemInput =
+    document.getElementById('ordem') ||
+    document.getElementById('ordemCarga');
 
-const pedidosInput =
+  const pedidosInput =
     document.getElementById('pedidos');
 
-const nfesInput =
+  const nfesInput =
     document.getElementById('nfes');
 
-const dataInput =
+  const dataInput =
     document.getElementById('data');
 
-const resultado =
+  const statusDiv =
+    document.getElementById('status');
+
+  const resultadoDiv =
     document.getElementById('resultado');
 
-let listaAtual = [];
-
-// =========================
-// HELPERS
-// =========================
-
-function getNunota(item) {
-
-    return (
-        item?.nunota ||
-        item?.NUNOTA ||
-        item?.NUNOTA?.$ ||
-        ''
-    );
-}
-
-function getNumNota(item) {
-
-    return (
-        item?.numNota ||
-        item?.NUMNOTA ||
-        item?.NUMNOTA?.$ ||
-        ''
-    );
-}
-
-function getLink(item) {
-
-    return (
-        item?.link ||
-        item?.LINK ||
-        ''
-    );
-}
-
-function mostrarMensagem(texto, tipo = '') {
-
-    resultado.innerHTML = `
-        <div class="mensagem ${tipo}">
-            ${texto}
-        </div>
-    `;
-}
-
-// =========================
-// FILTROS
-// =========================
-
-function atualizarFiltros() {
+  // =========================
+  // 🔁 CONTROLE FILTROS
+  // =========================
+  function atualizarFiltros() {
 
     const temCnpj =
-        !!cnpjInput.value.trim();
+      !!cnpjInput.value.trim();
 
     const temOrdem =
-        !!ordemInput.value.trim();
+      !!ordemInput.value.trim();
 
     const temPedidos =
-        !!pedidosInput.value.trim();
+      !!pedidosInput.value.trim();
 
     const temNfes =
-        !!nfesInput.value.trim();
+      nfesInput
+        ? !!nfesInput.value.trim()
+        : false;
 
     const temData =
-        !!dataInput.value;
+      !!dataInput.value;
 
     cnpjInput.disabled =
-        temOrdem ||
-        temPedidos ||
-        temNfes ||
-        temData;
+      temOrdem ||
+      temPedidos ||
+      temNfes ||
+      temData;
 
     ordemInput.disabled =
-        temCnpj ||
-        temPedidos ||
-        temNfes ||
-        temData;
+      temCnpj ||
+      temPedidos ||
+      temNfes ||
+      temData;
 
     pedidosInput.disabled =
-        temCnpj ||
-        temOrdem ||
-        temNfes ||
-        temData;
+      temCnpj ||
+      temOrdem ||
+      temNfes ||
+      temData;
 
-    nfesInput.disabled =
+    if (nfesInput) {
+
+      nfesInput.disabled =
         temCnpj ||
         temOrdem ||
         temPedidos ||
         temData;
+    }
 
     dataInput.disabled =
-        temCnpj ||
-        temOrdem ||
-        temPedidos ||
-        temNfes;
-}
+      temCnpj ||
+      temOrdem ||
+      temPedidos ||
+      temNfes;
+  }
 
-cnpjInput.addEventListener(
+  // =========================
+  // 🎧 EVENTOS
+  // =========================
+  cnpjInput.addEventListener(
     'input',
     atualizarFiltros
-);
+  );
 
-ordemInput.addEventListener(
+  ordemInput.addEventListener(
     'input',
     atualizarFiltros
-);
+  );
 
-pedidosInput.addEventListener(
+  pedidosInput.addEventListener(
     'input',
     atualizarFiltros
-);
+  );
 
-nfesInput.addEventListener(
+  if (nfesInput) {
+
+    nfesInput.addEventListener(
+      'input',
+      atualizarFiltros
+    );
+  }
+
+  dataInput.addEventListener(
     'input',
     atualizarFiltros
-);
+  );
 
-dataInput.addEventListener(
-    'input',
-    atualizarFiltros
-);
+  // =========================
+  // 🛡️ FETCH SEGURO
+  // =========================
+  async function fetchSeguro(
+    url,
+    options = {}
+  ) {
 
-// =========================
-// LIMPAR
-// =========================
+    try {
 
-function limpar() {
+      const res =
+        await fetch(url, options);
+
+      const text =
+        await res.text();
+
+      if (!text) {
+
+        throw new Error(
+          'Resposta vazia do servidor'
+        );
+      }
+
+      let data;
+
+      try {
+
+        data =
+          JSON.parse(text);
+
+      } catch {
+
+        console.error(
+          '❌ JSON inválido:',
+          text
+        );
+
+        throw new Error(
+          'Erro ao processar resposta'
+        );
+      }
+
+      if (!res.ok) {
+
+        throw new Error(
+          data.erro ||
+          'Erro na requisição'
+        );
+      }
+
+      return data;
+
+    } catch (err) {
+
+      console.error(
+        '❌ FETCH:',
+        err
+      );
+
+      throw err;
+    }
+  }
+
+  // =========================
+  // 🧹 LIMPAR RESULTADO
+  // =========================
+  function limparResultado() {
+
+    resultadoDiv.innerHTML = '';
+
+    pedidosGerados = [];
+
+    linksGerados = [];
+  }
+
+  // =========================
+  // 🧹 LIMPAR TELA
+  // =========================
+  function limpar() {
 
     cnpjInput.value = '';
     ordemInput.value = '';
     pedidosInput.value = '';
-    nfesInput.value = '';
+
+    if (nfesInput) {
+
+      nfesInput.value = '';
+    }
+
     dataInput.value = '';
 
-    resultado.innerHTML = '';
-
-    listaAtual = [];
+    limparResultado();
 
     cnpjInput.disabled = false;
     ordemInput.disabled = false;
     pedidosInput.disabled = false;
-    nfesInput.disabled = false;
+
+    if (nfesInput) {
+
+      nfesInput.disabled = false;
+    }
+
     dataInput.disabled = false;
-}
 
-// =========================
-// GERAR
-// =========================
+    setStatus('', '');
+  }
 
-async function gerar() {
+  // =========================
+  // 🔍 GERAR LINKS
+  // =========================
+  async function gerar() {
 
-    mostrarMensagem(
-        'Carregando...'
-    );
+    limparResultado();
 
     const documento =
-        cnpjInput.value.trim();
+      limparDoc(cnpjInput.value);
 
-    const ordemCarga =
-        ordemInput.value.trim();
+    const ordem =
+      ordemInput.value.trim();
 
     const pedidos =
-        pedidosInput.value.trim();
+      pedidosInput.value.trim();
 
     const nfes =
-        nfesInput.value.trim();
+      nfesInput
+        ? nfesInput.value.trim()
+        : '';
 
     const data =
-        dataInput.value;
+      dataInput.value;
 
     const filtros = [
-        documento,
-        ordemCarga,
-        pedidos,
-        nfes,
-        data
+
+      documento,
+      ordem,
+      pedidos,
+      nfes,
+      data
+
     ].filter(Boolean);
 
-    if (filtros.length !== 1) {
+    if (!filtros.length) {
 
-        mostrarMensagem(
-            'Utilize apenas UM filtro.',
-            'erro'
-        );
+      setStatus(
+        'erro',
+        '❌ Informe um filtro'
+      );
 
-        return;
+      return;
     }
+
+    if (filtros.length > 1) {
+
+      setStatus(
+        'erro',
+        '❌ Utilize apenas um filtro'
+      );
+
+      return;
+    }
+
+    if (
+      documento &&
+      documento.length !== 11 &&
+      documento.length !== 14
+    ) {
+
+      setStatus(
+        'erro',
+        '❌ CPF/CNPJ inválido'
+      );
+
+      return;
+    }
+
+    setStatus(
+      '',
+      '⏳ Buscando pedidos...'
+    );
 
     try {
 
-        const response =
-            await fetch(
-                '/api/gerar-links',
-                {
-                    method: 'POST',
+      const payload = {
 
-                    headers: {
-                        'Content-Type':
-                            'application/json'
-                    },
+        cnpj:
+          documento || null,
 
-                    body:
-                        JSON.stringify({
-                            cnpj:
-                                documento || null,
+        ordemCarga:
+          ordem || null,
 
-                            ordemCarga:
-                                ordemCarga || null,
+        pedidos:
+          pedidos || null,
 
-                            pedidos:
-                                pedidos || null,
+        nfes:
+          nfes || null,
 
-                            nfes:
-                                nfes || null,
+        data:
+          data || null
+      };
 
-                            data:
-                                data || null
-                        })
-                }
-            );
+      const dataRes =
+        await fetchSeguro(
+          '/api/gerar-links',
+          {
+            method: 'POST',
 
-        const json =
-            await response.json();
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
 
-        if (!response.ok) {
+            body:
+              JSON.stringify(payload)
+          }
+        );
 
-            throw new Error(
-                json?.erro ||
-                'Erro ao gerar links'
-            );
-        }
+      if (
+        !dataRes.links ||
+        !dataRes.links.length
+      ) {
 
-        listaAtual =
-            json.links || [];
+        setStatus(
+          'warn',
+          '⚠️ Nenhum pedido encontrado'
+        );
 
-        if (!listaAtual.length) {
+        return;
+      }
 
-            mostrarMensagem(
-                'Nenhum resultado encontrado.',
-                'erro'
-            );
+      pedidosGerados =
+        dataRes.links
+          .map(l => getNunota(l))
+          .filter(Boolean);
 
-            return;
-        }
+      linksGerados =
+        dataRes.links;
 
-        resultado.innerHTML = `
+      setStatus(
+        'ok',
+        `✅ ${dataRes.total || dataRes.links.length} pedido(s) encontrado(s)`
+      );
 
-            <div class="resultado-topo">
-                Total encontrado:
-                <strong>${json.total || listaAtual.length}</strong>
-            </div>
+      dataRes.links.forEach(l => {
 
-            ${listaAtual.map(item => {
+        const nunota =
+          getNunota(l);
 
-                const nunota =
-                    getNunota(item);
+        const numNota =
+          getNumNota(l);
 
-                const numNota =
-                    getNumNota(item);
+        const link =
+          getLink(l);
 
-                const link =
-                    getLink(item);
+        const el =
+          document.createElement('div');
 
-                return `
+        el.className =
+          'link-box';
 
-                    <div class="link-item">
+        el.innerHTML = `
 
-                        <strong>Pedido:</strong>
-                        ${nunota || '-'}
+          <b>Pedido:</b>
+          ${nunota}
 
-                        ${numNota
-                            ? `
-                                <br>
-                                <strong>NF-e:</strong>
-                                ${numNota}
-                            `
-                            : ''
-                        }
+          ${numNota
+            ? `
+              <br>
+              <b>NF-e:</b>
+              ${numNota}
+            `
+            : ''
+          }
 
-                        <br><br>
+          <br><br>
 
-                        <a
-                            href="${link}"
-                            target="_blank">
+          <a
+            href="${link}"
+            target="_blank"
+          >
+            ${link}
+          </a>
 
-                            ${link}
+          <div class="actions">
 
-                        </a>
+            <button
+              onclick="copiar('${link}')"
+            >
+              📋 Copiar
+            </button>
 
-                    </div>
-                `;
-            }).join('')}
+            <button
+              onclick="abrir('${link}')"
+            >
+              🔗 Abrir
+            </button>
+
+            <button
+              onclick="whatsapp('${link}')"
+            >
+              📲 WhatsApp
+            </button>
+
+          </div>
         `;
 
+        resultadoDiv.appendChild(el);
+      });
+
     } catch (err) {
 
-        console.error(
-            'Erro gerar links:',
-            err
-        );
+      console.error(
+        '❌ ERRO:',
+        err
+      );
 
-        mostrarMensagem(
-            'Erro ao gerar links.',
-            'erro'
-        );
+      setStatus(
+        'erro',
+        `❌ ${err.message}`
+      );
     }
-}
+  }
 
-// =========================
-// BAIXAR TODOS
-// =========================
+  // =========================
+  // 📋 COPIAR
+  // =========================
+  async function copiar(link) {
 
-async function baixarTodos() {
+    try {
 
-    if (!listaAtual.length) {
+      await navigator.clipboard
+        .writeText(link);
 
-        alert(
-            'Nenhum pedido gerado.'
-        );
+      alert(
+        '✅ Link copiado'
+      );
 
-        return;
+    } catch (err) {
+
+      console.error(err);
+
+      alert(
+        '❌ Erro ao copiar'
+      );
+    }
+  }
+
+  // =========================
+  // 🔗 ABRIR
+  // =========================
+  function abrir(link) {
+
+    window.open(
+      link,
+      '_blank'
+    );
+  }
+
+  // =========================
+  // 📲 WHATSAPP
+  // =========================
+  function whatsapp(link) {
+
+    const texto =
+      encodeURIComponent(
+        `Acompanhe seu pedido:\n${link}`
+      );
+
+    window.open(
+      `https://wa.me/?text=${texto}`,
+      '_blank'
+    );
+  }
+
+  // =========================
+  // ⬇️ BAIXAR TODOS
+  // =========================
+  async function baixarTodos() {
+
+    if (!linksGerados.length) {
+
+      alert(
+        '⚠️ Nenhum pedido gerado'
+      );
+
+      return;
     }
 
     try {
 
-        const pedidos =
-            listaAtual
-                .map(item =>
-                    getNunota(item)
-                )
-                .filter(Boolean);
+      setStatus(
+        '',
+        '⏳ Preparando downloads...'
+      );
 
-        if (!pedidos.length) {
+      let totalBaixados = 0;
 
-            alert(
-                'Nenhum pedido válido encontrado para download.'
-            );
+      for (const item of linksGerados) {
 
-            return;
+        const nunota =
+          getNunota(item);
+
+        const link =
+          getLink(item);
+
+        const token =
+          getTokenFromLink(link);
+
+        if (!nunota || !token) {
+
+          console.warn(
+            'Item inválido para download:',
+            item
+          );
+
+          continue;
         }
 
-        const response =
-            await fetch(
-                '/api/baixar-comprovantes',
-                {
-                    method: 'POST',
+        const imgUrl =
+          `/api/comprovante/imagem?nunota=${nunota}&token=${token}`;
 
-                    headers: {
-                        'Content-Type':
-                            'application/json'
-                    },
+        try {
 
-                    body:
-                        JSON.stringify({
-                            pedidos
-                        })
-                }
-            );
+          const imgRes =
+            await fetch(imgUrl);
 
-        if (!response.ok) {
+          if (imgRes.ok) {
 
-            const erro =
-                await response.text();
+            const blob =
+              await imgRes.blob();
 
-            console.error(
-                'Erro backend baixar comprovantes:',
-                erro
-            );
+            if (blob.size > 1000) {
 
-            throw new Error(
-                'Erro ao baixar comprovantes'
-            );
+              const url =
+                window.URL.createObjectURL(blob);
+
+              const a =
+                document.createElement('a');
+
+              a.href = url;
+
+              a.download =
+                `Comprovante_${nunota}.jpg`;
+
+              document.body.appendChild(a);
+
+              a.click();
+
+              a.remove();
+
+              window.URL.revokeObjectURL(url);
+
+              totalBaixados++;
+
+              await new Promise(r =>
+                setTimeout(r, 800)
+              );
+
+              continue;
+            }
+          }
+
+        } catch (err) {
+
+          console.error(
+            `Erro imagem ${nunota}`,
+            err
+          );
         }
 
-        const blob =
-            await response.blob();
+        const pdfUrl =
+          `/api/comprovante/pdf?nunota=${nunota}&token=${token}`;
 
-        if (!blob || blob.size === 0) {
+        try {
 
-            throw new Error(
-                'Arquivo ZIP vazio'
-            );
+          const pdfRes =
+            await fetch(pdfUrl);
+
+          if (pdfRes.ok) {
+
+            const blob =
+              await pdfRes.blob();
+
+            if (blob.size > 1000) {
+
+              const url =
+                window.URL.createObjectURL(blob);
+
+              const a =
+                document.createElement('a');
+
+              a.href = url;
+
+              a.download =
+                `Comprovante_${nunota}.pdf`;
+
+              document.body.appendChild(a);
+
+              a.click();
+
+              a.remove();
+
+              window.URL.revokeObjectURL(url);
+
+              totalBaixados++;
+
+              await new Promise(r =>
+                setTimeout(r, 800)
+              );
+            }
+          }
+
+        } catch (err) {
+
+          console.error(
+            `Erro PDF ${nunota}`,
+            err
+          );
         }
+      }
 
-        const url =
-            window.URL.createObjectURL(blob);
+      setStatus(
+        'ok',
+        `✅ ${totalBaixados} download(s) iniciado(s)`
+      );
 
-        const a =
-            document.createElement('a');
+      alert(`
 
-        a.href = url;
+  ✅ Downloads iniciados
 
-        a.download =
-            'comprovantes.zip';
+  📂 Os arquivos foram enviados
+  para a pasta padrão de Downloads
+  do navegador.
 
-        document.body.appendChild(a);
+  💡 Dica:
+  configure o Chrome para perguntar
+  onde salvar os arquivos.
 
-        a.click();
-
-        a.remove();
-
-        window.URL.revokeObjectURL(url);
+      `);
 
     } catch (err) {
 
-        console.error(
-            'Erro baixar comprovantes:',
-            err
-        );
+      console.error(err);
 
-        alert(
-            'Erro ao baixar comprovantes.'
-        );
+      setStatus(
+        'erro',
+        `❌ ${err.message}`
+      );
     }
-}
+  }
 
-// =========================
-// MANUAL
-// =========================
-
-function abrirManual() {
-
-    window.open(
-        '/manual.html',
-        '_blank'
-    );
-}
+  // =========================
+  // 🚀 START
+  // =========================
+  atualizarFiltros();
