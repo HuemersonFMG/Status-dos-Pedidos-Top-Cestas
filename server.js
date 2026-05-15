@@ -392,6 +392,12 @@ app.post(
           NUMNOTA:
             r.NUMNOTA?.$ || '',
 
+          nomeParc:
+            r.NOMEPARC?.$ || '',
+
+          NOMEPARC:
+            r.NOMEPARC?.$ || '',
+
           link:
             `${baseUrl}/index.html?nunota=${r.NUNOTA?.$}&token=${gerarToken(r.NUNOTA?.$)}`
         }));
