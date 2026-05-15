@@ -579,13 +579,24 @@ document.addEventListener('keydown', function (e) {
     );
   }
 
-    // =========================
+  // =========================
   // 🔗 ABRIR GERADOR COMERCIAL
   // =========================
   function abrirgeradorcomercial() {
 
     window.open(
       '/geradorcomercial.html',
+      '_blank'
+    );
+  }
+
+  // =========================
+  // 🔗 ABRIR MANUAL DO USUARIO
+  // =========================
+  function abrirManual() {
+
+    window.open(
+      '/docs/manual.html',
       '_blank'
     );
   }
