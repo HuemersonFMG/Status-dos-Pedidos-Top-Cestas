@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Top Cestas Track - Gerador Comercial</title>
+
+    <link rel="icon" href="https://tutoriaissankhya.netlify.app/img/IcoTop.png" type="image/png">
+    <link rel="stylesheet" href="Styles/gerador.css">
+  </head>
+
+  <body>
+    <header>
+      <div class="header-left">
+        <a href="https://topalimentos.shop/produtos/">
+          <img
+            src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+            alt="Logo Top Cestas"
+            width="20%"
+            height="auto">
+        </a>
+
+        <h1>Top Cestas</h1>
+
+        <span>
+          Gerador Comercial de Links de Rastreamento de Pedidos
+        </span>
+      </div>
+
+      <div class="header-actions">
+        <button
+          class="btn-download"
+          onclick="baixarTodos()">
+          Baixar Todos Comprovantes
+        </button>
+
+        <button
+          class="btn-manual"
+          onclick="abrirManual()">
+          Manual
+        </button>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="descricao">
+        <p class="highlight2">
+          Informe obrigatoriamente o
+          <strong>CPF/CNPJ</strong>
+          e o
+          <strong>Período PAP</strong>.
+          Os filtros são combinados.
+        </p>
+      </div>
+
+      <input
+        type="text"
+        id="cnpj"
+        placeholder="CPF/CNPJ">
+
+      <input
+        type="text"
+        id="periodoPap"
+        placeholder="Período PAP">
+
+      <div class="acoes">
+        <button
+          class="btn-gerar"
+          onclick="gerar()">
+          Gerar Links
+        </button>
+
+        <button
+          class="btn-limpar"
+          onclick="limpar()">
+          Limpar
+        </button>
+      </div>
+
+      <div id="status"></div>
+
+      <div
+        class="resultado"
+        id="resultado">
+      </div>
+    </div>
+
+    <footer>
+      Top Cestas Track © 2026 - Sistema de rastreamento integrado Sankhya ERP
+    </footer>
+
+    <script src="Styles/geradorcomercial.js"></script>
+  </body>
+</html>
