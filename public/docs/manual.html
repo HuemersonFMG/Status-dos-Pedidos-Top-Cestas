@@ -2,835 +2,601 @@
 <html lang="pt-BR">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual do Usuário - Top Alimentos</title>
 
-<title>Manual do Usuário - Top Alimentos</title>
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
 
-<style>
+        body{
+            font-family:Arial,sans-serif;
+            background:#f4f6f9;
+            color:#222;
+            line-height:1.7;
+        }
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
+        header{
+            background:linear-gradient(90deg,#ff3131,#ff9800);
+            padding:40px 20px;
+            text-align:center;
+            color:#133b63;
+            box-shadow:0 2px 10px rgba(0,0,0,0.2);
+        }
 
-body{
-    font-family:Arial,sans-serif;
-    background:#f4f6f9;
-    color:#222;
-    line-height:1.7;
-}
+        header img{
+            width:20%%;
+            margin-bottom:20px;
+        }
 
-header{
-    background:linear-gradient(90deg,#ff3131,#ff9800);
-    padding:40px 20px;
-    text-align:center;
-    color:#133b63;
-    box-shadow:0 2px 10px rgba(0,0,0,0.2);
-}
+        header h1{
+            font-size:42px;
+            margin-bottom:10px;
+        }
 
-header img{
-    width:95%;
-    margin-bottom:20px;
-}
+        header p{
+            font-size:18px;
+            color:#fff;
+        }
 
-header h1{
-    font-size:42px;
-    margin-bottom:10px;
-}
+        .container{
+            width:95%;
+            max-width:97%px;
+            margin:40px auto;
+        }
 
-header p{
-    font-size:18px;
-    color:#fff;
-}
+        .card{
+            background:#fff;
+            border-radius:12px;
+            padding:30px;
+            margin-bottom:30px;
+            box-shadow:0 0 12px rgba(0,0,0,0.08);
+        }
 
-.container{
-    width:95%;
-    max-width:1200px;
-    margin:40px auto;
-}
+        .card h2{
+            color:#234b72;
+            margin-bottom:20px;
+            font-size:28px;
+            border-left:8px solid #ff9800;
+            padding-left:15px;
+        }
 
-.card{
-    background:#fff;
-    border-radius:12px;
-    padding:30px;
-    margin-bottom:30px;
-    box-shadow:0 0 12px rgba(0,0,0,0.08);
-}
+        .card h3{
+            margin-top:25px;
+            margin-bottom:15px;
+            color:#ff6600;
+        }
 
-.card h2{
-    color:#234b72;
-    margin-bottom:20px;
-    font-size:28px;
-    border-left:8px solid #ff9800;
-    padding-left:15px;
-}
+        .card p{
+            margin-bottom:15px;
+        }
 
-.card h3{
-    margin-top:25px;
-    margin-bottom:15px;
-    color:#ff6600;
-}
+        .card ul{
+            padding-left:25px;
+            margin-bottom:20px;
+        }
 
-.card p{
-    margin-bottom:15px;
-}
+        .card li{
+            margin-bottom:10px;
+        }
 
-.card ul{
-    padding-left:25px;
-    margin-bottom:20px;
-}
+        .card2{
+            background:#becbf5;
+            border-radius:12px;
+            padding:30px;
+            margin-bottom:30px;
+            box-shadow:0 0 12px rgba(0,0,0,0.08);
+        }
 
-.card li{
-    margin-bottom:10px;
-}
+        .flow{
+            background:#f8f9fb;
+            border-left:6px solid #4a87fa;
+            padding:20px;
+            border-radius:8px;
+            margin:20px 0;
+        }
 
-.card2{
-    background:#becbf5;
-    border-radius:12px;
-    padding:30px;
-    margin-bottom:30px;
-    box-shadow:0 0 12px rgba(0,0,0,0.08);
-}
+        .table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:20px;
+        }
 
-.flow{
-    background:#f8f9fb;
-    border-left:6px solid #4a87fa;
-    padding:20px;
-    border-radius:8px;
-    margin:20px 0;
-}
+        .table th{
+            background:#234b72;
+            color:#fff;
+            padding:14px;
+            text-align:left;
+        }
 
-.table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:20px;
-}
+        .table td{
+            padding:14px;
+            border-bottom:1px solid #ddd;
+        }
 
-.table th{
-    background:#234b72;
-    color:#fff;
-    padding:14px;
-    text-align:left;
-}
+        .tag{
+            display:inline-block;
+            padding:6px 12px;
+            border-radius:20px;
+            font-size:13px;
+            font-weight:bold;
+            margin-right:5px;
+        }
 
-.table td{
-    padding:14px;
-    border-bottom:1px solid #ddd;
-}
+        .ok{
+            background:#d4edda;
+            color:#155724;
+        }
 
-.tag{
-    display:inline-block;
-    padding:6px 12px;
-    border-radius:20px;
-    font-size:13px;
-    font-weight:bold;
-    margin-right:5px;
-}
+        .warn{
+            background:#fff3cd;
+            color:#856404;
+        }
 
-.ok{
-    background:#d4edda;
-    color:#155724;
-}
+        .erro{
+            background:#f8d7da;
+            color:#721c24;
+        }
 
-.warn{
-    background:#fff3cd;
-    color:#856404;
-}
+        .code{
+            background:#1e1e1e;
+            color:#00ff88;
+            padding:15px;
+            border-radius:8px;
+            overflow:auto;
+            margin:20px 0;
+            font-family:Consolas;
+        }
 
-.erro{
-    background:#f8d7da;
-    color:#721c24;
-}
+        footer{
+            margin-top:50px;
+            background:#133b63;
+            color:#fff;
+            text-align:center;
+            padding:30px;
+        }
 
-.code{
-    background:#1e1e1e;
-    color:#00ff88;
-    padding:15px;
-    border-radius:8px;
-    overflow:auto;
-    margin:20px 0;
-    font-family:Consolas;
-}
+        @media(max-width:768px){
+            header h1{ font-size:30px;}
+            .card{padding:20px;}
+            .table{font-size:14px;}
 
-footer{
-    margin-top:50px;
-    background:#133b63;
-    color:#fff;
-    text-align:center;
-    padding:30px;
-}
-
-@media(max-width:768px){
-
-    header h1{
-        font-size:30px;
-    }
-
-    .card{
-        padding:20px;
-    }
-
-    .table{
-        font-size:14px;
-    }
-
-}
-
-</style>
-
+        }
+    </style>
 </head>
 
 <body>
+    <header>
+        <img
+            src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
+            alt="Top Alimentos" width="20%" height="auto">
+        <h1>Manual do Usuário</h1>
+        <p>Sistema de Rastreamento de Pedidos e Entregas</p>
 
-<header>
+    </header>
 
-    <img
-        src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-        alt="Top Alimentos">
-
-    <h1>Manual do Usuário</h1>
-
-    <p>
-        Sistema de Rastreamento de Pedidos e Entregas
-    </p>
-
-</header>
-
-<div class="container">
-
-    <!-- INTRODUÇÃO -->
-
-    <section class="card">
-
-        <h2>📘 Visão Geral do Sistema</h2>
-
-        <p>
-            O sistema de rastreamento da <strong>Top Alimentos</strong>
-            foi desenvolvido para permitir o acompanhamento dos pedidos
-            realizados pelos clientes, exibindo o status atualizado da entrega
-            diretamente a partir do banco de dados do ERP Sankhya.
-        </p>
-
-        <p>
-            O sistema possui três módulos principais:
-        </p>
-
-        <ul>
-
-            <li>
-                <strong>Gerador de Links</strong>:
-                utilizado pela equipe interna para gerar links de rastreamento.
-            </li>
-
-            <li>
-                <strong>Página do Cliente</strong>:
-                onde o cliente acompanha o status do pedido.
-            </li>
-
-            <li>
-                <strong>Página do Vendedor</strong>:
-                permite visualizar diversos pedidos em lote (<strong>este módulo ainda está em desenvolvimento</strong> ).
-            </li>
-
-        </ul>
-
-        <div class="flow">
-
-            <strong>Fluxo Geral do Sistema:</strong>
-
-            <br><br>
-
-            ERP Sankhya →
-            API Node.js →
-            Views do Banco →
-            Geração de Links →
-            Cliente acompanha entrega em tempo real
-
-        </div>
-
-    </section>
-
-    <!-- GERADOR -->
-
-    <section class="card">
-
-        <h2>🔗 Módulo Gerador de Links</h2>
-
-        <p>
-            O arquivo <strong>gerador.html</strong>
-            é utilizado pela equipe da Top Alimentos para gerar links
-            individuais ou em lote para os clientes.
-        </p>
-
-        <h3>📌 Objetivo</h3>
-
-        <p>
-            Criar links seguros de rastreamento dos pedidos.
-        </p>
-
-        <h3>📋 Filtros Disponíveis</h3>
-
-        <table class="table">
-
-            <tr>
-                <th>Filtro</th>
-                <th>Descrição</th>
-            </tr>
-
-            <tr>
-                <td>CPF/CNPJ</td>
-                <td>Busca todos os pedidos de um cliente em um período de 60 dias.</td>
-            </tr>
-
-            <tr>
-                <td>Ordem de Carga</td>
-                <td>Busca pedidos vinculados a uma carga (Minuta de carregamento) específica.</td>
-            </tr>
-
-            <tr>
-                <td>Pedidos (Número único)</td>
-                <td>Busca pedidos específicos separados por vírgula.</td>
-            </tr>
-
-            <tr>
-                <td>Data (Liberação)</td>
-                <td>Busca pedidos pela data de liberação do pedido via PCP.</td>
-            </tr>
-
-        </table>
-
-        <h3>⚙️ Como Utilizar</h3>
-
-        <ul>
-
-            <li>
-                Abra o módulo Gerador de Links.
-            </li>
-
-            <li>
-                Escolha apenas um filtro.
-            </li>
-
-            <li>
-                Clique em:
-                <strong>Gerar Links Clientes</strong>.
-            </li>
-
-            <li>
-                O sistema exibirá os links encontrados.
-            </li>
-
-            <li>
-                Utilize os botões:
-            </li>
+    <div class="container">
+        <section class="card">
+            <h2>📘 Visão Geral do Sistema</h2>
+            <p>
+                O sistema de rastreamento da <strong>Top Alimentos</strong>
+                foi desenvolvido para permitir o acompanhamento dos pedidos
+                realizados pelos clientes, exibindo o status atualizado da entrega
+                diretamente a partir do banco de dados do ERP Sankhya.
+            </p>
+            <p>O sistema possui três módulos principais:</p>
 
             <ul>
-
-                <li>📋 Copiar - Copia um link para a área de transferenica.</li>
-
-                <li>🔗 Abrir - Abre a página referente ao Link exibindo as informações do Pedido.</li>
-
-                <li>📲 WhatsApp - Abre o WhatsApp Web para colar o link e enviar ao cliente.</li>
-
+                <li>
+                    <strong>Gerador de Links</strong>:
+                    utilizado pela equipe interna para gerar links de rastreamento.
+                </li>
+                <li>
+                    <strong>Página do Cliente</strong>:
+                    onde o cliente acompanha o status do pedido.
+                </li>
+                <li>
+                    <strong>Página do Vendedor - Específico PAP</strong>:
+                    permite visualizar diversos pedidos em lote a partir do CNPJ e Período de entrega.
+                </li>
             </ul>
 
-        </ul>
+            <div class="flow">
+                <strong>Fluxo Geral do Sistema:</strong>
+                <br><br>
+                ERP Sankhya →
+                API Node.js →
+                Views do Banco →
+                Geração de Links →
+                Cliente acompanha entrega em tempo real
+            </div>
+        </section>
 
-        <div class="card2">
-            <p>Na barra de títulos temos dois botões de ação.</p>
+        <section class="card">
+            <h2>🔗 Módulo Gerador de Links</h2>
+            <p>
+                O arquivo <strong>gerador.html</strong>
+                é utilizado pela equipe da Top Alimentos para gerar links
+                individuais ou em lote para os clientes.
+            </p>
+            <h3>📌 Objetivo</h3>
+            <p>Criar links seguros de rastreamento dos pedidos.</p>
+
+            <h3>📋 Filtros Disponíveis</h3>
+            <table class="table">
+                <tr>
+                    <th>Filtro</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td>CPF/CNPJ</td>
+                    <td>Busca todos os pedidos de um cliente em um período de 60 dias.</td>
+                </tr>
+                <tr>
+                    <td>Ordem de Carga</td>
+                    <td>Busca pedidos vinculados a uma carga (Minuta de carregamento) específica.</td>
+                </tr>
+                <tr>
+                    <td>Pedidos (Número único)</td>
+                    <td>Busca pedidos específicos separados por vírgula.</td>
+                </tr>
+                <tr>
+                    <td>Data (Liberação)</td>
+                    <td>Busca pedidos pela data de liberação do pedido via PCP.</td>
+                </tr>
+            </table>
+
+            <h3>⚙️ Como Utilizar</h3>
             <ul>
-                <li>🔝 <strong>Baixar Todos Comprovantes</strong>: Com este botão podemos baixar todos os comprovantes da lista de links gerados, caso existam, e salvar em uma pasta local.</li>
-                <li>📘 <strong>Manual</strong>: Com este botão podemos visualizar um Mnaual do usuário.</li>
+                <li>
+                    Abra o módulo Gerador de Links.
+                </li>
+                <li>
+                    Escolha apenas um filtro.
+                </li>
+                <li>
+                    Clique em:
+                    <strong>Gerar Links Clientes</strong>.
+                </li>
+                <li>
+                    O sistema exibirá os links encontrados.
+                </li>
+                <li>
+                    Utilize os botões:
+                </li>
+                <ul>
+                    <li>📋 Copiar - Copia um link para a área de transferenica.</li>
+                    <li>🔗 Abrir - Abre a página referente ao Link exibindo as informações do Pedido.</li>
+                    <li>📲 WhatsApp - Abre o WhatsApp Web para colar o link e enviar ao cliente.</li>
+                </ul>
             </ul>
-        </div>
-
-        <div class="flow">
-
-            O sistema bloqueia o uso simultâneo de múltiplos filtros,
-            evitando buscas incorretas ou excessivas.
-
-        </div>
-
-    </section>
-
-    <!-- CLIENTE -->
-
-    <section class="card">
-
-        <h2>📦 Página de Rastreamento do Cliente</h2>
-
-        <p>
-            A página <strong>index.html</strong>
-            é acessada diretamente pelo cliente através do link gerado.
-        </p>
-
-        <h3>📌 Informações Exibidas</h3>
-
-        <ul>
-
-            <li>Número do Pedido</li>
-
-            <li>Número da Nota</li>
-
-            <li>Cliente</li>
-
-            <li>CPF/CNPJ</li>
-
-            <li>Data do Pedido</li>
-
-            <li>Ordem de Carga</li>
-
-            <li>Transportadora</li>
-
-            <li>Status Atual da Entrega</li>
-
-            <li>Comprovante da Entrega</li>
-
-        </ul>
-
-        <h3>📍 Status Possíveis (O texto Informativo pode ser alterado no Front.)</h3>
-
-        <p>
-
-            <span class="tag ok">Entregue</span>
-
-            Pedido entregue com sucesso.
-
-        </p>
-
-        <p>
-
-            <span class="tag warn">Em Entrega</span>
-
-            Pedido em rota de entrega.
-
-        </p>
-
-        <p>
-
-            <span class="tag erro">Aguardando</span>
-
-            Pedido ainda aguardando expedição ou separação.
-
-        </p>
-
-        <h3>📷 Comprovantes</h3>
-
-        <p>
-            Quando disponível, o sistema poderá exibir:
-        </p>
-
-        <ul>
-
-            <li>📷 Foto da entrega - Gerado a partir do aplicativo de entregas (Motorists da Top Cestas)</li>
-
-            <li>📄 PDF do comprovante - Gerado via API de uma transportadora contratada (Solistica)</li>
-
-        </ul>
-
-        <div class="flow">
-
-            Todos os dados exibidos são consultados em tempo real
-            diretamente do banco de dados do Sankhya.
-
-        </div>
-
-    </section>
-
-    <!-- VENDEDOR -->
-
-    <section class="card">
-
-        <h2>👨‍💼 Página do Vendedor - este móduo ainda está sendo desenvolvido.</h2>
-
-        <p>
-            O módulo <strong>vendedor</strong>
-            permite ao vendedor acompanhar diversos pedidos simultaneamente a partir de um ou mais <strong>CNPJs</strong> informados. Este módulo está sendo projetado para gerar links de acompanhamento de entrega de pedidos PAP, facilitando a administração e download de comprovantes de entrega.
-        </p>
-
-        <h3>📌 Objetivo</h3>
-
-        <p>
-            Gerar um único link contendo vários pedidos filtrados por:
-        </p>
-
-        <ul>
-
-            <li>CPF/CNPJ - pode filtrar por CNPJ ou CPF.</li>
-
-            <li>Período de campanha - Período de entregas (PAP)</li>
-
-        </ul>
-
-        <h3>⚙️ Como Funciona</h3>
-
-        <ul>
-
-            <li>
-                O gerador cria um token seguro.
-            </li>
-
-            <li>
-                O vendedor recebe um único link.
-            </li>
-
-            <li>
-                Ao abrir o link:
-            </li>
-
-            <ul>
-
-                <li>Todos os pedidos são carregados</li>
-
-                <li>Os status são exibidos em cards</li>
-
-                <li>O vendedor pode abrir o pedido</li>
-
-                <li>Pode enviar pelo WhatsApp</li>
-
-                <li>Pode exibir a foto dos comprovantes</li>
-
-            </ul>
-
-        </ul>
-
-        <div class="flow">
-
-            Este recurso é ideal para pedidos gerados por (Multi Entregas) no Planejamento de Entregas e é mais específoco para entregas de modalidade Porta a Porta (<strong>PAP</strong> ), gerenciando e reduzindo o trabalho operacional.
-
-        </div>
-
-    </section>
-
-    <!-- BACKEND -->
-
-    <section class="card">
-
-        <h2>⚙️ Funcionamento Técnico da API</h2>
-
-        <h3>📡 Backend</h3>
-
-        <p>
-            O backend foi desenvolvido em:
-        </p>
-
-        <ul>
-
-            <li>Node.js</li>
-
-            <li>Express</li>
-
-            <li>Fetch API</li>
-
-            <li>Archiver</li>
-
-        </ul>
-
-        <h3>🔄 Processo de Consulta</h3>
-
-        <div class="flow">
-
-            Usuário →
-            Front-End →
-            API Node.js →
-            Login Sankhya →
-            Consulta View →
-            Retorno JSON →
-            Interface do usuário
-
-        </div>
-
-        <h3>🗂️ Views Utilizadas</h3>
-
-        <table class="table">
-
-            <tr>
-                <th>View</th>
-                <th>Finalidade</th>
-            </tr>
-
-            <tr>
-                <td>VW_NOTAS_FUSION</td>
-                <td>Consulta completa do pedido.</td>
-            </tr>
-
-            <tr>
-                <td>VW_NOTAS_FUSION_LIGHT</td>
-                <td>Consulta resumida para listagens.</td>
-            </tr>
-
-            <tr>
-                <td>VW_NOTAS_FUSION_LIGHT_VENDEDOR</td>
-                <td>Consulta resumida para listagens. (em desenvolvimento)</td>
-            </tr>
-
-        </table>
-
-    </section>
-
-    <!-- SEGURANÇA -->
-
-    <section class="card">
-
-        <h2>🔐 Segurança e Controle de Acesso</h2>
-
-        <h3>✅ Pontos Fortes</h3>
-
-        <ul>
-
-            <li>
-                Uso de tokens SHA-256 para proteção dos links.
-            </li>
-
-            <li>
-                Validação de token em todas as rotas críticas.
-            </li>
-
-            <li>
-                Cache de autenticação no Sankhya.
-            </li>
-
-            <li>
-                Separação entre API e Front-End.
-            </li>
-
-            <li>
-                Controle de filtros no front-end.
-            </li>
-
-            <li>
-                Consulta apenas através de Views do banco.
-            </li>
-
-            <li>
-                Não expõe diretamente o banco ao usuário final.
-            </li>
-
-        </ul>
-
-        <h3>⚠️ Pontos Fracos Identificados</h3>
-
-        <ul>
-
-            <li>
-                SECRET está fixo no backend.
-            </li>
-
-            <li>
-                Usuário e senha do Sankhya estão expostos no backend.
-            </li>
-
-            <li>
-                Não existe expiração dos tokens.
-            </li>
-
-            <li>
-                Não existe controle de tentativas de acesso.
-            </li>
-
-            <li>
-                Não há autenticação administrativa no gerador.
-            </li>
-
-            <li>
-                Bloqueio de F12 não impede acesso técnico real.
-            </li>
-
-            <li>
-                Algumas rotas ainda permitem parâmetros diretos via URL, mas já exite uma camada de proteção (✅ token SHA-256).
-            </li>
-
-        </ul>
-
-        <h3>🚀 Sugestões de Melhoria</h3>
-
-        <ul>
-
-            <li>
-                Mover SECRET, USER e PASS para variáveis de ambiente.
-            </li>
-
-            <li>
-                Implementar JWT com expiração.
-            </li>
-
-            <li>
-                Adicionar autenticação administrativa.
-            </li>
-
-            <li>
-                Criar logs de auditoria.
-            </li>
-
-            <li>
-                Adicionar Rate Limit nas rotas.
-            </li>
-
-            <li>
-                Criar expiração automática dos links.
-            </li>
-
-            <li>
-                Validar origem das requisições.
-            </li>
-
-            <li>
-                Implementar CDN para comprovantes.
-            </li>
-
-            <li>
-                Melhorar proteção contra download massivo.
-            </li>
-
-        </ul>
-
-    </section>
-
-    <!-- CONCLUSÃO -->
-
-    <section class="card">
-
-        <h2>✅ Conclusão</h2>
-
-        <p>
-            O sistema de rastreamento da Top Alimentos fornece
-            uma solução moderna e eficiente para acompanhamento
-            de pedidos em tempo real utilizando integração direta
-            com o ERP Sankhya.
-        </p>
-
-        <p>
-            A arquitetura atual atende muito bem o processo operacional,
-            principalmente na automação da geração de links,
-            acompanhamento de entregas e visualização de comprovantes.
-        </p>
-
-        <p>
-            Pode ser implementdo uma melhoria no sistema segurança da API, onde o sistema poderá alcançar
-            um nível ainda maior de confiabilidade e escalabilidade.
-        </p>
-
-    </section>
-
-    <section class="card">
-        <h2>Pontos alinhados com a LGPD</h2>
-        <ul><h3>A aplicação manipula:</h3>
-            <li>Nome do cliente</li>
-            <li>CPF/CNPJ</li>
-            <li>Número do pedido</li>
-            <li>Dados de entrega</li>
-            <li>Status logístico</li>
-            <li>Comprovante de entrega</li>
-            <li>Foto da entrega</li>
-            <li>Possível assinatura</li>
-           <li> Dados comerciais</li>
-            <li>Histórico operacional</li>
-        </ul>
-
-        <ul><h2>Pela LGPD:</h2>
-            <li>✅ CPF = dado pessoal</li>
-            <li>✅ foto de entrega = dado pessoal</li>
-            <li>✅ comprovante assinado = dado pessoal</li>
-            <li>✅ nome + pedido = dado pessoal</li>
-        </ul>
-
-        <ul><h3>O que está alinhado com a LGPD neste sistema:</h3>
-            <li><h4>1. Não expõe o banco diretamente</h4></li>
-            <ul>
-                <li>Não abriu acesso direto ao Oracle</li>
-                <li>Não expôs query livre</li>
-                <li>Não liberou conexão externa</li>
-                <h4>✅ Muito bom para LGPD e segurança.</h4>
-            </ul>
-            <li><h4>2. Uso de Views</h4></li>
-            <ul>
-                <li>limita os dados</li>
-                <li>controla exposição</li>
-                <li>reduz vazamento</li>
-                <h4>✅ Boa prática LGPD.</h4>
-            </ul>
-
-            <li><h4>3. Uso de tokens</h4></li>
-            <ul>
-                <li>Isso reduz acesso indevido simples.</li>
-                <h4>✅ Boa prática LGPD.</h4>
-            </ul>
-
-            <li><h4>4. Separação de módulos</h4></li>
-            <ul>
-                <li>cliente</li>
-                <li>vendedor</li>
-                <li>backend</li>
-                <p>✅ Isso ajuda no princípio do menor privilégio.</p>
-                <h4>✅ Boa prática LGPD.</h4>
-            </ul>
-
-            <li><h4>5. Não coleta dados desnecessários</h4></li>
-            <ul>
-                <h3>A API aparentemente usa apenas:</h3>
-                <li>dados operacionais</li>
-                <li>dados logísticos</li>
-
-                <h3>Evitando:</h3>
-                <li>biometria</li>
-                <li>localização GPS</li>
-                <li>dados sensíveis</li>
-
-                <p>✅ Excelente.</p>
-                <h4>✅ Boa prática LGPD.</h4>
-            </ul>
-        </ul>
-
-        <ul><h3>⚠️ Pontos de atenção LGPD</h3>
-            <li>1. Links podem ser compartilhados</li>
-            <li>2. CPF completo exposto</li>
-            <li>3. Comprovantes contendo assinatura e dados pessoais</li>
-            <ul>LGPD exige
-                <li>✅ finalidade clara</li>
-                <li>✅ proteção adequada</li>
-                <li>✅ retenção controlada</li>
-                <li>✅ acesso restrito</li>
-            </ul>
-            <li>5. Falta de auditoria</li>
-            <ul>
-                <li>quem gerou links</li>
-                <li>quem acessou comprovantes</li>
-                <li>horário</li>
-                <li>IP</li>
-                <li>volume</li>
-            </ul>
-            <li>6. SECRET e credenciais no código</li>
-            <li>❌ Ausência de política de retenção - (Expiração dos links)</li>
-            <li>❌ Sem expiração de token</li>
-            <li>❌ Falta de consentimento/transparência</li>
 
             <div class="card2">
-                <h2>🛡️ Seu sistema está “ilegal”?</h2>
-                <p>Não necessariamente.</p>
-
-                <h3>A LGPD NÃO exige perfeição absoluta.</h3>
-                <p><strong>Ela exige:</strong></p>
-                <li>✅ finalidade legítima</li>
-                <li>✅ necessidade</li>
-                <li>✅ segurança razoável</li>
-                <li>✅ controle operacional</li>
-                <li>✅ boa-fé</li>
+                <p>Na barra de títulos temos dois botões de ação.</p>
+                <ul>
+                    <li>🔝 <strong>Baixar Todos Comprovantes</strong>: Com este botão podemos baixar todos os comprovantes da lista de links gerados, caso existam, e salvar em uma pasta local.</li>
+                    <li>📘 <strong>Manual</strong>: Com este botão podemos visualizar um Mnaual do usuário.</li>
+                </ul>
             </div>
-        </ul>
-    </section>
 
-</div>
+            <div class="flow">
+                O sistema bloqueia o uso simultâneo de múltiplos filtros,
+                evitando buscas incorretas ou excessivas.
+            </div>
 
-<footer>
+        </section>
 
-    © Top Alimentos - 2026
-    <br>
-    Sistema de Rastreamento de Pedidos
+        <section class="card">
+            <h2>📦 Página de Rastreamento do Cliente</h2>
+            <p>
+                A página <strong>index.html</strong>
+                é acessada diretamente pelo cliente através do link gerado.
+            </p>
+            <h3>📌 Informações Exibidas</h3>
+            <ul>
+                <li>Número do Pedido</li>
+                <li>Número da Nota</li>
+                <li>Cliente</li>
+                <li>CPF/CNPJ</li>
+                <li>Data do Pedido</li>
+                <li>Ordem de Carga</li>
+                <li>Transportadora</li>
+                <li>Status Atual da Entrega</li>
+                <li>Comprovante da Entrega</li>
+            </ul>
 
-</footer>
+            <h3>📍 Status Possíveis (O texto Informativo pode ser alterado no Front.)</h3>
 
+            <p>span class="tag ok">Entregue</span>Pedido entregue com sucesso.</p>
+            <p><span class="tag warn">Em Entrega</span>Pedido em rota de entrega.</p>
+            <p><span class="tag erro">Aguardando</span>Pedido ainda aguardando expedição ou separação.</p>
+
+            <h3>📷 Comprovantes</h3>
+            <p>Quando disponível, o sistema poderá exibir:</p>
+
+            <ul>
+                <li>📷 Foto da entrega - Gerado a partir do aplicativo de entregas (Motorists da Top Cestas)</li>
+                <li>📄 PDF do comprovante - Gerado via API de uma transportadora contratada (Solistica)</li>
+            </ul>
+
+            <div class="flow">
+                Todos os dados exibidos são consultados em tempo real
+                diretamente do banco de dados do Sankhya.
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>👨‍💼 Página do Vendedor - este móduo ainda está sendo desenvolvido.</h2>
+            <p>
+                O módulo <strong>vendedor</strong>
+                permite ao vendedor acompanhar diversos pedidos simultaneamente a partir de um ou mais <strong>CNPJs</strong> informados. Este módulo está sendo projetado para gerar links de acompanhamento de entrega de pedidos PAP, facilitando a administração e download de comprovantes de entrega.
+            </p>
+            <h3>📌 Objetivo</h3>
+            <p>Gerar um único link contendo vários pedidos filtrados por:</p>
+            <ul>
+                <li>CPF/CNPJ - pode filtrar por CNPJ ou CPF.</li>
+                <li>Período de campanha - Período de entregas (PAP)</li>
+            </ul>
+
+            <h3>⚙️ Como Funciona</h3>
+            <ul>
+                <li>O gerador cria um token seguro.</li>
+                <li>O vendedor recebe um único link.</li>
+                <li>Ao abrir o link:</li>
+                <ul>
+                    <li>Todos os pedidos são carregados</li>
+                    <li>Os status são exibidos em cards</li>
+                    <li>O vendedor pode abrir o pedido</li>
+                    <li>Pode enviar pelo WhatsApp</li>
+                    <li>Pode exibir a foto dos comprovantes</li>
+                </ul>
+            </ul>
+
+            <div class="flow">
+                Este recurso é ideal para pedidos gerados por (Multi Entregas) no Planejamento de Entregas e é mais específoco para entregas de modalidade Porta a Porta (<strong>PAP</strong> ), gerenciando e reduzindo o trabalho operacional.
+            </div>
+
+        </section>
+
+        <section class="card">
+            <h2>⚙️ Funcionamento Técnico da API</h2>
+            <h3>📡 Backend</h3>
+            <p>O backend foi desenvolvido em:</p>
+
+            <ul>
+                <li>Node.js</li>
+                <li>Express</li>
+                <li>Fetch API</li>
+                <li>Archiver</li>
+            </ul>
+
+            <h3>🔄 Processo de Consulta</h3>
+            <div class="flow">
+                Usuário →
+                Front-End →
+                API Node.js →
+                Login Sankhya →
+                Consulta View →
+                Retorno JSON →
+                Interface do usuário
+            </div>
+
+            <h3>🗂️ Views Utilizadas</h3>
+            <table class="table">
+                <tr>
+                    <th>View</th>
+                    <th>Finalidade</th>
+                </tr>
+                <tr>
+                    <td>VW_NOTAS_FUSION</td>
+                    <td>Consulta completa do pedido.</td>
+                </tr>
+                <tr>
+                    <td>VW_NOTAS_FUSION_LIGHT</td>
+                    <td>Consulta resumida para listagens.</td>
+                </tr>
+                <tr>
+                    <td>VW_NOTAS_FUSION_LIGHT_VENDEDOR</td>
+                    <td>Consulta resumida para listagens. (em desenvolvimento)</td>
+                </tr>
+            </table>
+
+        </section>
+        <section class="card">
+            <h2>🔐 Segurança e Controle de Acesso</h2>
+            <h3>✅ Pontos Fortes</h3>
+            <ul>
+                <li>Uso de tokens SHA-256 para proteção dos links.</li>
+                <li>Validação de token em todas as rotas críticas.</li>
+                <li>Cache de autenticação no Sankhya.</li>
+                <li>Separação entre API e Front-End.</li>
+                <li>Controle de filtros no front-end.</li>
+                <li>Consulta apenas através de Views do banco.</li>
+                <li>Não expõe diretamente o banco ao usuário final.</li>
+            </ul>
+
+            <h3>⚠️ Pontos Fracos Identificados</h3>
+            <ul>
+                <li>SECRET está fixo no backend.</li>
+                <li>Usuário e senha do Sankhya estão expostos no backend.</li>
+                <li>Não existe expiração dos tokens.</li>
+                <li>Não existe controle de tentativas de acesso.</li>
+                <li>Não há autenticação administrativa no gerador.</li>
+                <li>Bloqueio de F12 não impede acesso técnico real.</li>
+                <li>Algumas rotas ainda permitem parâmetros diretos via URL, mas já exite uma camada de proteção (✅ token SHA-256).</li>
+            </ul>
+
+            <h3>🚀 Sugestões de Melhoria</h3>
+            <ul>
+                <li>
+                    Mover SECRET, USER e PASS para variáveis de ambiente.
+                </li>
+                <li>
+                    Implementar JWT com expiração.
+                </li>
+                <li>
+                    Adicionar autenticação administrativa.
+                </li>
+                <li>
+                    Criar logs de auditoria.
+                </li>
+                <li>
+                    Adicionar Rate Limit nas rotas.
+                </li>
+                <li>
+                    Criar expiração automática dos links.
+                </li>
+                <li>
+                    Validar origem das requisições.
+                </li>
+                <li>
+                    Implementar CDN para comprovantes.
+                </li>
+                <li>
+                    Melhorar proteção contra download massivo.
+                </li>
+            </ul>
+
+        </section>
+        <section class="card">
+            <h2>✅ Conclusão</h2>
+            <p>
+                O sistema de rastreamento da Top Alimentos fornece
+                uma solução moderna e eficiente para acompanhamento
+                de pedidos em tempo real utilizando integração direta
+                com o ERP Sankhya.
+            </p>
+            <p>
+                A arquitetura atual atende muito bem o processo operacional,
+                principalmente na automação da geração de links,
+                acompanhamento de entregas e visualização de comprovantes.
+            </p>
+            <p>
+                Pode ser implementdo uma melhoria no sistema segurança da API, onde o sistema poderá alcançar
+                um nível ainda maior de confiabilidade e escalabilidade.
+            </p>
+        </section>
+
+        <section class="card">
+            <h2>Pontos alinhados com a LGPD</h2>
+            <ul><h3>A aplicação manipula:</h3>
+                <li>Nome do cliente</li>
+                <li>CPF/CNPJ</li>
+                <li>Número do pedido</li>
+                <li>Dados de entrega</li>
+                <li>Status logístico</li>
+                <li>Comprovante de entrega</li>
+                <li>Foto da entrega</li>
+                <li>Possível assinatura</li>
+            <li> Dados comerciais</li>
+                <li>Histórico operacional</li>
+            </ul>
+
+            <ul><h2>Pela LGPD:</h2>
+                <li>✅ CPF = dado pessoal</li>
+                <li>✅ foto de entrega = dado pessoal</li>
+                <li>✅ comprovante assinado = dado pessoal</li>
+                <li>✅ nome + pedido = dado pessoal</li>
+            </ul>
+
+            <ul><h3>O que está alinhado com a LGPD neste sistema:</h3>
+                <li><h4>1. Não expõe o banco diretamente</h4></li>
+                <ul>
+                    <li>Não abriu acesso direto ao Oracle</li>
+                    <li>Não expôs query livre</li>
+                    <li>Não liberou conexão externa</li>
+                    <h4>✅ Muito bom para LGPD e segurança.</h4>
+                </ul>
+                <li><h4>2. Uso de Views</h4></li>
+                <ul>
+                    <li>limita os dados</li>
+                    <li>controla exposição</li>
+                    <li>reduz vazamento</li>
+                    <h4>✅ Boa prática LGPD.</h4>
+                </ul>
+
+                <li><h4>3. Uso de tokens</h4></li>
+                <ul>
+                    <li>Isso reduz acesso indevido simples.</li>
+                    <h4>✅ Boa prática LGPD.</h4>
+                </ul>
+
+                <li><h4>4. Separação de módulos</h4></li>
+                <ul>
+                    <li>cliente</li>
+                    <li>vendedor</li>
+                    <li>backend</li>
+                    <p>✅ Isso ajuda no princípio do menor privilégio.</p>
+                    <h4>✅ Boa prática LGPD.</h4>
+                </ul>
+
+                <li><h4>5. Não coleta dados desnecessários</h4></li>
+                <ul>
+                    <h3>A API aparentemente usa apenas:</h3>
+                    <li>dados operacionais</li>
+                    <li>dados logísticos</li>
+
+                    <h3>Evitando:</h3>
+                    <li>biometria</li>
+                    <li>localização GPS</li>
+                    <li>dados sensíveis</li>
+
+                    <p>✅ Excelente.</p>
+                    <h4>✅ Boa prática LGPD.</h4>
+                </ul>
+            </ul>
+
+            <ul><h3>⚠️ Pontos de atenção LGPD</h3>
+                <li>1. Links podem ser compartilhados</li>
+                <li>2. CPF completo exposto</li>
+                <li>3. Comprovantes contendo assinatura e dados pessoais</li>
+                <ul>LGPD exige
+                    <li>✅ finalidade clara</li>
+                    <li>✅ proteção adequada</li>
+                    <li>✅ retenção controlada</li>
+                    <li>✅ acesso restrito</li>
+                </ul>
+                <li>5. Falta de auditoria</li>
+                <ul>
+                    <li>quem gerou links</li>
+                    <li>quem acessou comprovantes</li>
+                    <li>horário</li>
+                    <li>IP</li>
+                    <li>volume</li>
+                </ul>
+                <li>6. SECRET e credenciais no código</li>
+                <li>❌ Ausência de política de retenção - (Expiração dos links)</li>
+                <li>❌ Sem expiração de token</li>
+                <li>❌ Falta de consentimento/transparência</li>
+
+                <div class="card2">
+                    <h2>🛡️ Seu sistema está “ilegal”?</h2>
+                    <p>Não necessariamente.</p>
+
+                    <h3>A LGPD NÃO exige perfeição absoluta.</h3>
+                    <p><strong>Ela exige:</strong></p>
+                    <li>✅ finalidade legítima</li>
+                    <li>✅ necessidade</li>
+                    <li>✅ segurança razoável</li>
+                    <li>✅ controle operacional</li>
+                    <li>✅ boa-fé</li>
+                </div>
+            </ul>
+        </section>
+
+    </div>
+
+    <footer>
+
+        © Top Alimentos - 2026
+        <br>
+        Sistema de Rastreamento de Pedidos
+
+    </footer>
 </body>
 </html>
