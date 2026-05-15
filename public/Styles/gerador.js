@@ -582,7 +582,7 @@ document.addEventListener('keydown', function (e) {
     // =========================
   // 🔗 ABRIR GERADOR COMERCIAL
   // =========================
-  function abrirGeradorComercial() {
+  function abrirgeradorcomercial() {
 
     window.open(
       '/geradorcomercial.html',
