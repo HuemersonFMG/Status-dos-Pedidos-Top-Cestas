@@ -1,7 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
-const archiver = require('archiver');
+
+const archiverPkg = require('archiver');
+const archiver =
+  typeof archiverPkg === 'function'
+    ? archiverPkg
+    : archiverPkg.default;
+
 const path = require('path');
 
 const fetch = (...args) =>
