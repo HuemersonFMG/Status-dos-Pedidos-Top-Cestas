@@ -20,6 +20,8 @@
       </div>
 
       <div class="header-actions">
+        <div id="usuario-logado" style="color:white; font-weight:bold; display:flex; align-items:center; ">Usuário: ---</div>
+
         <button class="btn-download" onclick="baixarTodos()">Baixar Todos Comprovantes</button>
         <button class="btn-manual" onclick="abrirManual()">Manual</button>
         <button class="btn-geradorcomercial" onclick="abrirGeradorComercial()">Gerador Comercial</button>
@@ -50,22 +52,25 @@
     <script>
       async function validarSessaoAdmin() {
         try {
-          const res = await fetch('/api/admin-status', {
-            method: 'GET',
-            credentials: 'same-origin',
-            cache: 'no-store'
-          });
+          const res = await fetch('/api/admin-status');
 
           if (!res.ok) {
-            window.location.replace('/login.html');
-            return false;
+            window.location.href = '/login.html';
+            return;
           }
 
-          return true;
+          const json = await res.json();
+
+          const usuarioDiv =
+            document.getElementById('usuario-logado');
+
+          if (usuarioDiv) {
+            usuarioDiv.innerHTML =
+              `👤 ${json.usuario || 'Usuário'}`;
+          }
 
         } catch (err) {
-          window.location.replace('/login.html');
-          return false;
+          window.location.href = '/login.html';
         }
       }
 
