@@ -1,14 +1,26 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
-
-const archiverPkg = require('archiver');
-const archiver =
-  typeof archiverPkg === 'function'
-    ? archiverPkg
-    : archiverPkg.default;
-
 const path = require('path');
+
+const archiverModule = require('archiver');
+
+function criarZip() {
+  const archiverFn =
+    typeof archiverModule === 'function'
+      ? archiverModule
+      : archiverModule.default;
+
+  if (typeof archiverFn !== 'function') {
+    throw new Error('Falha ao carregar archiver');
+  }
+
+  return archiverFn('zip', {
+    zlib: {
+      level: 9
+    }
+  });
+}
 
 const fetch = (...args) =>
   import('node-fetch')
@@ -31,29 +43,19 @@ app.use(express.urlencoded({
 }));
 
 const PORT = process.env.PORT || 5050;
-
 const SECRET = process.env.SECRET || 'chave_super_secreta';
-
 const BASE_URL = 'http://topcesta.fwc.cloud:8180';
-
 const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
-
 const USER = process.env.USER || 'HUEMERSON';
-
 const PASS = process.env.PASS || '654321';
-
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const ADMIN_SESSION_COOKIE = 'topcestas_admin_session';
-
 const ADMIN_SESSION_TTL = 8 * 60 * 60 * 1000;
-
 const MAX_LOGIN_ATTEMPTS = 5;
-
 const LOGIN_BLOCK_TIME = 5 * 60 * 1000;
 
 const adminSessions = new Map();
-
 const loginAttempts = new Map();
 
 app.use((req, res, next) => {
@@ -194,23 +196,19 @@ async function validarLoginSankhya(usuario, senha) {
     }
   };
 
-  const response =
-    await fetch(
-      `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      }
-    );
+  const response = await fetch(
+    `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }
+  );
 
-  const rawCookie =
-    response.headers.get('set-cookie') || '';
-
-  const cookie =
-    rawCookie.split(';')[0];
+  const rawCookie = response.headers.get('set-cookie') || '';
+  const cookie = rawCookie.split(';')[0];
 
   if (!response.ok || !cookie) {
     return false;
@@ -238,23 +236,19 @@ async function login() {
     }
   };
 
-  const response =
-    await fetch(
-      `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      }
-    );
+  const response = await fetch(
+    `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }
+  );
 
-  const rawCookie =
-    response.headers.get('set-cookie') || '';
-
-  const cookie =
-    rawCookie.split(';')[0];
+  const rawCookie = response.headers.get('set-cookie') || '';
+  const cookie = rawCookie.split(';')[0];
 
   if (!cookie) {
     throw new Error('Erro ao autenticar no Sankhya');
@@ -300,24 +294,20 @@ async function carregarViewLight(cookie) {
     }
   };
 
-  const response =
-    await fetch(
-      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': cookie
-        },
-        body: JSON.stringify(payload)
-      }
-    );
+  const response = await fetch(
+    `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookie
+      },
+      body: JSON.stringify(payload)
+    }
+  );
 
-  const json =
-    await response.json();
-
-  const rec =
-    json?.responseBody?.records?.record;
+  const json = await response.json();
+  const rec = json?.responseBody?.records?.record;
 
   if (!rec) {
     return [];
@@ -372,15 +362,11 @@ app.post('/api/admin-login', async (req, res) => {
       });
     }
 
-    const loginOk =
-      await validarLoginSankhya(usuario, senha);
+    const loginOk = await validarLoginSankhya(usuario, senha);
 
     if (!loginOk) {
-      const tentativa =
-        registerFailedLogin(loginKey);
-
-      const restantes =
-        Math.max(0, MAX_LOGIN_ATTEMPTS - tentativa.count);
+      const tentativa = registerFailedLogin(loginKey);
+      const restantes = Math.max(0, MAX_LOGIN_ATTEMPTS - tentativa.count);
 
       if (tentativa.blockedUntil && tentativa.blockedUntil > Date.now()) {
         return res.status(429).json({
@@ -395,8 +381,7 @@ app.post('/api/admin-login', async (req, res) => {
 
     clearFailedLogin(loginKey);
 
-    const sessionToken =
-      crypto.randomBytes(32).toString('hex');
+    const sessionToken = crypto.randomBytes(32).toString('hex');
 
     adminSessions.set(sessionToken, {
       usuario,
@@ -458,411 +443,453 @@ app.get('/api/admin-status', (req, res) => {
 
 app.use(express.static(PUBLIC_DIR));
 
-app.post(
-  '/api/gerar-links',
-  requireAdminApi,
-  async (req, res) => {
-    try {
-      const {
-        cnpj,
-        ordemCarga,
-        data,
-        pedidos,
-        nfes
-      } = req.body;
+app.post('/api/gerar-links', requireAdminApi, async (req, res) => {
+  try {
+    const {
+      cnpj,
+      ordemCarga,
+      data,
+      pedidos,
+      nfes
+    } = req.body;
 
-      const documento =
-        (cnpj || '').replace(/\D/g, '');
+    const documento = (cnpj || '').replace(/\D/g, '');
 
-      const ordem =
-        ordemCarga
-          ? String(ordemCarga)
-          : null;
+    const ordem =
+      ordemCarga
+        ? String(ordemCarga)
+        : null;
 
-      let listaPedidos = [];
-      let listaNfes = [];
+    let listaPedidos = [];
+    let listaNfes = [];
 
-      if (pedidos) {
-        listaPedidos =
-          String(pedidos)
-            .split(',')
-            .map(p => p.trim())
-            .filter(Boolean);
-      }
+    if (pedidos) {
+      listaPedidos = String(pedidos)
+        .split(',')
+        .map(p => p.trim())
+        .filter(Boolean);
+    }
 
-      if (nfes) {
-        listaNfes =
-          String(nfes)
-            .split(',')
-            .map(n => n.trim())
-            .filter(Boolean);
-      }
+    if (nfes) {
+      listaNfes = String(nfes)
+        .split(',')
+        .map(n => n.trim())
+        .filter(Boolean);
+    }
 
-      let tipoFiltro = null;
+    let tipoFiltro = null;
 
-      if (listaPedidos.length) {
-        tipoFiltro = 'PEDIDOS';
-      } else if (listaNfes.length) {
-        tipoFiltro = 'NFES';
-      } else if (documento) {
-        tipoFiltro = 'DOCUMENTO';
-      } else if (ordem) {
-        tipoFiltro = 'ORDEM';
-      } else if (data) {
-        tipoFiltro = 'DATA';
-      }
+    if (listaPedidos.length) {
+      tipoFiltro = 'PEDIDOS';
+    } else if (listaNfes.length) {
+      tipoFiltro = 'NFES';
+    } else if (documento) {
+      tipoFiltro = 'DOCUMENTO';
+    } else if (ordem) {
+      tipoFiltro = 'ORDEM';
+    } else if (data) {
+      tipoFiltro = 'DATA';
+    }
 
-      if (!tipoFiltro) {
-        return res.status(400).json({
-          erro: 'Informe um filtro'
-        });
-      }
-
-      const cookie =
-        await login();
-
-      const lista =
-        await carregarViewLight(cookie);
-
-      let inicio = null;
-      let fim = null;
-
-      if (tipoFiltro === 'DATA') {
-        inicio = new Date(data + 'T00:00:00');
-        fim = new Date(data + 'T23:59:59');
-      }
-
-      const filtrados =
-        lista.filter(r => {
-          const doc =
-            (r.CGC_CPF?.$ || '').replace(/\D/g, '');
-
-          const oc =
-            r.ORDEMCARGA?.$
-              ? String(r.ORDEMCARGA.$)
-              : '';
-
-          const nunota =
-            String(r.NUNOTA?.$ || '');
-
-          const numNota =
-            String(r.NUMNOTA?.$ || '');
-
-          switch (tipoFiltro) {
-            case 'PEDIDOS':
-              return listaPedidos.includes(nunota);
-
-            case 'NFES':
-              return listaNfes.includes(numNota);
-
-            case 'DOCUMENTO':
-              return doc === documento;
-
-            case 'ORDEM':
-              return oc === ordem;
-
-            case 'DATA': {
-              const dataPedido =
-                parseDataBR(r.DTNEG?.$);
-
-              return (
-                dataPedido &&
-                dataPedido >= inicio &&
-                dataPedido <= fim
-              );
-            }
-
-            default:
-              return false;
-          }
-        });
-
-      const baseUrl =
-        `${req.protocol}://${req.get('host')}`;
-
-      const links =
-        montarLinks(filtrados, baseUrl);
-
-      res.json({
-        total: links.length,
-        links
-      });
-
-    } catch (err) {
-      console.error('❌ ERRO gerar-links:', err);
-
-      res.status(500).json({
-        erro: err.message
+    if (!tipoFiltro) {
+      return res.status(400).json({
+        erro: 'Informe um filtro'
       });
     }
-  }
-);
 
-app.post(
-  '/api/gerar-links-comercial',
-  requireAdminApi,
-  async (req, res) => {
-    try {
-      const {
-        cnpj,
-        periodoPap
-      } = req.body;
+    const cookie = await login();
+    const lista = await carregarViewLight(cookie);
 
-      const documento =
-        (cnpj || '').replace(/\D/g, '');
+    let inicio = null;
+    let fim = null;
 
-      const periodo =
-        String(periodoPap || '').trim();
+    if (tipoFiltro === 'DATA') {
+      inicio = new Date(data + 'T00:00:00');
+      fim = new Date(data + 'T23:59:59');
+    }
 
-      if (!documento && !periodo) {
-        return res.status(400).json({
-          erro: 'Informe CPF/CNPJ e Período PAP'
-        });
-      }
+    const filtrados = lista.filter(r => {
+      const doc = (r.CGC_CPF?.$ || '').replace(/\D/g, '');
+      const oc = r.ORDEMCARGA?.$ ? String(r.ORDEMCARGA.$) : '';
+      const nunota = String(r.NUNOTA?.$ || '');
+      const numNota = String(r.NUMNOTA?.$ || '');
 
-      if (!documento) {
-        return res.status(400).json({
-          erro: 'Informe CPF/CNPJ'
-        });
-      }
+      switch (tipoFiltro) {
+        case 'PEDIDOS':
+          return listaPedidos.includes(nunota);
 
-      if (!periodo) {
-        return res.status(400).json({
-          erro: 'Informe Período PAP'
-        });
-      }
+        case 'NFES':
+          return listaNfes.includes(numNota);
 
-      if (
-        documento.length !== 11 &&
-        documento.length !== 14
-      ) {
-        return res.status(400).json({
-          erro: 'CPF/CNPJ inválido'
-        });
-      }
+        case 'DOCUMENTO':
+          return doc === documento;
 
-      const cookie =
-        await login();
+        case 'ORDEM':
+          return oc === ordem;
 
-      const lista =
-        await carregarViewLight(cookie);
-
-      const filtrados =
-        lista.filter(r => {
-          const doc =
-            (r.CGC_CPF?.$ || '').replace(/\D/g, '');
-
-          const periodoRegistro =
-            String(r.AD_PERIODO_PAP?.$ || '').trim();
+        case 'DATA': {
+          const dataPedido = parseDataBR(r.DTNEG?.$);
 
           return (
-            doc === documento &&
-            periodoRegistro === periodo
+            dataPedido &&
+            dataPedido >= inicio &&
+            dataPedido <= fim
           );
-        });
+        }
 
-      const baseUrl =
-        `${req.protocol}://${req.get('host')}`;
+        default:
+          return false;
+      }
+    });
 
-      const links =
-        montarLinks(filtrados, baseUrl);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const links = montarLinks(filtrados, baseUrl);
 
-      res.json({
-        total: links.length,
-        links
-      });
+    res.json({
+      total: links.length,
+      links
+    });
 
-    } catch (err) {
-      console.error('❌ ERRO gerar-links-comercial:', err);
+  } catch (err) {
+    console.error('❌ ERRO gerar-links:', err);
 
-      res.status(500).json({
-        erro: err.message
+    res.status(500).json({
+      erro: err.message
+    });
+  }
+});
+
+app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
+  try {
+    const {
+      cnpj,
+      periodoPap
+    } = req.body;
+
+    const documento = (cnpj || '').replace(/\D/g, '');
+    const periodo = String(periodoPap || '').trim();
+
+    if (!documento && !periodo) {
+      return res.status(400).json({
+        erro: 'Informe CPF/CNPJ e Período PAP'
       });
     }
+
+    if (!documento) {
+      return res.status(400).json({
+        erro: 'Informe CPF/CNPJ'
+      });
+    }
+
+    if (!periodo) {
+      return res.status(400).json({
+        erro: 'Informe Período PAP'
+      });
+    }
+
+    if (
+      documento.length !== 11 &&
+      documento.length !== 14
+    ) {
+      return res.status(400).json({
+        erro: 'CPF/CNPJ inválido'
+      });
+    }
+
+    const cookie = await login();
+    const lista = await carregarViewLight(cookie);
+
+    const filtrados = lista.filter(r => {
+      const doc = (r.CGC_CPF?.$ || '').replace(/\D/g, '');
+      const periodoRegistro = String(r.AD_PERIODO_PAP?.$ || '').trim();
+
+      return (
+        doc === documento &&
+        periodoRegistro === periodo
+      );
+    });
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const links = montarLinks(filtrados, baseUrl);
+
+    res.json({
+      total: links.length,
+      links
+    });
+
+  } catch (err) {
+    console.error('❌ ERRO gerar-links-comercial:', err);
+
+    res.status(500).json({
+      erro: err.message
+    });
   }
-);
+});
 
-app.get(
-  '/api/pedido',
-  async (req, res) => {
-    try {
-      const {
-        nunota,
-        token
-      } = req.query;
+app.get('/api/pedido', async (req, res) => {
+  try {
+    const {
+      nunota,
+      token
+    } = req.query;
 
-      if (!nunota || !token) {
-        return res.status(400).json({
-          erro: 'Parâmetros inválidos'
-        });
-      }
+    if (!nunota || !token) {
+      return res.status(400).json({
+        erro: 'Parâmetros inválidos'
+      });
+    }
 
-      if (token !== gerarToken(nunota)) {
-        return res.status(403).json({
-          erro: 'Acesso negado'
-        });
-      }
+    if (token !== gerarToken(nunota)) {
+      return res.status(403).json({
+        erro: 'Acesso negado'
+      });
+    }
 
-      const cookie =
-        await login();
+    const cookie = await login();
 
-      const payload = {
-        serviceName: 'CRUDServiceProvider.loadView',
-        requestBody: {
-          query: {
-            viewName: 'VW_NOTAS_FUSION'
-          }
+    const payload = {
+      serviceName: 'CRUDServiceProvider.loadView',
+      requestBody: {
+        query: {
+          viewName: 'VW_NOTAS_FUSION'
         }
-      };
+      }
+    };
 
-      const response =
-        await fetch(
-          `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const json = await response.json();
+    const rec = json?.responseBody?.records?.record;
+
+    let lista = [];
+
+    if (rec) {
+      lista =
+        Array.isArray(rec)
+          ? rec
+          : [rec];
+    }
+
+    const pedido = lista.find(
+      r => String(r.NUNOTA?.$) === String(nunota)
+    );
+
+    if (!pedido) {
+      return res.json({
+        rows: []
+      });
+    }
+
+    const tipo = Number(pedido.TIPO_FOTO?.$ || 0);
+
+    res.json({
+      rows: [{
+        NUNOTA: pedido.NUNOTA?.$,
+        NUMNOTA: pedido.NUMNOTA?.$,
+        NOMEPARC: pedido.NOMEPARC?.$,
+        CGC_CPF: pedido.CGC_CPF?.$,
+        DTNEG: parseDataBR(pedido.DTNEG?.$),
+        ORDEMCARGA: pedido.ORDEMCARGA?.$,
+        TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || '').trim(),
+        ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
+        TEM_FOTO: tipo === 1,
+        TEM_PDF: tipo === 2
+      }]
+    });
+
+  } catch (err) {
+    console.error('❌ ERRO pedido:', err);
+
+    res.status(500).json({
+      erro: err.message
+    });
+  }
+});
+
+app.get('/api/comprovante/imagem', async (req, res) => {
+  try {
+    const {
+      nunota,
+      token
+    } = req.query;
+
+    if (token !== gerarToken(nunota)) {
+      return res.status(403).send('Acesso negado');
+    }
+
+    const cookie = await login();
+
+    const url =
+      `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
+
+    const response = await fetch(url, {
+      headers: {
+        Cookie: cookie
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(404).send('Imagem não encontrada');
+    }
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'no-store');
+
+    response.body.pipe(res);
+
+  } catch (err) {
+    console.error('❌ ERRO IMAGEM:', err);
+
+    res.status(500).send('Erro ao carregar imagem');
+  }
+});
+
+app.get('/api/comprovante/pdf', async (req, res) => {
+  try {
+    const {
+      nunota,
+      token
+    } = req.query;
+
+    const nunotaNum = Number(nunota);
+
+    if (!nunota || isNaN(nunotaNum)) {
+      return res.status(400).send('NUNOTA inválido');
+    }
+
+    if (token !== gerarToken(nunota)) {
+      return res.status(403).send('Acesso negado');
+    }
+
+    const cookie = await login();
+
+    const payload = {
+      serviceName: 'DbExplorerSP.executeQuery',
+      requestBody: {
+        sql: `
+          SELECT AD_COMPROVTRANSP
+          FROM TGFCAB
+          WHERE NUNOTA = ${nunotaNum}
+        `
+      }
+    };
+
+    const response = await fetch(
+      `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': cookie
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const json = await response.json();
+    const registro = json?.responseBody?.rows?.[0];
+
+    if (!registro || !registro[0]) {
+      return res.status(404).send('PDF não encontrado');
+    }
+
+    const buffer = Buffer.from(registro[0], 'base64');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename=comprovante_${nunota}.pdf`
+    );
+
+    res.send(buffer);
+
+  } catch (err) {
+    console.error('❌ ERRO PDF:', err);
+
+    res.status(500).send('Erro ao processar PDF');
+  }
+});
+
+app.post('/api/baixar-comprovantes', requireAdminApi, async (req, res) => {
+  try {
+    const { pedidos } = req.body;
+
+    if (!Array.isArray(pedidos) || !pedidos.length) {
+      return res.status(400).json({
+        erro: 'Nenhum pedido informado'
+      });
+    }
+
+    const cookie = await login();
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=comprovantes.zip'
+    );
+
+    const archive = criarZip();
+
+    archive.on('error', err => {
+      console.error('❌ ERRO ARCHIVE:', err);
+      throw err;
+    });
+
+    archive.pipe(res);
+
+    for (const nunota of pedidos) {
+      try {
+        console.log(`🔍 PROCESSANDO ${nunota}`);
+
+        const imgUrl =
+          `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
+
+        const imgResponse = await fetch(
+          imgUrl,
           {
-            method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Cookie': cookie
-            },
-            body: JSON.stringify(payload)
+              Cookie: cookie
+            }
           }
         );
 
-      const json =
-        await response.json();
+        if (imgResponse.ok) {
+          const arrayBuffer = await imgResponse.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
 
-      const rec =
-        json?.responseBody?.records?.record;
+          if (buffer.length > 0) {
+            archive.append(buffer, {
+              name: `Comprovante_${nunota}.jpg`
+            });
 
-      let lista = [];
+            console.log(`✅ IMG ${nunota}`);
 
-      if (rec) {
-        lista =
-          Array.isArray(rec)
-            ? rec
-            : [rec];
-      }
-
-      const pedido =
-        lista.find(
-          r =>
-            String(r.NUNOTA?.$) ===
-            String(nunota)
-        );
-
-      if (!pedido) {
-        return res.json({
-          rows: []
-        });
-      }
-
-      const tipo =
-        Number(pedido.TIPO_FOTO?.$ || 0);
-
-      res.json({
-        rows: [{
-          NUNOTA: pedido.NUNOTA?.$,
-          NUMNOTA: pedido.NUMNOTA?.$,
-          NOMEPARC: pedido.NOMEPARC?.$,
-          CGC_CPF: pedido.CGC_CPF?.$,
-          DTNEG: parseDataBR(pedido.DTNEG?.$),
-          ORDEMCARGA: pedido.ORDEMCARGA?.$,
-          TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || '').trim(),
-          ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
-          TEM_FOTO: tipo === 1,
-          TEM_PDF: tipo === 2
-        }]
-      });
-
-    } catch (err) {
-      console.error('❌ ERRO pedido:', err);
-
-      res.status(500).json({
-        erro: err.message
-      });
-    }
-  }
-);
-
-app.get(
-  '/api/comprovante/imagem',
-  async (req, res) => {
-    try {
-      const {
-        nunota,
-        token
-      } = req.query;
-
-      if (token !== gerarToken(nunota)) {
-        return res.status(403).send('Acesso negado');
-      }
-
-      const cookie =
-        await login();
-
-      const url =
-        `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
-
-      const response =
-        await fetch(url, {
-          headers: {
-            Cookie: cookie
+            continue;
           }
-        });
-
-      if (!response.ok) {
-        return res.status(404).send('Imagem não encontrada');
-      }
-
-      res.setHeader('Content-Type', 'image/jpeg');
-      res.setHeader('Cache-Control', 'no-store');
-
-      response.body.pipe(res);
-
-    } catch (err) {
-      console.error('❌ ERRO IMAGEM:', err);
-
-      res.status(500).send('Erro ao carregar imagem');
-    }
-  }
-);
-
-app.get(
-  '/api/comprovante/pdf',
-  async (req, res) => {
-    try {
-      const {
-        nunota,
-        token
-      } = req.query;
-
-      const nunotaNum =
-        Number(nunota);
-
-      if (!nunota || isNaN(nunotaNum)) {
-        return res.status(400).send('NUNOTA inválido');
-      }
-
-      if (token !== gerarToken(nunota)) {
-        return res.status(403).send('Acesso negado');
-      }
-
-      const cookie =
-        await login();
-
-      const payload = {
-        serviceName: 'DbExplorerSP.executeQuery',
-        requestBody: {
-          sql: `
-            SELECT AD_COMPROVTRANSP
-            FROM TGFCAB
-            WHERE NUNOTA = ${nunotaNum}
-          `
         }
-      };
 
-      const response =
-        await fetch(
+        const payload = {
+          serviceName: 'DbExplorerSP.executeQuery',
+          requestBody: {
+            sql: `
+              SELECT AD_COMPROVTRANSP
+              FROM TGFCAB
+              WHERE NUNOTA = ${Number(nunota)}
+            `
+          }
+        };
+
+        const response = await fetch(
           `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
           {
             method: 'POST',
@@ -874,168 +901,40 @@ app.get(
           }
         );
 
-      const json =
-        await response.json();
+        const json = await response.json();
+        const registro = json?.responseBody?.rows?.[0];
 
-      const registro =
-        json?.responseBody?.rows?.[0];
+        if (registro && registro[0]) {
+          const buffer = Buffer.from(registro[0], 'base64');
 
-      if (!registro || !registro[0]) {
-        return res.status(404).send('PDF não encontrado');
-      }
-
-      const buffer =
-        Buffer.from(registro[0], 'base64');
-
-      res.setHeader('Content-Type', 'application/pdf');
-
-      res.setHeader(
-        'Content-Disposition',
-        `inline; filename=comprovante_${nunota}.pdf`
-      );
-
-      res.send(buffer);
-
-    } catch (err) {
-      console.error('❌ ERRO PDF:', err);
-
-      res.status(500).send('Erro ao processar PDF');
-    }
-  }
-);
-
-app.post(
-  '/api/baixar-comprovantes',
-  requireAdminApi,
-  async (req, res) => {
-    try {
-      const { pedidos } =
-        req.body;
-
-      if (!Array.isArray(pedidos) || !pedidos.length) {
-        return res.status(400).json({
-          erro: 'Nenhum pedido informado'
-        });
-      }
-
-      const cookie =
-        await login();
-
-      res.setHeader('Content-Type', 'application/zip');
-
-      res.setHeader(
-        'Content-Disposition',
-        'attachment; filename=comprovantes.zip'
-      );
-
-      const archive =
-        archiver('zip', {
-          zlib: {
-            level: 9
-          }
-        });
-
-      archive.on(
-        'error',
-        err => {
-          throw err;
-        }
-      );
-
-      archive.pipe(res);
-
-      for (const nunota of pedidos) {
-        try {
-          console.log(`🔍 PROCESSANDO ${nunota}`);
-
-          const imgUrl =
-            `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
-
-          const imgResponse =
-            await fetch(
-              imgUrl,
-              {
-                headers: {
-                  Cookie: cookie
-                }
-              }
-            );
-
-          if (imgResponse.ok) {
-            const arrayBuffer =
-              await imgResponse.arrayBuffer();
-
-            const buffer =
-              Buffer.from(arrayBuffer);
-
-            archive.append(buffer, {
-              name: `Comprovante_${nunota}.jpg`
-            });
-
-            console.log(`✅ IMG ${nunota}`);
-
-            continue;
-          }
-
-          const payload = {
-            serviceName: 'DbExplorerSP.executeQuery',
-            requestBody: {
-              sql: `
-                SELECT AD_COMPROVTRANSP
-                FROM TGFCAB
-                WHERE NUNOTA = ${Number(nunota)}
-              `
-            }
-          };
-
-          const response =
-            await fetch(
-              `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Cookie': cookie
-                },
-                body: JSON.stringify(payload)
-              }
-            );
-
-          const json =
-            await response.json();
-
-          const registro =
-            json?.responseBody?.rows?.[0];
-
-          if (registro && registro[0]) {
-            const buffer =
-              Buffer.from(registro[0], 'base64');
-
+          if (buffer.length > 0) {
             archive.append(buffer, {
               name: `Comprovante_${nunota}.pdf`
             });
 
             console.log(`✅ PDF ${nunota}`);
           }
-
-        } catch (err) {
-          console.error(`❌ ERRO ${nunota}:`, err.message);
         }
+
+      } catch (err) {
+        console.error(`❌ ERRO ${nunota}:`, err.message);
       }
+    }
 
-      await archive.finalize();
+    await archive.finalize();
 
-      console.log('✅ ZIP FINALIZADO');
+    console.log('✅ ZIP FINALIZADO');
 
-    } catch (err) {
-      console.error('❌ ERRO ZIP:', err);
+  } catch (err) {
+    console.error('❌ ERRO ZIP:', err);
 
+    if (!res.headersSent) {
       res.status(500).json({
         erro: err.message
       });
     }
   }
-);
+});
 
 app.listen(
   PORT,
