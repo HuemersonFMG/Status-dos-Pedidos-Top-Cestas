@@ -28,7 +28,7 @@
       <input type="password" id="senha" placeholder="Senha Sankhya" autocomplete="current-password">
 
       <div class="acoes">
-        <button class="btn-gerar" onclick="loginAdmin()"> Entrar </button>
+        <button class="btn-gerar" id="btnEntrar" onclick="loginAdmin()"> Entrar </button>
       </div>
 
       <div class="resultado" id="status"></div>
@@ -40,17 +40,52 @@
       const usuarioInput = document.getElementById('usuario');
       const senhaInput = document.getElementById('senha');
       const statusDiv = document.getElementById('status');
+      const btnEntrar = document.getElementById('btnEntrar');
+
+      let loginEmProcessamento = false;
+
+      function setStatusLogin(mensagem, tipo) {
+        const cor = tipo === 'ok' ? 'green' : tipo === 'warn' ? '#8a5a00' : 'red';
+        statusDiv.innerHTML = `<p style="color:${cor}">${mensagem}</p>`;
+      }
+
+      function bloquearFormulario(bloquear) {
+        usuarioInput.disabled = bloquear;
+        senhaInput.disabled = bloquear;
+        btnEntrar.disabled = bloquear;
+        btnEntrar.innerText = bloquear ? 'Validando...' : ' Entrar ';
+      }
+
+      async function verificarSessaoExistente() {
+        try {
+          const response = await fetch('/api/admin-status');
+
+          if (response.ok) {
+            window.location.href = '/gerador.html';
+          }
+        } catch (err) {
+          console.warn('Sessão administrativa não encontrada.');
+        }
+      }
 
       async function loginAdmin() {
+        if (loginEmProcessamento) {
+          return;
+        }
+
         const usuario = usuarioInput.value.trim();
         const senha = senhaInput.value.trim();
 
         if (!usuario || !senha) {
-          statusDiv.innerHTML = '<p style="color:red">Informe usuário e senha.</p>';
+          setStatusLogin('Informe usuário e senha.', 'erro');
+          senhaInput.value = '';
+          usuarioInput.focus();
           return;
         }
 
-        statusDiv.innerHTML = 'Validando acesso...';
+        loginEmProcessamento = true;
+        bloquearFormulario(true);
+        setStatusLogin('Validando acesso...', 'warn');
 
         try {
           const response = await fetch('/api/admin-login', {
@@ -64,24 +99,56 @@
             })
           });
 
-          const json = await response.json();
+          let json = {};
 
-          if (!response.ok) {
-            throw new Error(json.erro || 'Usuário ou senha inválidos');
+          try {
+            json = await response.json();
+          } catch {
+            json = {};
           }
+
+          if (!response.ok || !json.ok) {
+            setStatusLogin(json.erro || 'Usuário ou senha inválidos.', 'erro');
+            senhaInput.value = '';
+            bloquearFormulario(false);
+
+            if (response.status === 429) {
+              usuarioInput.focus();
+            } else {
+              senhaInput.focus();
+            }
+
+            loginEmProcessamento = false;
+            return;
+          }
+
+          setStatusLogin('Acesso liberado. Redirecionando...', 'ok');
 
           window.location.href = '/gerador.html';
 
         } catch (err) {
-          statusDiv.innerHTML = `<p style="color:red">${err.message}</p>`;
+          setStatusLogin(err.message || 'Erro ao validar acesso.', 'erro');
+          senhaInput.value = '';
+          bloquearFormulario(false);
+          senhaInput.focus();
+          loginEmProcessamento = false;
         }
       }
+
+      usuarioInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          senhaInput.focus();
+        }
+      });
 
       senhaInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
           loginAdmin();
         }
       });
+
+      verificarSessaoExistente();
+      usuarioInput.focus();
     </script>
   </body>
 </html>

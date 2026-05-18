@@ -43,7 +43,6 @@
       </div>
 
       <div id="status"></div>
-
       <div class="resultado" id="resultado"></div>
     </div>
 
@@ -52,13 +51,22 @@
     <script>
       async function validarSessaoAdmin() {
         try {
-          const res = await fetch('/api/admin-status');
+          const res = await fetch('/api/admin-status', {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
 
           if (!res.ok) {
-            window.location.href = '/login.html';
+            window.location.replace('/login.html');
+            return false;
           }
+
+          return true;
+
         } catch (err) {
-          window.location.href = '/login.html';
+          window.location.replace('/login.html');
+          return false;
         }
       }
 

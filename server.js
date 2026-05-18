@@ -42,7 +42,13 @@ const ADMIN_SESSION_COOKIE = 'topcestas_admin_session';
 
 const ADMIN_SESSION_TTL = 8 * 60 * 60 * 1000;
 
+const MAX_LOGIN_ATTEMPTS = 5;
+
+const LOGIN_BLOCK_TIME = 5 * 60 * 1000;
+
 const adminSessions = new Map();
+
+const loginAttempts = new Map();
 
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url}`);
@@ -62,6 +68,58 @@ function getCookie(req, nome) {
     ?.split('=')
     .slice(1)
     .join('=') || '';
+}
+
+function getClientKey(req, usuario) {
+  const ip =
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.socket.remoteAddress ||
+    'unknown';
+
+  return `${ip}:${String(usuario || '').trim().toUpperCase()}`;
+}
+
+function isLoginBlocked(key) {
+  const item = loginAttempts.get(key);
+
+  if (!item) {
+    return false;
+  }
+
+  if (item.blockedUntil && item.blockedUntil > Date.now()) {
+    return true;
+  }
+
+  if (item.blockedUntil && item.blockedUntil <= Date.now()) {
+    loginAttempts.delete(key);
+    return false;
+  }
+
+  return false;
+}
+
+function registerFailedLogin(key) {
+  const now = Date.now();
+
+  const item =
+    loginAttempts.get(key) || {
+      count: 0,
+      blockedUntil: null
+    };
+
+  item.count++;
+
+  if (item.count >= MAX_LOGIN_ATTEMPTS) {
+    item.blockedUntil = now + LOGIN_BLOCK_TIME;
+  }
+
+  loginAttempts.set(key, item);
+
+  return item;
+}
+
+function clearFailedLogin(key) {
+  loginAttempts.delete(key);
 }
 
 function limparSessoesExpiradas() {
@@ -297,14 +355,39 @@ app.post('/api/admin-login', async (req, res) => {
       });
     }
 
+    const loginKey = getClientKey(req, usuario);
+
+    if (isLoginBlocked(loginKey)) {
+      const item = loginAttempts.get(loginKey);
+      const segundos = Math.ceil((item.blockedUntil - Date.now()) / 1000);
+
+      return res.status(429).json({
+        erro: `Muitas tentativas inválidas. Tente novamente em ${segundos} segundos.`
+      });
+    }
+
     const loginOk =
       await validarLoginSankhya(usuario, senha);
 
     if (!loginOk) {
+      const tentativa =
+        registerFailedLogin(loginKey);
+
+      const restantes =
+        Math.max(0, MAX_LOGIN_ATTEMPTS - tentativa.count);
+
+      if (tentativa.blockedUntil && tentativa.blockedUntil > Date.now()) {
+        return res.status(429).json({
+          erro: 'Muitas tentativas inválidas. Aguarde alguns minutos e tente novamente.'
+        });
+      }
+
       return res.status(401).json({
-        erro: 'Usuário ou senha inválidos'
+        erro: `Usuário ou senha inválidos. Tentativas restantes: ${restantes}`
       });
     }
+
+    clearFailedLogin(loginKey);
 
     const sessionToken =
       crypto.randomBytes(32).toString('hex');
