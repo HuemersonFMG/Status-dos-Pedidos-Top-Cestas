@@ -12,7 +12,8 @@
     <header>
       <div class="header-left">
         <a href="https://topalimentos.shop/produtos/">
-          <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0" alt="Logo Top Cestas" width="20%" height="auto"></a>
+          <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0" alt="Logo Top Cestas" width="20%" height="auto">
+        </a>
 
         <h1>Top Cestas</h1>
         <span>Gerador de Links de Rastreamento de pedidos</span>
@@ -21,7 +22,7 @@
       <div class="header-actions">
         <button class="btn-download" onclick="baixarTodos()">Baixar Todos Comprovantes</button>
         <button class="btn-manual" onclick="abrirManual()">Manual</button>
-        <button class="btn-geradorcomercial" onclick="abrirgeradorcomercial()">Gerador Comecial</button>
+        <button class="btn-geradorcomercial" onclick="abrirGeradorComercial()">Gerador Comercial</button>
       </div>
     </header>
 
@@ -41,12 +42,27 @@
         <button class="btn-limpar" onclick="limpar()"> Limpar </button>
       </div>
 
-      <div
-        class="resultado" id="resultado">
-      </div>
+      <div class="resultado" id="resultado"></div>
     </div>
 
     <footer>Top Cestas Track © 2026 - Sistema de rastreamento integrado Sankhya ERP</footer>
+
+    <script>
+      async function validarSessaoAdmin() {
+        try {
+          const res = await fetch('/api/admin-status');
+
+          if (!res.ok) {
+            window.location.href = '/login.html';
+          }
+        } catch (err) {
+          window.location.href = '/login.html';
+        }
+      }
+
+      validarSessaoAdmin();
+    </script>
+
     <script src="Styles/gerador.js"></script>
   </body>
 </html>

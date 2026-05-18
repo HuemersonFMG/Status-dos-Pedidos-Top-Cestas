@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 const archiver = require('archiver');
+const path = require('path');
 
 const fetch = (...args) =>
   import('node-fetch')
@@ -9,7 +10,10 @@ const fetch = (...args) =>
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 
 app.use(express.json({
   limit: '50mb'
@@ -20,28 +24,25 @@ app.use(express.urlencoded({
   limit: '50mb'
 }));
 
-app.use(express.static('public'));
+const PORT = process.env.PORT || 5050;
 
-const PORT =
-  process.env.PORT || 5050;
+const SECRET = process.env.SECRET || 'chave_super_secreta';
 
-const SECRET =
-  process.env.SECRET ||
-  'chave_super_secreta';
+const BASE_URL = 'http://topcesta.fwc.cloud:8180';
 
-const BASE_URL =
-  'http://topcesta.fwc.cloud:8180';
+const SERVICE_URL = `${BASE_URL}/mge/service.sbr`;
 
-const SERVICE_URL =
-  `${BASE_URL}/mge/service.sbr`;
+const USER = process.env.USER || 'HUEMERSON';
 
-const USER =
-  process.env.USER ||
-  'HUEMERSON';
+const PASS = process.env.PASS || '654321';
 
-const PASS =
-  process.env.PASS ||
-  '654321';
+const PUBLIC_DIR = path.join(__dirname, 'public');
+
+const ADMIN_SESSION_COOKIE = 'topcestas_admin_session';
+
+const ADMIN_SESSION_TTL = 8 * 60 * 60 * 1000;
+
+const adminSessions = new Map();
 
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url}`);
@@ -50,6 +51,109 @@ app.use((req, res, next) => {
 
 let cachedCookie = null;
 let cookieTime = 0;
+
+function getCookie(req, nome) {
+  const raw = req.headers.cookie || '';
+
+  return raw
+    .split(';')
+    .map(c => c.trim())
+    .find(c => c.startsWith(`${nome}=`))
+    ?.split('=')
+    .slice(1)
+    .join('=') || '';
+}
+
+function limparSessoesExpiradas() {
+  const now = Date.now();
+
+  for (const [token, session] of adminSessions.entries()) {
+    if (!session || session.expiresAt <= now) {
+      adminSessions.delete(token);
+    }
+  }
+}
+
+function getAdminSession(req) {
+  limparSessoesExpiradas();
+
+  const token = getCookie(req, ADMIN_SESSION_COOKIE);
+
+  if (!token) {
+    return null;
+  }
+
+  const session = adminSessions.get(token);
+
+  if (!session || session.expiresAt <= Date.now()) {
+    adminSessions.delete(token);
+    return null;
+  }
+
+  session.lastAccess = Date.now();
+
+  return session;
+}
+
+function requireAdminPage(req, res, next) {
+  const session = getAdminSession(req);
+
+  if (!session) {
+    return res.redirect('/login.html');
+  }
+
+  next();
+}
+
+function requireAdminApi(req, res, next) {
+  const session = getAdminSession(req);
+
+  if (!session) {
+    return res.status(401).json({
+      erro: 'Sessão administrativa expirada. Faça login novamente.'
+    });
+  }
+
+  next();
+}
+
+async function validarLoginSankhya(usuario, senha) {
+  const payload = {
+    serviceName: 'MobileLoginSP.login',
+    requestBody: {
+      NOMUSU: {
+        $: usuario
+      },
+      INTERNO: {
+        $: senha
+      }
+    }
+  };
+
+  const response =
+    await fetch(
+      `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+  const rawCookie =
+    response.headers.get('set-cookie') || '';
+
+  const cookie =
+    rawCookie.split(';')[0];
+
+  if (!response.ok || !cookie) {
+    return false;
+  }
+
+  return true;
+}
 
 async function login() {
   const now = Date.now();
@@ -61,8 +165,12 @@ async function login() {
   const payload = {
     serviceName: 'MobileLoginSP.login',
     requestBody: {
-      NOMUSU: { $: USER },
-      INTERNO: { $: PASS }
+      NOMUSU: {
+        $: USER
+      },
+      INTERNO: {
+        $: PASS
+      }
     }
   };
 
@@ -109,11 +217,8 @@ function parseDataBR(dataStr) {
   }
 
   try {
-    const [data] =
-      dataStr.split(' ');
-
-    const [dia, mes, ano] =
-      data.split('/');
+    const [data] = dataStr.split(' ');
+    const [dia, mes, ano] = data.split('/');
 
     return new Date(`${ano}-${mes}-${dia}`);
   } catch {
@@ -173,8 +278,100 @@ function montarLinks(filtrados, baseUrl) {
   }));
 }
 
+app.get('/gerador.html', requireAdminPage, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'gerador.html'));
+});
+
+app.get('/geradorcomercial.html', requireAdminPage, (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'geradorcomercial.html'));
+});
+
+app.post('/api/admin-login', async (req, res) => {
+  try {
+    const usuario = String(req.body.usuario || '').trim();
+    const senha = String(req.body.senha || '').trim();
+
+    if (!usuario || !senha) {
+      return res.status(400).json({
+        erro: 'Informe usuário e senha'
+      });
+    }
+
+    const loginOk =
+      await validarLoginSankhya(usuario, senha);
+
+    if (!loginOk) {
+      return res.status(401).json({
+        erro: 'Usuário ou senha inválidos'
+      });
+    }
+
+    const sessionToken =
+      crypto.randomBytes(32).toString('hex');
+
+    adminSessions.set(sessionToken, {
+      usuario,
+      createdAt: Date.now(),
+      lastAccess: Date.now(),
+      expiresAt: Date.now() + ADMIN_SESSION_TTL
+    });
+
+    res.setHeader(
+      'Set-Cookie',
+      `${ADMIN_SESSION_COOKIE}=${sessionToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${ADMIN_SESSION_TTL / 1000}`
+    );
+
+    res.json({
+      ok: true,
+      usuario
+    });
+
+  } catch (err) {
+    console.error('❌ ERRO admin-login:', err);
+
+    res.status(500).json({
+      erro: err.message
+    });
+  }
+});
+
+app.post('/api/admin-logout', (req, res) => {
+  const token = getCookie(req, ADMIN_SESSION_COOKIE);
+
+  if (token) {
+    adminSessions.delete(token);
+  }
+
+  res.setHeader(
+    'Set-Cookie',
+    `${ADMIN_SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`
+  );
+
+  res.json({
+    ok: true
+  });
+});
+
+app.get('/api/admin-status', (req, res) => {
+  const session = getAdminSession(req);
+
+  if (!session) {
+    return res.status(401).json({
+      autenticado: false
+    });
+  }
+
+  res.json({
+    autenticado: true,
+    usuario: session.usuario
+  });
+});
+
+app.use(express.static(PUBLIC_DIR));
+
 app.post(
   '/api/gerar-links',
+  requireAdminApi,
   async (req, res) => {
     try {
       const {
@@ -314,6 +511,7 @@ app.post(
 
 app.post(
   '/api/gerar-links-comercial',
+  requireAdminApi,
   async (req, res) => {
     try {
       const {
@@ -619,6 +817,7 @@ app.get(
 
 app.post(
   '/api/baixar-comprovantes',
+  requireAdminApi,
   async (req, res) => {
     try {
       const { pedidos } =
