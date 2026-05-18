@@ -267,6 +267,10 @@ document.addEventListener('keydown', function (e) {
     window.open(`https://wa.me/?text=${texto}`, '_blank');
   }
 
+  //-----------------------------------------------------
+  //BAIXAR TODOS COMPROVANTES ZIP
+  //-----------------------------------------------------
+
   async function baixarTodos() {
     if (!linksGerados.length) {
       alert('⚠️ Nenhum pedido gerado');
@@ -274,107 +278,80 @@ document.addEventListener('keydown', function (e) {
     }
 
     try {
-      setStatus('', '⏳ Preparando downloads...');
+      setStatus('', '⏳ Gerando arquivo ZIP dos comprovantes...');
 
-      let totalBaixados = 0;
+      const pedidos = linksGerados
+        .map(item =>
+          item.nunota ||
+          item.NUNOTA
+        )
+        .filter(Boolean);
 
-      for (const item of linksGerados) {
-        const nunota = getNunota(item);
-        const link = getLink(item);
-        const token = getTokenFromLink(link);
-
-        if (!nunota || !token) {
-          console.warn('Item inválido para download:', item);
-          continue;
-        }
-
-        const imgUrl = `/api/comprovante/imagem?nunota=${nunota}&token=${token}`;
-
-        try {
-          const imgRes = await fetch(imgUrl);
-
-          if (imgRes.ok) {
-            const blob = await imgRes.blob();
-
-            if (blob.size > 1000) {
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-
-              a.href = url;
-              a.download = montarNomeArquivo(item, 'jpg');
-
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-
-              window.URL.revokeObjectURL(url);
-
-              totalBaixados++;
-
-              await new Promise(r => setTimeout(r, 800));
-
-              continue;
-            }
-          }
-
-        } catch (err) {
-          console.error(`Erro imagem ${nunota}`, err);
-        }
-
-        const pdfUrl = `/api/comprovante/pdf?nunota=${nunota}&token=${token}`;
-
-        try {
-          const pdfRes = await fetch(pdfUrl);
-
-          if (pdfRes.ok) {
-            const blob = await pdfRes.blob();
-
-            if (blob.size > 1000) {
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-
-              a.href = url;
-              a.download = montarNomeArquivo(item, 'pdf');
-
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-
-              window.URL.revokeObjectURL(url);
-
-              totalBaixados++;
-
-              await new Promise(r => setTimeout(r, 800));
-            }
-          }
-
-        } catch (err) {
-          console.error(`Erro PDF ${nunota}`, err);
-        }
+      if (!pedidos.length) {
+        setStatus('erro', '❌ Nenhum pedido válido.');
+        return;
       }
 
-      setStatus('ok', `✅ ${totalBaixados} download(s) iniciado(s)`);
+      const response = await fetch('/api/baixar-comprovantes', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pedidos
+        })
+      });
 
-      alert(`
+      if (response.status === 401) {
+        alert('Sessão expirada.');
+        window.location.href = '/login.html';
+        return;
+      }
 
-  ✅ Downloads iniciados
+      if (!response.ok) {
+        const erro = await response.text();
 
-  📂 Os arquivos foram enviados
-  para a pasta padrão de Downloads
-  do navegador.
+        console.error('Erro ZIP:', erro);
 
-  💡 Dica:
-  configure o Chrome para perguntar
-  onde salvar os arquivos.
+        throw new Error('Erro ao gerar ZIP dos comprovantes.');
+      }
 
-      `);
+      const blob = await response.blob();
+
+      if (!blob || blob.size === 0) {
+        throw new Error('ZIP vazio.');
+      }
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+
+      a.href = url;
+
+      a.download =
+        `Comprovantes_Comercial_${new Date().toISOString().slice(0, 10)}.zip`;
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+
+      setStatus('ok', `✅ ZIP gerado com ${pedidos.length} comprovante(s).`);
 
     } catch (err) {
       console.error(err);
+
       setStatus('erro', `❌ ${err.message}`);
     }
   }
 
+  //-----------------------------------------------
+  //ABRIR MANUALMENTE
+  //-----------------------------------------------
   function abrirManual() {
     window.open('/manual.html', '_blank');
   }
