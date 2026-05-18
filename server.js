@@ -2,25 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 const path = require('path');
-
-const archiverModule = require('archiver');
-
-function criarZip() {
-  const archiverFn =
-    typeof archiverModule === 'function'
-      ? archiverModule
-      : archiverModule.default;
-
-  if (typeof archiverFn !== 'function') {
-    throw new Error('Falha ao carregar archiver');
-  }
-
-  return archiverFn('zip', {
-    zlib: {
-      level: 9
-    }
-  });
-}
+const archiver = require('archiver');
 
 const fetch = (...args) =>
   import('node-fetch')
@@ -838,11 +820,20 @@ app.post('/api/baixar-comprovantes', requireAdminApi, async (req, res) => {
       'attachment; filename=comprovantes.zip'
     );
 
-    const archive = criarZip();
+    const archive = archiver('zip', {
+      zlib: {
+        level: 9
+      }
+    });
 
     archive.on('error', err => {
       console.error('❌ ERRO ARCHIVE:', err);
-      throw err;
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          erro: err.message
+        });
+      }
     });
 
     archive.pipe(res);
