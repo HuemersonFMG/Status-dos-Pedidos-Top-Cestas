@@ -31,16 +31,16 @@
         <p class="highlight2">Utilize apenas <strong>um filtro</strong> por vez. | Pedidos e NFes aceitam múltiplos valores separados por vírgula.</p>
       </div>
 
+      <div class="acoes">
+        <button class="btn-gerar" onclick="gerar()"> Gerar Links </button>
+        <button class="btn-limpar" onclick="limpar()"> Limpar </button>
+      </div>
+
       <input type="text" id="cnpj" placeholder="CPF/CNPJ">
       <input type="text" id="ordem" placeholder="Ordem de Carga">
       <input type="text" id="pedidos" placeholder="Pedidos (ex: 123,456,789)">
       <input type="text" id="nfes" placeholder="NFes (ex: 1001,1002,1003)">
       <input type="date" id="data">
-
-      <div class="acoes">
-        <button class="btn-gerar" onclick="gerar()"> Gerar Links </button>
-        <button class="btn-limpar" onclick="limpar()"> Limpar </button>
-      </div>
 
       <div id="status"></div>
       <div class="resultado" id="resultado"></div>
