@@ -618,6 +618,40 @@ document.addEventListener('keydown', function (e) {
   }
 
   // =========================
+  // 📲 BARRA DE PROCESSOS
+  // =========================
+
+  #status {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+  }
+
+  #status:empty {
+      display: none;
+  }
+
+  #status.ok {
+      background: #e6ffed;
+      color: #146c2e;
+      border: 1px solid #9be2ae;
+  }
+
+  #status.erro {
+      background: #ffe5e5;
+      color: #b30000;
+      border: 1px solid #ffb3b3;
+  }
+
+  #status.warn {
+      background: #fff4d6;
+      color: #8a5a00;
+      border: 1px solid #ffd36b;
+  }
+
+  // =========================
   // ⬇️ BAIXAR TODOS
   // =========================
   async function baixarTodos() {
