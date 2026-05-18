@@ -165,6 +165,75 @@ function requireAdminApi(req, res, next) {
   next();
 }
 
+function normalizarNomeArquivo(valor) {
+  return String(valor || 'CLIENTE')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .trim()
+    .toUpperCase() || 'CLIENTE';
+}
+
+function montarNomeComprovante(nunota, nomeParc, extensao) {
+  const pedido = String(nunota || 'PEDIDO').replace(/\D/g, '') || 'PEDIDO';
+  const cliente = normalizarNomeArquivo(nomeParc);
+
+  return `Comprovante_${pedido}_${cliente}.${extensao}`;
+}
+
+async function buscarNomeParcPorNunota(cookie, nunota) {
+  const nunotaNum = Number(nunota);
+
+  if (!nunota || isNaN(nunotaNum)) {
+    return 'CLIENTE';
+  }
+
+  const payload = {
+    serviceName: 'DbExplorerSP.executeQuery',
+    requestBody: {
+      sql: `
+        SELECT NOMEPARC
+        FROM VW_NOTAS_FUSION_LIGHT
+        WHERE NUNOTA = ${nunotaNum}
+      `
+    }
+  };
+
+  const response = await fetch(
+    `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookie
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const json = await response.json();
+  const row = json?.responseBody?.rows?.[0];
+
+  return row?.[0] || 'CLIENTE';
+}
+
+function montarMapaNomeParc(lista) {
+  const mapa = new Map();
+
+  for (const r of lista || []) {
+    const nunota = String(r.NUNOTA?.$ || '').trim();
+    const nomeParc = String(r.NOMEPARC?.$ || '').trim();
+
+    if (nunota) {
+      mapa.set(nunota, nomeParc || 'CLIENTE');
+    }
+  }
+
+  return mapa;
+}
+
 async function validarLoginSankhya(usuario, senha) {
   const payload = {
     serviceName: 'MobileLoginSP.login',
@@ -705,14 +774,22 @@ app.get('/api/comprovante/imagem', async (req, res) => {
       token
     } = req.query;
 
+    const nunotaNum = Number(nunota);
+
+    if (!nunota || isNaN(nunotaNum)) {
+      return res.status(400).send('NUNOTA inválido');
+    }
+
     if (token !== gerarToken(nunota)) {
       return res.status(403).send('Acesso negado');
     }
 
     const cookie = await login();
+    const nomeParc = await buscarNomeParcPorNunota(cookie, nunotaNum);
+    const nomeArquivo = montarNomeComprovante(nunotaNum, nomeParc, 'jpg');
 
     const url =
-      `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
+      `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunotaNum}@SEQ=1.dbimage`;
 
     const response = await fetch(url, {
       headers: {
@@ -725,6 +802,7 @@ app.get('/api/comprovante/imagem', async (req, res) => {
     }
 
     res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Disposition', `inline; filename="${nomeArquivo}"`);
     res.setHeader('Cache-Control', 'no-store');
 
     response.body.pipe(res);
@@ -754,6 +832,8 @@ app.get('/api/comprovante/pdf', async (req, res) => {
     }
 
     const cookie = await login();
+    const nomeParc = await buscarNomeParcPorNunota(cookie, nunotaNum);
+    const nomeArquivo = montarNomeComprovante(nunotaNum, nomeParc, 'pdf');
 
     const payload = {
       serviceName: 'DbExplorerSP.executeQuery',
@@ -788,10 +868,7 @@ app.get('/api/comprovante/pdf', async (req, res) => {
     const buffer = Buffer.from(registro[0], 'base64');
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename=comprovante_${nunota}.pdf`
-    );
+    res.setHeader('Content-Disposition', `inline; filename="${nomeArquivo}"`);
 
     res.send(buffer);
 
@@ -812,7 +889,19 @@ app.post('/api/baixar-comprovantes', requireAdminApi, async (req, res) => {
       });
     }
 
+    const listaPedidos = pedidos
+      .map(p => Number(p))
+      .filter(p => p && !isNaN(p));
+
+    if (!listaPedidos.length) {
+      return res.status(400).json({
+        erro: 'Nenhum pedido válido informado'
+      });
+    }
+
     const cookie = await login();
+    const listaLight = await carregarViewLight(cookie);
+    const mapaNomeParc = montarMapaNomeParc(listaLight);
 
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader(
@@ -838,9 +927,13 @@ app.post('/api/baixar-comprovantes', requireAdminApi, async (req, res) => {
 
     archive.pipe(res);
 
-    for (const nunota of pedidos) {
+    for (const nunota of listaPedidos) {
       try {
         console.log(`🔍 PROCESSANDO ${nunota}`);
+
+        const nomeParc =
+          mapaNomeParc.get(String(nunota)) ||
+          await buscarNomeParcPorNunota(cookie, nunota);
 
         const imgUrl =
           `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
@@ -860,7 +953,7 @@ app.post('/api/baixar-comprovantes', requireAdminApi, async (req, res) => {
 
           if (buffer.length > 0) {
             archive.append(buffer, {
-              name: `Comprovante_${nunota}.jpg`
+              name: montarNomeComprovante(nunota, nomeParc, 'jpg')
             });
 
             console.log(`✅ IMG ${nunota}`);
@@ -900,7 +993,7 @@ app.post('/api/baixar-comprovantes', requireAdminApi, async (req, res) => {
 
           if (buffer.length > 0) {
             archive.append(buffer, {
-              name: `Comprovante_${nunota}.pdf`
+              name: montarNomeComprovante(nunota, nomeParc, 'pdf')
             });
 
             console.log(`✅ PDF ${nunota}`);
