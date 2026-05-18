@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Manual do Usuário - Top Alimentos</title>
 
     <style>
@@ -21,32 +20,57 @@
             line-height:1.7;
         }
 
-        header{
-            background:linear-gradient(90deg,#ff3131,#ff9800);
-            padding:40px 20px;
-            text-align:center;
-            color:#133b63;
-            box-shadow:0 2px 10px rgba(0,0,0,0.2);
+        /* =========================
+            HEADER
+        ========================== */
+
+        header {
+            background: linear-gradient(to right, rgb(243, 54, 54), orange);
+            color: white;
+            padding: 18px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
         }
 
-        header img{
-            width:20%%;
-            margin-bottom:20px;
+        .header-left {
+            display: flex;
+            flex-direction: column;
         }
 
-        header h1{
-            font-size:42px;
-            margin-bottom:10px;
+        .header-left h1 {
+            margin: 0;
+            font-size: 24px;
         }
 
-        header p{
-            font-size:18px;
-            color:#fff;
+        .header-left span {
+            font-size: 13px;
+            opacity: 0.8;
         }
 
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .header-actions button {
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+
+        /* CONTAINER */
         .container{
             width:95%;
-            max-width:97%px;
+            max-width:97%;
             margin:40px auto;
         }
 
@@ -153,77 +177,104 @@
             font-family:Consolas;
         }
 
-        footer{
-            margin-top:50px;
-            background:#133b63;
-            color:#fff;
-            text-align:center;
-            padding:30px;
+        footer {
+            margin-top: auto;
+            background: linear-gradient(to right, rgb(243, 54, 54), orange);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            font-size: 13px;
         }
 
         @media(max-width:768px){
             header h1{ font-size:30px;}
             .card{padding:20px;}
             .table{font-size:14px;}
+        }
 
+        .highlight2 {
+            background-color: #e9ecfa;
+            padding: 10px;
+            padding-left: 10px;
+            padding-right: 10px;
+            border: 4px solid #7d93f5;
+            margin: 0.5px 0;
+            border-radius: 10px;
+        }
+
+        .codeA {
+            background-color: #f4f4f4; /* Cor de fundo */
+            border: 1px solid #ccc; /* Borda */
+            padding: 2px 6px; /* Espaçamento interno */
+            border-radius: 4px; /* Cantos arredondados */
+            font-family: "Courier New", monospace; /* Fonte monoespaçada */
+            color: #d63384; /* Cor do texto */
+            font-size: 14px; /* Tamanho da fonte */
         }
     </style>
 </head>
 
 <body>
     <header>
-        <img
-            src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0"
-            alt="Top Alimentos" width="20%" height="auto">
-        <h1>Manual do Usuário</h1>
-        <p>Sistema de Rastreamento de Pedidos e Entregas</p>
+        <div class="header-left">
+          <a href="https://topalimentos.shop/produtos/">
+            <img src="https://acdn.mitiendanube.com/stores/005/153/537/themes/common/logo-1763652655-1725039982-7ed6073ae2f21d42c151cd86c3596fe41725039982.png?0" alt="Logo Top Cestas" width="20%" height="auto">
+          </a>
 
-    </header>
+          <h1>Top Cestas - Manual do Usuário</h1>
+          <span>Sistema de Rastreamento de Pedidos e Entregas</span>
+        </div>
+      </header>
 
     <div class="container">
         <section class="card">
-            <h2>📘 Visão Geral do Sistema</h2>
-            <p>
-                O sistema de rastreamento da <strong>Top Alimentos</strong>
-                foi desenvolvido para permitir o acompanhamento dos pedidos
-                realizados pelos clientes, exibindo o status atualizado da entrega
-                diretamente a partir do banco de dados do ERP Sankhya.
-            </p>
-            <p>O sistema possui três módulos principais:</p>
+            <h3>📘 Visão Geral do Sistema</h3>
+            <p>O sistema de rastreamento da <strong>Top Alimentos</strong> foi desenvolvido para permitir o acompanhamento dos pedidos realizados pelos clientes, exibindo o status atualizado da entrega diretamente a partir do ERP Sankhya.</p>
+            <div class="highlight2">
+                <h2>O sistema possui quatro módulos principais:</h2>
 
-            <ul>
-                <li>
-                    <strong>Gerador de Links</strong>:
-                    utilizado pela equipe interna para gerar links de rastreamento.
-                </li>
-                <li>
-                    <strong>Página do Cliente</strong>:
-                    onde o cliente acompanha o status do pedido.
-                </li>
-                <li>
-                    <strong>Página do Vendedor - Específico PAP</strong>:
-                    permite visualizar diversos pedidos em lote a partir do CNPJ e Período de entrega.
-                </li>
-            </ul>
+                <ul>
+                    <li><strong>Login Administrativo</strong>: valida usuário e senha diretamente no Sankhya antes de liberar os geradores.</li>
+                    <li><strong>Gerador de Links</strong>: Utilizado pela equipe interna para gerar links de rastreamento de pedidos de entrega direta no cliente, por: CPF/CNPJ, ordem de carga, pedidos, NF-e ou data de produção. Neste caso gerar via CNPJ_CPF é indicado para clientes Simples descarga.</li>
+                    <li><strong>Gerador Comercial</strong>: utilizado para gerar links de pedidos Porta a Porta onde o volume de remessas é muito alto e o que destaca neste processo é a informação de (Período de Entregas), possuindo os filtros combinados por CPF/CNPJ e Período PAP.</li>
+                    <li><strong>Página do Cliente</strong>: onde o cliente acompanha o status do pedido sem precisar de login.</li>
+                </ul>
+            </div>
 
             <div class="flow">
                 <strong>Fluxo Geral do Sistema:</strong>
                 <br><br>
-                ERP Sankhya →
-                API Node.js →
-                Views do Banco →
-                Geração de Links →
-                Cliente acompanha entrega em tempo real
+                Usuário interno → Login Sankhya → Gerador de Links → API Node.js → Views Sankhya → Geração de link seguro → Cliente acompanha entrega
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>🔐 Login Administrativo</h2>
+            <p>Antes de acessar o <strong>gerador.html</strong> ou o <strong>geradorcomercial.html</strong>, o usuário interno deve informar usuário e senha do Sankhya.</p>
+
+            <h3>📌 Objetivo</h3>
+            <p>Impedir que pessoas não autorizadas acessem os geradores de links e façam consultas administrativas.</p>
+
+            <h3>⚙️ Como Funciona</h3>
+            <ul>
+                <li>O usuário acessa o gerador.</li>
+                <li>Se ainda não estiver autenticado, o sistema redireciona para <strong>login.html</strong>.</li>
+                <li>O usuário informa login e senha do Sankhya.</li>
+                <li>A API valida as credenciais usando autenticação no Sankhya.</li>
+                <li>Se o login estiver correto, o sistema libera o acesso ao gerador.</li>
+                <li>Se a senha estiver incorreta, o sistema permanece na tela de login.</li>
+                <li>Após várias tentativas inválidas, o login pode ficar bloqueado temporariamente.</li>
+            </ul>
+
+            <div class="card2">
+                <p><strong>Importante:</strong> o cliente final que acessa o <strong>index.html</strong> não precisa de usuário e senha do Sankhya. O acesso do cliente continua sendo feito exclusivamente pelo link com token seguro.</p>
             </div>
         </section>
 
         <section class="card">
             <h2>🔗 Módulo Gerador de Links</h2>
-            <p>
-                O arquivo <strong>gerador.html</strong>
-                é utilizado pela equipe da Top Alimentos para gerar links
-                individuais ou em lote para os clientes.
-            </p>
+            <p>O arquivo <strong>gerador.html</strong> é utilizado pela equipe da Top Alimentos para gerar links individuais ou em lote para os clientes.</p>
+
             <h3>📌 Objetivo</h3>
             <p>Criar links seguros de rastreamento dos pedidos.</p>
 
@@ -235,136 +286,173 @@
                 </tr>
                 <tr>
                     <td>CPF/CNPJ</td>
-                    <td>Busca todos os pedidos de um cliente em um período de 60 dias.</td>
+                    <td>Busca todos os pedidos de um cliente de entrega direta dentro do período definido na View (&asymp;60 dias). É importante não gerar links de entregas em residência nesta tela para não sobrecarregar o sistema, para PAP utilize o Gerador Comercial.</td>
                 </tr>
                 <tr>
                     <td>Ordem de Carga</td>
-                    <td>Busca pedidos vinculados a uma carga (Minuta de carregamento) específica.</td>
+                    <td>Busca pedidos vinculados a uma Ordem de Carga específica (Minuta de Carregamento).</td>
                 </tr>
                 <tr>
-                    <td>Pedidos (Número único)</td>
-                    <td>Busca pedidos específicos separados por vírgula.</td>
+                    <td>Pedidos / NUNOTA</td>
+                    <td>Busca por um ou vários números de pedidos específicos separados por vírgula.</td>
                 </tr>
                 <tr>
-                    <td>Data (Liberação)</td>
-                    <td>Busca pedidos pela data de liberação do pedido via PCP.</td>
+                    <td>NF-e / NUMNOTA</td>
+                    <td>Busca um ou vários números de notas fiscais específicas separadas por vírgula.</td>
+                </tr>
+                <tr>
+                    <td>Data</td>
+                    <td>Busca pedidos pela data de liberação dos pedidos (Fluxo PCP). Seria como dizer que está buscando pela data de Produção, neste caso serão listados tanto entregas diretas no Cliente como as entregas em residência.</td>
                 </tr>
             </table>
+            <div class="highlight2"><p><strong>É importante observar que o ratreamento de um pedido inicia a partir da informação de que o produto foi produzido (Cesta, Kit Higine ou outros), na Top Cestas identificamos esta data como sendo a data de liberação dos Pedidos no PCP, o que gera uma Nota Temporária.</strong></p></div>
 
             <h3>⚙️ Como Utilizar</h3>
             <ul>
-                <li>
-                    Abra o módulo Gerador de Links.
-                </li>
-                <li>
-                    Escolha apenas um filtro.
-                </li>
-                <li>
-                    Clique em:
-                    <strong>Gerar Links Clientes</strong>.
-                </li>
-                <li>
-                    O sistema exibirá os links encontrados.
-                </li>
-                <li>
-                    Utilize os botões:
-                </li>
+                <li>Abra o módulo Gerador de Links.</li>
+                <li>Informe usuário e senha do Sankhya, caso solicitado.</li>
+                <li>Escolha apenas um filtro.</li>
+                <li>Clique em <strong>Gerar Links</strong>.</li>
+                <li>O sistema exibirá os links encontrados.</li>
+                <li>Utilize os botões disponíveis em cada link:</li>
                 <ul>
-                    <li>📋 Copiar - Copia um link para a área de transferenica.</li>
-                    <li>🔗 Abrir - Abre a página referente ao Link exibindo as informações do Pedido.</li>
-                    <li>📲 WhatsApp - Abre o WhatsApp Web para colar o link e enviar ao cliente.</li>
+                    <li>📋 Copiar - Copia o link para a área de transferência.</li>
+                    <li>🔗 Abrir - Abre a página de rastreamento do pedido.</li>
+                    <li>📲 WhatsApp - Abre o WhatsApp Web para envio do link ao cliente.</li>
                 </ul>
             </ul>
 
             <div class="card2">
-                <p>Na barra de títulos temos dois botões de ação.</p>
+                <p>Na barra superior existem botões de ação:</p>
                 <ul>
-                    <li>🔝 <strong>Baixar Todos Comprovantes</strong>: Com este botão podemos baixar todos os comprovantes da lista de links gerados, caso existam, e salvar em uma pasta local.</li>
-                    <li>📘 <strong>Manual</strong>: Com este botão podemos visualizar um Mnaual do usuário.</li>
+                    <li>🔝 <strong>Baixar Todos Comprovantes</strong>: baixa todos os comprovantes disponíveis da lista gerada em um único arquivo ZIP.</li>
+                    <li>📘 <strong>Manual</strong>: abre este manual do usuário.</li>
+                    <li>👨‍💼 <strong>Gerador Comercial</strong>: abre o módulo comercial para geração por CPF/CNPJ + Período PAP.</li>
                 </ul>
             </div>
 
             <div class="flow">
-                O sistema bloqueia o uso simultâneo de múltiplos filtros,
-                evitando buscas incorretas ou excessivas.
+                <strong>Para a tela do Gerador principal, o sistema bloqueia o uso simultâneo de múltiplos filtros, evitando buscas incorretas ou excessivas.</strong>
             </div>
-
         </section>
 
         <section class="card">
-            <h2>📦 Página de Rastreamento do Cliente</h2>
-            <p>
-                A página <strong>index.html</strong>
-                é acessada diretamente pelo cliente através do link gerado.
-            </p>
+            <div class="highlight2">
+                <h2>👨‍💼 Gerador Comercial</h2>
+                <p>A tela <strong>Gerador Comercial</strong> é utilizada para geração de links em lote com foco em operações comerciais, campanhas e principalmente entregas PAP, onde o pedido deve conter além do CNPJ/CPF a informação de Período de Entrega.</p>
+            </div>
+
+            <div class="highlight2">
+                <h3>📌 Objetivo</h3>
+                <p>Permitir a geração de links usando filtros combinados obrigatórios limitando a busca em um período de entrega específico que normalmente é utilizado nas entregas em residência (PAP), o que evita gerar links em quantidades muito excessivas e travamento do sistema. Com foco principal em atender uma demanda de envio de comprovantes em lote para os clientes quando da solicitação destes pelo cliente.</p>
+            </div>
+
+            <h3>📋 Filtros Obrigatórios</h3>
+            <table class="table">
+                <tr>
+                    <th>Filtro</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td>CPF/CNPJ</td>
+                    <td>Documento do cliente parceiro.</td>
+                </tr>
+                <tr>
+                    <td>Período PAP</td>
+                    <td>Campo obrigatório da Tela de Pedidos, utilizado para identificar o período de campanha ou entrega PAP.</td>
+                </tr>
+            </table>
+
+            <div class="highlight2">
+                <h3>⚙️ Como Utilizar</h3>
+                <ul>
+                    <li>Acesse o Gerador Comercial pelo botão no Gerador principal.</li>
+                    <li>Informe CPF/CNPJ.</li>
+                    <li>Informe o Período PAP exatamente conforme cadastrado no Sankhya.</li>
+                    <li>Clique em <strong>Gerar Links</strong>.</li>
+                    <li>O sistema retornará somente pedidos que atendam aos dois filtros combinados.</li>
+                </ul>
+            </div>
+
+            <div class="flow">
+                <p><strong>Para consultar o CNPJ e Período corretos para a utilização correta nesta tela, pode ser utilizado o Relatório de Comprovantes gerados ou a partir de uma consulta direta no Portal de vendas a partir do numero de um dos pedidos.</strong></p>
+                <p><strong>No Gerador Comercial, CPF/CNPJ e Período PAP devem ser usados juntos. Se um dos campos não for informado, o sistema solicita o preenchimento antes da consulta.</strong></p>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="highlight2">
+                <h2>📦 Página de Rastreamento do Cliente</h2>
+                <p>A página <strong>Status do Pedido</strong> cujo link foi devidamente gerado, é acessada diretamente pelo cliente para o qual o link foi enviado, no momento este envio será feito manualmente mas já estamos trabalhando em um processo de automação. Por segurança o link possui o numero do Pedido e uma <code class="codeA">Hash SHA-256 do pedido</code> que valida acesso ao pedido, protege o link e impede acesso direto apenas pelo número do pedido evitando que um cliente consiga abrir o rastreador de outro cliente.</p>
+            </div>
+
             <h3>📌 Informações Exibidas</h3>
             <ul>
-                <li>Número do Pedido</li>
-                <li>Número da Nota</li>
-                <li>Cliente</li>
-                <li>CPF/CNPJ</li>
-                <li>Data do Pedido</li>
-                <li>Ordem de Carga</li>
-                <li>Transportadora</li>
-                <li>Status Atual da Entrega</li>
-                <li>Comprovante da Entrega</li>
+                <li>Número do Pedido - Dados não Pessoais.</li>
+                <li>Número da Nota - Dados não Pessoais.</li>
+                <li>Cliente - Dados não Pessoais.</li>
+                <li>CPF/CNPJ - <strong>Dados Pessoais quando CPF</strong>.</li>
+                <li>Data do Pedido - Dados não Pessoais.</li>
+                <li>Ordem de Carga - Dados não Pessoais.</li>
+                <li>Transportadora - Dados não Pessoais.</li>
+                <li>Status Atual da Entrega - Dados não Pessoais.</li>
+                <li>Comprovante da Entrega - Quando Canhoto da NFe ou CTE da Transpotadora não possui dados Pessoais, mas no <strong>Comprovante PAP</strong> já teremos <strong style="color: #721c24;">Dados Pessoais.</strong></li>
             </ul>
 
-            <h3>📍 Status Possíveis (O texto Informativo pode ser alterado no Front.)</h3>
-
-            <p>span class="tag ok">Entregue</span>Pedido entregue com sucesso.</p>
+            <h3>📍 Status Possíveis</h3>
+            <p><span class="tag ok">Entregue</span>Pedido entregue com sucesso.</p>
             <p><span class="tag warn">Em Entrega</span>Pedido em rota de entrega.</p>
-            <p><span class="tag erro">Aguardando</span>Pedido ainda aguardando expedição ou separação.</p>
+            <p><span class="tag erro">Aguardando</span>Sua cesta foi produzida e aguarda transporte.</p>
 
             <h3>📷 Comprovantes</h3>
             <p>Quando disponível, o sistema poderá exibir:</p>
 
             <ul>
-                <li>📷 Foto da entrega - Gerado a partir do aplicativo de entregas (Motorists da Top Cestas)</li>
-                <li>📄 PDF do comprovante - Gerado via API de uma transportadora contratada (Solistica)</li>
+                <li>📷 Foto da entrega - Gerada a partir do aplicativo de entregas.</li>
+                <li>📄 PDF do comprovante - Gerado via transportadora ou integração externa.</li>
             </ul>
 
             <div class="flow">
-                Todos os dados exibidos são consultados em tempo real
-                diretamente do banco de dados do Sankhya.
+                <strong>O cliente final acessa somente pelo link com token. Não é necessário login Sankhya para consultar o pedido.</strong>
             </div>
         </section>
 
         <section class="card">
-            <h2>👨‍💼 Página do Vendedor - este móduo ainda está sendo desenvolvido.</h2>
-            <p>
-                O módulo <strong>vendedor</strong>
-                permite ao vendedor acompanhar diversos pedidos simultaneamente a partir de um ou mais <strong>CNPJs</strong> informados. Este módulo está sendo projetado para gerar links de acompanhamento de entrega de pedidos PAP, facilitando a administração e download de comprovantes de entrega.
-            </p>
-            <h3>📌 Objetivo</h3>
-            <p>Gerar um único link contendo vários pedidos filtrados por:</p>
+            <h2>📁 Download de Comprovantes em ZIP</h2>
+            <p>O sistema atual permite baixar todos os comprovantes disponíveis da lista gerada em um único arquivo ZIP.</p>
+
+            <h3>📌 Como Funciona</h3>
             <ul>
-                <li>CPF/CNPJ - pode filtrar por CNPJ ou CPF.</li>
-                <li>Período de campanha - Período de entregas (PAP)</li>
+                <li>O usuário gera uma lista de links no Gerador principal ou no Gerador Comercial.</li>
+                <li>Clica em <strong>Baixar Todos Comprovantes</strong>.</li>
+                <li>A API busca os comprovantes disponíveis no Sankhya.</li>
+                <li>O sistema prioriza imagem quando existir foto da entrega.</li>
+                <li>Se não houver imagem, tenta localizar PDF/base64 do comprovante.</li>
+                <li>Todos os arquivos encontrados são compactados em um único ZIP.</li>
             </ul>
 
-            <h3>⚙️ Como Funciona</h3>
-            <ul>
-                <li>O gerador cria um token seguro.</li>
-                <li>O vendedor recebe um único link.</li>
-                <li>Ao abrir o link:</li>
-                <ul>
-                    <li>Todos os pedidos são carregados</li>
-                    <li>Os status são exibidos em cards</li>
-                    <li>O vendedor pode abrir o pedido</li>
-                    <li>Pode enviar pelo WhatsApp</li>
-                    <li>Pode exibir a foto dos comprovantes</li>
-                </ul>
-            </ul>
+            <h3>📝 Nome dos Arquivos</h3>
+            <p>Os comprovantes são salvos com a nomenclatura:</p>
 
-            <div class="flow">
-                Este recurso é ideal para pedidos gerados por (Multi Entregas) no Planejamento de Entregas e é mais específoco para entregas de modalidade Porta a Porta (<strong>PAP</strong> ), gerenciando e reduzindo o trabalho operacional.
+            <div class="code">
+Comprovante_NUNOTA_NOMEPARC.pdf <br>
+Comprovante_NUNOTA_NOMEPARC.jpg
             </div>
 
+            <p>Exemplo:</p>
+
+            <div class="code">
+Comprovante_543012_JOAO_DA_SILVA.pdf <br>
+Comprovante_543013_MARIA_APARECIDA.jpg
+            </div>
+
+            <div class="flow">
+                <strong>Essa nomenclatura facilita conferência, auditoria, envio por e-mail, organização local e identificação do cliente sem precisar abrir o arquivo.</strong>
+            </div>
         </section>
 
         <section class="card">
-            <h2>⚙️ Funcionamento Técnico da API</h2>
+            <h2>⚙️ Funcionamento Técnico da API || Para avaliação e supote TI.</h2>
             <h3>📡 Backend</h3>
             <p>O backend foi desenvolvido em:</p>
 
@@ -373,17 +461,12 @@
                 <li>Express</li>
                 <li>Fetch API</li>
                 <li>Archiver</li>
+                <li>Integração com serviços Sankhya</li>
             </ul>
 
             <h3>🔄 Processo de Consulta</h3>
             <div class="flow">
-                Usuário →
-                Front-End →
-                API Node.js →
-                Login Sankhya →
-                Consulta View →
-                Retorno JSON →
-                Interface do usuário
+                Usuário interno → Login Administrativo → Front-End → API Node.js → Login técnico Sankhya → Consulta View → Retorno JSON → Interface do usuário
             </div>
 
             <h3>🗂️ Views Utilizadas</h3>
@@ -394,92 +477,87 @@
                 </tr>
                 <tr>
                     <td>VW_NOTAS_FUSION</td>
-                    <td>Consulta completa do pedido.</td>
+                    <td>Consulta completa do pedido exibido ao cliente.</td>
                 </tr>
                 <tr>
                     <td>VW_NOTAS_FUSION_LIGHT</td>
-                    <td>Consulta resumida para listagens.</td>
-                </tr>
-                <tr>
-                    <td>VW_NOTAS_FUSION_LIGHT_VENDEDOR</td>
-                    <td>Consulta resumida para listagens. (em desenvolvimento)</td>
+                    <td>Consulta resumida para listagens, filtros do gerador, Gerador Comercial e apoio ao nome dos arquivos de comprovante.</td>
                 </tr>
             </table>
 
+            <h3>🔗 Principais Rotas</h3>
+            <table class="table">
+                <tr>
+                    <th>Rota</th>
+                    <th>Finalidade</th>
+                </tr>
+                <tr>
+                    <td>/api/admin-login</td>
+                    <td>Valida usuário e senha do Sankhya para acesso administrativo.</td>
+                </tr>
+                <tr>
+                    <td>/api/gerar-links</td>
+                    <td>Gera links pelo gerador principal.</td>
+                </tr>
+                <tr>
+                    <td>/api/gerar-links-comercial</td>
+                    <td>Gera links pelo Gerador Comercial.</td>
+                </tr>
+                <tr>
+                    <td>/api/pedido</td>
+                    <td>Consulta o pedido exibido ao cliente pelo token.</td>
+                </tr>
+                <tr>
+                    <td>/api/comprovante/imagem</td>
+                    <td>Busca comprovante de entrega em imagem.</td>
+                </tr>
+                <tr>
+                    <td>/api/comprovante/pdf</td>
+                    <td>Busca comprovante de entrega em PDF/base64.</td>
+                </tr>
+                <tr>
+                    <td>/api/baixar-comprovantes</td>
+                    <td>Gera ZIP com comprovantes disponíveis.</td>
+                </tr>
+            </table>
         </section>
+
         <section class="card">
-            <h2>🔐 Segurança e Controle de Acesso</h2>
+            <h2>🔐 Segurança e Controle de Acesso || Para avaliação e suporte TI.</h2>
             <h3>✅ Pontos Fortes</h3>
             <ul>
-                <li>Uso de tokens SHA-256 para proteção dos links.</li>
-                <li>Validação de token em todas as rotas críticas.</li>
-                <li>Cache de autenticação no Sankhya.</li>
-                <li>Separação entre API e Front-End.</li>
-                <li>Controle de filtros no front-end.</li>
-                <li>Consulta apenas através de Views do banco.</li>
-                <li>Não expõe diretamente o banco ao usuário final.</li>
+                <li>Uso de tokens SHA-256 para proteção dos links dos clientes.</li>
+                <li>Validação de token nas rotas públicas de pedido e comprovante.</li>
+                <li>Login administrativo validado contra usuário e senha do Sankhya.</li>
+                <li>Controle de tentativas inválidas no login administrativo.</li>
+                <li>Sessão administrativa para acesso aos geradores.</li>
+                <li>Separação entre acesso administrativo e acesso do cliente final.</li>
+                <li>Consulta de dados através de Views.</li>
+                <li>Não expõe conexão direta com o banco ao usuário final.</li>
+                <li>Download de comprovantes concentrado em rota protegida.</li>
             </ul>
 
-            <h3>⚠️ Pontos Fracos Identificados</h3>
+            <h3>⚠️ Pontos de Atenção</h3>
             <ul>
-                <li>SECRET está fixo no backend.</li>
-                <li>Usuário e senha do Sankhya estão expostos no backend.</li>
-                <li>Não existe expiração dos tokens.</li>
-                <li>Não existe controle de tentativas de acesso.</li>
-                <li>Não há autenticação administrativa no gerador.</li>
+                <li>SECRET ainda deve preferencialmente ser movido para variável de ambiente.</li>
+                <li>Usuário técnico e senha técnica do Sankhya devem preferencialmente ficar em variáveis de ambiente.</li>
+                <li>Os links públicos ainda não possuem expiração automática.</li>
+                <li>Links podem ser compartilhados por terceiros.</li>
                 <li>Bloqueio de F12 não impede acesso técnico real.</li>
-                <li>Algumas rotas ainda permitem parâmetros diretos via URL, mas já exite uma camada de proteção (✅ token SHA-256).</li>
+                <li>Comprovantes podem conter dados pessoais e devem ser tratados com cuidado.</li>
             </ul>
 
             <h3>🚀 Sugestões de Melhoria</h3>
             <ul>
-                <li>
-                    Mover SECRET, USER e PASS para variáveis de ambiente.
-                </li>
-                <li>
-                    Implementar JWT com expiração.
-                </li>
-                <li>
-                    Adicionar autenticação administrativa.
-                </li>
-                <li>
-                    Criar logs de auditoria.
-                </li>
-                <li>
-                    Adicionar Rate Limit nas rotas.
-                </li>
-                <li>
-                    Criar expiração automática dos links.
-                </li>
-                <li>
-                    Validar origem das requisições.
-                </li>
-                <li>
-                    Implementar CDN para comprovantes.
-                </li>
-                <li>
-                    Melhorar proteção contra download massivo.
-                </li>
+                <li>Mover SECRET, USER e PASS para variáveis de ambiente.</li>
+                <li>Implementar expiração automática dos links públicos.</li>
+                <li>Criar logs de auditoria para geração de links e download de comprovantes.</li>
+                <li>Registrar usuário administrativo que gerou links ou baixou comprovantes.</li>
+                <li>Adicionar Rate Limit nas rotas sensíveis.</li>
+                <li>Validar origem das requisições.</li>
+                <li>Criar política de retenção para comprovantes.</li>
+                <li>Melhorar proteção contra download massivo.</li>
             </ul>
-
-        </section>
-        <section class="card">
-            <h2>✅ Conclusão</h2>
-            <p>
-                O sistema de rastreamento da Top Alimentos fornece
-                uma solução moderna e eficiente para acompanhamento
-                de pedidos em tempo real utilizando integração direta
-                com o ERP Sankhya.
-            </p>
-            <p>
-                A arquitetura atual atende muito bem o processo operacional,
-                principalmente na automação da geração de links,
-                acompanhamento de entregas e visualização de comprovantes.
-            </p>
-            <p>
-                Pode ser implementdo uma melhoria no sistema segurança da API, onde o sistema poderá alcançar
-                um nível ainda maior de confiabilidade e escalabilidade.
-            </p>
         </section>
 
         <section class="card">
@@ -488,97 +566,92 @@
                 <li>Nome do cliente</li>
                 <li>CPF/CNPJ</li>
                 <li>Número do pedido</li>
+                <li>Número da nota fiscal</li>
                 <li>Dados de entrega</li>
                 <li>Status logístico</li>
                 <li>Comprovante de entrega</li>
                 <li>Foto da entrega</li>
                 <li>Possível assinatura</li>
-            <li> Dados comerciais</li>
+                <li>Dados comerciais</li>
                 <li>Histórico operacional</li>
             </ul>
 
             <ul><h2>Pela LGPD:</h2>
                 <li>✅ CPF = dado pessoal</li>
-                <li>✅ foto de entrega = dado pessoal</li>
+                <li>✅ Foto de comprovante de entrega = pode possuir dado pessoal</li>
                 <li>✅ comprovante assinado = dado pessoal</li>
-                <li>✅ nome + pedido = dado pessoal</li>
+                <li>✅ nome + pedido ao baixar comprovantes = dado pessoal</li>
             </ul>
 
             <ul><h3>O que está alinhado com a LGPD neste sistema:</h3>
                 <li><h4>1. Não expõe o banco diretamente</h4></li>
                 <ul>
                     <li>Não abriu acesso direto ao Oracle</li>
-                    <li>Não expôs query livre</li>
-                    <li>Não liberou conexão externa</li>
+                    <li>Não expôs query livre ao usuário final</li>
+                    <li>Não liberou conexão externa com o banco</li>
                     <h4>✅ Muito bom para LGPD e segurança.</h4>
                 </ul>
+
                 <li><h4>2. Uso de Views</h4></li>
                 <ul>
-                    <li>limita os dados</li>
-                    <li>controla exposição</li>
-                    <li>reduz vazamento</li>
+                    <li>Limita os dados retornados</li>
+                    <li>Controla a exposição</li>
+                    <li>Reduz risco de vazamento</li>
                     <h4>✅ Boa prática LGPD.</h4>
                 </ul>
 
                 <li><h4>3. Uso de tokens</h4></li>
                 <ul>
-                    <li>Isso reduz acesso indevido simples.</li>
+                    <li>Reduz acesso indevido simples.</li>
                     <h4>✅ Boa prática LGPD.</h4>
                 </ul>
 
-                <li><h4>4. Separação de módulos</h4></li>
+                <li><h4>4. Login administrativo</h4></li>
                 <ul>
-                    <li>cliente</li>
-                    <li>vendedor</li>
-                    <li>backend</li>
+                    <li>Restringe acesso aos geradores.</li>
+                    <li>Exige usuário válido no Sankhya.</li>
+                    <li>Reduz risco de geração indevida de links.</li>
+                    <h4>✅ Melhoria importante de segurança.</h4>
+                </ul>
+
+                <li><h4>5. Separação de módulos</h4></li>
+                <ul>
+                    <li>Cliente</li>
+                    <li>Gerador interno</li>
+                    <li>Gerador comercial</li>
+                    <li>Backend</li>
                     <p>✅ Isso ajuda no princípio do menor privilégio.</p>
-                    <h4>✅ Boa prática LGPD.</h4>
                 </ul>
 
-                <li><h4>5. Não coleta dados desnecessários</h4></li>
+                <li><h4>6. Não coleta dados desnecessários</h4></li>
                 <ul>
-                    <h3>A API aparentemente usa apenas:</h3>
+                    <h3>A API usa principalmente:</h3>
                     <li>dados operacionais</li>
                     <li>dados logísticos</li>
+                    <li>dados comerciais necessários ao rastreamento</li>
 
-                    <h3>Evitando:</h3>
+                    <h3>E evita:</h3>
                     <li>biometria</li>
-                    <li>localização GPS</li>
-                    <li>dados sensíveis</li>
+                    <li>localização GPS contínua</li>
+                    <li>dados sensíveis desnecessários</li>
 
-                    <p>✅ Excelente.</p>
                     <h4>✅ Boa prática LGPD.</h4>
                 </ul>
             </ul>
 
             <ul><h3>⚠️ Pontos de atenção LGPD</h3>
-                <li>1. Links podem ser compartilhados</li>
-                <li>2. CPF completo exposto</li>
-                <li>3. Comprovantes contendo assinatura e dados pessoais</li>
-                <ul>LGPD exige
-                    <li>✅ finalidade clara</li>
-                    <li>✅ proteção adequada</li>
-                    <li>✅ retenção controlada</li>
-                    <li>✅ acesso restrito</li>
-                </ul>
-                <li>5. Falta de auditoria</li>
-                <ul>
-                    <li>quem gerou links</li>
-                    <li>quem acessou comprovantes</li>
-                    <li>horário</li>
-                    <li>IP</li>
-                    <li>volume</li>
-                </ul>
-                <li>6. SECRET e credenciais no código</li>
-                <li>❌ Ausência de política de retenção - (Expiração dos links)</li>
-                <li>❌ Sem expiração de token</li>
-                <li>❌ Falta de consentimento/transparência</li>
+                <li>Links podem ser compartilhados.</li>
+                <li>CPF/CNPJ pode ser exibido ao cliente.</li>
+                <li>Comprovantes podem conter assinatura e dados pessoais.</li>
+                <li>Arquivos ZIP devem ser armazenados e compartilhados com cuidado.</li>
+                <li>É recomendável auditoria de geração de links e downloads.</li>
+                <li>É recomendável política de retenção e expiração dos links.</li>
+                <li>É recomendável manter credenciais e SECRET fora do código-fonte.</li>
 
                 <div class="card2">
-                    <h2>🛡️ Seu sistema está “ilegal”?</h2>
+                    <h2>🛡️ O sistema está “ilegal”?</h2>
                     <p>Não necessariamente.</p>
-
-                    <h3>A LGPD NÃO exige perfeição absoluta.</h3>
+                    <h3>A LGPD não exige perfeição absoluta.</h3>
                     <p><strong>Ela exige:</strong></p>
                     <li>✅ finalidade legítima</li>
                     <li>✅ necessidade</li>
@@ -589,14 +662,14 @@
             </ul>
         </section>
 
+        <section class="card">
+            <h2>✅ Conclusão</h2>
+            <p>O sistema de rastreamento da Top Alimentos fornece uma solução moderna e eficiente para acompanhamento de pedidos em tempo real utilizando integração direta com o ERP Sankhya.</p>
+            <p>A arquitetura atual atende o processo operacional de geração de links, acompanhamento de entregas, visualização de comprovantes e download em lote.</p>
+            <p>As melhorias recentes aumentaram a segurança e a usabilidade do projeto, principalmente com login administrativo Sankhya, Gerador Comercial, download ZIP e nomenclatura dos comprovantes com pedido e parceiro.</p>
+        </section>
     </div>
 
-    <footer>
-
-        © Top Alimentos - 2026
-        <br>
-        Sistema de Rastreamento de Pedidos
-
-    </footer>
+    <footer>Top Cestas Track © 2026 - Sistema de rastreamento integrado Sankhya ERP</footer>
 </body>
 </html>
