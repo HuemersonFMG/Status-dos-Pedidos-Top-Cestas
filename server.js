@@ -234,6 +234,8 @@ function montarMapaNomeParc(lista) {
   return mapa;
 }
 
+
+
 async function validarLoginSankhya(usuario, senha) {
   const payload = {
     serviceName: 'MobileLoginSP.login',
@@ -261,12 +263,45 @@ async function validarLoginSankhya(usuario, senha) {
   const rawCookie = response.headers.get('set-cookie') || '';
   const cookie = rawCookie.split(';')[0];
 
-  if (!response.ok || !cookie) {
+  let json = {};
+
+  try {
+    const text = await response.text();
+    json = text ? JSON.parse(text) : {};
+  } catch {
     return false;
   }
 
+  const statusOk =
+    String(json?.status || '') === '1';
+
+  const temErro =
+    String(json?.statusMessage || '')
+      .toLowerCase()
+      .includes('erro') ||
+    String(json?.statusMessage || '')
+      .toLowerCase()
+      .includes('inválid') ||
+    String(json?.statusMessage || '')
+      .toLowerCase()
+      .includes('invalid');
+
+  if (!response.ok || !cookie || !statusOk || temErro) {
+    console.warn('❌ Login admin Sankhya negado:', {
+      usuario,
+      status: json?.status,
+      statusMessage: json?.statusMessage
+    });
+
+    return false;
+  }
+
+  console.log('✅ Login admin Sankhya validado:', usuario);
+
   return true;
 }
+
+
 
 async function login() {
   const now = Date.now();
