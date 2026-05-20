@@ -40,29 +40,15 @@ function extrairValor(valor) {
 }
 
 function getNunota(item) {
-  return String(
-    extrairValor(item?.nunota) ||
-    extrairValor(item?.NUNOTA) ||
-    ''
-  );
+  return String(extrairValor(item?.nunota) || extrairValor(item?.NUNOTA) || '');
 }
 
 function getNumNota(item) {
-  return String(
-    extrairValor(item?.numNota) ||
-    extrairValor(item?.NUMNOTA) ||
-    ''
-  );
+  return String(extrairValor(item?.numNota) || extrairValor(item?.NUMNOTA) || '');
 }
 
 function getNomeCliente(item) {
-  const nome =
-    extrairValor(item?.nomeParc) ||
-    extrairValor(item?.NOMEPARC) ||
-    extrairValor(item?.nomeparc) ||
-    extrairValor(item?.cliente) ||
-    extrairValor(item?.CLIENTE) ||
-    '';
+  const nome = extrairValor(item?.nomeParc) || extrairValor(item?.NOMEPARC) || extrairValor(item?.nomeparc) || extrairValor(item?.cliente) || extrairValor(item?.CLIENTE) || '';
 
   const nomeLimpo = String(nome)
     .normalize('NFD')
@@ -77,23 +63,13 @@ function getNomeCliente(item) {
 }
 
 function getNomeClienteExibicao(item) {
-  const nome =
-    extrairValor(item?.nomeParc) ||
-    extrairValor(item?.NOMEPARC) ||
-    extrairValor(item?.nomeparc) ||
-    extrairValor(item?.cliente) ||
-    extrairValor(item?.CLIENTE) ||
-    '';
+  const nome = extrairValor(item?.nomeParc) || extrairValor(item?.NOMEPARC) || extrairValor(item?.nomeparc) || extrairValor(item?.cliente) || extrairValor(item?.CLIENTE) || '';
 
   return String(nome).trim() || 'CLIENTE';
 }
 
 function getLink(item) {
-  return (
-    extrairValor(item?.link) ||
-    extrairValor(item?.LINK) ||
-    ''
-  );
+  return extrairValor(item?.link) || extrairValor(item?.LINK) || '';
 }
 
 function montarNomeArquivo(item, extensao) {
@@ -412,6 +388,36 @@ function abrirgeradorcomercial() {
 // =========================
 function abrirManual() {
   window.open('/docs/manual.html', '_blank');
+}
+
+// =========================
+// 🔄 SAIR / RECARREGAR LOGIN
+// =========================
+async function recarga() {
+  const confirmar = confirm('Deseja encerrar a sessão atual e voltar para o login?');
+
+  if (!confirmar) {
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/admin-logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao encerrar sessão.');
+    }
+
+    window.location.href = '/login.html';
+
+  } catch (err) {
+    console.error('❌ ERRO RECARGA:', err);
+    alert('Erro ao recarregar login. Você será redirecionado para a tela de login.');
+    window.location.href = '/login.html';
+  }
 }
 
 // =========================
