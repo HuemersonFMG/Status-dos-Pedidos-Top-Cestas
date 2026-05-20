@@ -27,22 +27,37 @@ function getParam(nome) {
 // =========================
 // 📦 STATUS
 // =========================
+function normalizarStatus(status) {
+  return String(status || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+}
+
 function traduzirStatus(status) {
+  const st = normalizarStatus(status);
+
   const mapa = {
-    "AGUARDANDO ROTA":
-      "🧺 Sua cesta foi produzida e aguarda transporte.",
-
-    "ENTREGANDO":
-      "🚚 Sua Cesta foi entregue a Transportadora.",
-
-    "NOTA EMITIDA":
-      "🧾 Sua Nota Fiscal foi emitida e o pedido está pronto para entrega.",
-
-    "ENTREGUE":
-      "✅ Pedido entregue com sucesso."
+    "AGUARDANDO ROTA": "🧺 Sua cesta foi produzida e aguarda transporte.",
+    "ENTREGANDO": "🚚 Sua Cesta foi entregue a Transportadora.",
+    "NOTA EMITIDA": "🧾 Sua Nota Fiscal foi emitida e o pedido está pronto para entrega.",
+    "ENTREGUE": "✅ Pedido entregue com sucesso."
   };
 
-  return mapa[status] || status || "-";
+  return mapa[st] || status || "-";
+}
+
+function classeStatus(status) {
+  const st = normalizarStatus(status);
+
+  const mapa = {
+    "AGUARDANDO ROTA": "warn",
+    "NOTA EMITIDA": "nota-emitida",
+    "ENTREGANDO": "ok",
+    "ENTREGUE": "ok"
+  };
+
+  return mapa[st] || "";
 }
 
 function classeStatus(status) {
