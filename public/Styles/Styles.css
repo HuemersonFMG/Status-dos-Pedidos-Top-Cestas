@@ -10,25 +10,25 @@ header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  flex-wrap: wrap; /* Permite que os elementos se ajustem em várias linhas */
+  flex-wrap: wrap;
   padding: 20px;
   background: linear-gradient(to right, rgb(243, 54, 54), orange);
   color: rgb(12, 8, 255);
 }
 
 header img {
-  max-width: 100px; /* Permite redimensionamento */
-  height: auto; /* Mantém a proporção da imagem */
-  margin-right: 20px; /* Espaço entre a imagem e o texto */
-  flex-shrink: 0; /* Evita que a imagem encolha */
+  max-width: 100px;
+  height: auto;
+  margin-right: 20px;
+  flex-shrink: 0;
 }
 
 header h1 {
   margin: 0;
-  word-break: break-word; /* Quebra palavras longas, se necessário */
+  word-break: break-word;
   text-align: left;
-  flex: 1; /* Permite que o texto ocupe o espaço restante */
-  min-width: 200px; /* Evita que o texto fique muito pequeno */
+  flex: 1;
+  min-width: 200px;
 }
 
 .container {
@@ -50,17 +50,17 @@ h2 {
 }
 
 .card {
-  background: white;
+  background: #fff;
   padding: 20px;
   border-radius: 10px;
   margin-top: 20px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-  background: #fff;
 }
 
 input {
   padding: 10px;
   width: 300px;
+  max-width: 90%;
 }
 
 button {
@@ -91,10 +91,9 @@ pre {
 }
 
 .status {
-  margin-top: 10px;
+  margin: 10px 0;
   font-size: 18px;
   font-weight: bold;
-  margin: 10px 0;
 }
 
 table {
@@ -102,7 +101,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: center;
@@ -118,14 +118,14 @@ th {
 
 .popup {
   position: fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0,0,0,0.92);
-  display:none;
-  justify-content:center;
-  align-items:center;
+  display: none;
+  justify-content: center;
+  align-items: center;
   flex-direction: column;
   z-index: 9999;
   overflow: hidden;
@@ -134,31 +134,23 @@ th {
 .viewer {
   width: 100%;
   height: 80vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  overflow:hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
   position: relative;
 }
 
 .viewer img {
-
   max-width: 90%;
   max-height: 80vh;
-
   border-radius: 10px;
-
-  transition:
-    transform .25s ease;
-
+  transition: transform .25s ease;
   transform:
-    scale(var(--zoom))
-    rotate(var(--rotate));
-
+    scale(var(--zoom, 1))
+    rotate(var(--rotate, 0deg));
   cursor: grab;
-
   user-select: none;
-
   -webkit-user-drag: none;
 }
 
@@ -175,15 +167,11 @@ th {
 }
 
 .controls button {
-
   margin: 4px;
   padding: 10px 14px;
-
   cursor: pointer;
-
   border: none;
   border-radius: 6px;
-
   background: #fff;
   font-weight: bold;
 }
@@ -193,18 +181,17 @@ th {
 }
 
 .close {
-
   position: absolute;
-
   top: 15px;
   right: 20px;
-
   color: white;
-
   font-size: 28px;
-
   cursor: pointer;
 }
+
+/* =========================
+   DESTAQUES
+========================= */
 
 .highlight {
   color: #e74c3c;
@@ -212,69 +199,67 @@ th {
 }
 
 .highlight2 {
-    background-color: #e9ecfa;
-    padding: 10px;
-    padding-left: 10px;
-    padding-right: 10px;
-    border: 4px solid #7d93f5;
-    margin: 0.5px 0;
-    border-radius: 30px;
+  background-color: #e9ecfa;
+  padding: 10px;
+  border: 4px solid #7d93f5;
+  margin: 0.5px 0;
+  border-radius: 30px;
 }
 
-/*quardro*/
-.highlight3{
-  position:relative;
-  background:rgba(255,255,255,0.12);
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
-  border:1px solid rgba(255,255,255,0.25);
-  border-radius:32px;
-  padding:18px 22px;
-  margin:2px 0;
-  color:#ffffff;
+/* Quadro */
+.highlight3 {
+  position: relative;
+  background-color: #afc9f8;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-left: 4px solid #4a1af7;
+  border-radius: 32px;
+  padding: 10px 22px;
+  margin: 0.5px 0;
+  color: #ffffff;
   box-shadow:
-      inset 0 1px 1px rgba(255,255,255,0.35),
-      inset 0 -8px 20px rgba(255,255,255,0.05),
-      0 8px 32px rgba(0,0,0,0.12);
-  overflow:hidden;
+    inset 0 1px 1px rgba(255,255,255,0.35),
+    inset 0 -8px 20px rgba(255,255,255,0.05),
+    0 8px 32px rgba(0,0,0,0.12);
+  overflow: hidden;
 }
 
-.highlight3::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  border-radius:32px;
-  padding:1px;
-  background:linear-gradient(
-      135deg,
-      rgba(255,255,255,0.55),
-      rgba(255,255,255,0.08)
+.highlight3::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.55),
+    rgba(255,255,255,0.08)
   );
   -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-  -webkit-mask-composite:xor;
-  mask-composite:exclude;
-  pointer-events:none;
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
-.highlight3::after{
-  content:'';
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:45%;
-  background:linear-gradient(
-      to bottom,
-      rgba(255,255,255,0.22),
-      transparent
+.highlight3::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 45%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.22),
+    transparent
   );
-  border-radius:32px 32px 100px 100px;
-  pointer-events:none;
+  border-radius: 32px 32px 100px 100px;
+  pointer-events: none;
 }
-
-/*fim quadro*/
+/* Fim quadro */
 
 .highlightTitle {
   text-align: center;
@@ -284,14 +269,6 @@ th {
   color: white;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.highlight3 {
-  background-color: #afc9f8;
-  padding: 10px;
-  padding-left: 20px;
-  border-left: 4px solid #4a1af7;
-  margin: 0.5px 0;
 }
 
 .highlight4 {
@@ -335,8 +312,6 @@ th {
 .highlight8 {
   background-color: #e9ecfa;
   padding: 10px;
-  padding-left: 10px;
-  padding-right: 10px;
   border: 4px solid #7d93f5;
   margin: 0.5px 0;
   border-radius: 30px;
@@ -364,6 +339,47 @@ th {
   margin: 1rem 0;
 }
 
+/* =========================
+   STATUS
+========================= */
+
+.ok {
+  color: green;
+}
+
+.warn {
+  color: orange;
+}
+
+.erro {
+  color: red;
+}
+
+.nota-emitida,
+.status-nota-emitida {
+  color: #d68910;
+  font-weight: bold;
+}
+
+.badge-nota-emitida {
+  display: inline-block;
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  border-radius: 30px;
+  padding: 6px 12px;
+  font-weight: bold;
+}
+
+.status.nota-emitida,
+.status.status-nota-emitida {
+  color: #d68910;
+}
+
+/* =========================
+   RODAPÉ
+========================= */
+
 footer {
   background: linear-gradient(to right, rgb(243, 54, 54), orange);
   color: white;
@@ -372,10 +388,39 @@ footer {
   position: relative;
 }
 
-.ok { color: green; }
-.warn { color: orange; }
-.erro { color: red; }
-
 hr {
   margin: 15px 0;
+}
+
+/* =========================
+   RESPONSIVO
+========================= */
+
+@media (max-width: 600px) {
+  header {
+    justify-content: center;
+    text-align: center;
+  }
+
+  header img {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+
+  header h1 {
+    text-align: center;
+  }
+
+  .container {
+    padding: 15px;
+  }
+
+  button {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+
+  table {
+    font-size: 13px;
+  }
 }
