@@ -277,24 +277,40 @@ document.addEventListener('keydown', function (e) {
       return;
     }
 
+    const progressBox = document.getElementById('download-progress');
+    const progressText = document.getElementById('download-progress-text');
+
     try {
+      if (progressBox) {
+        progressBox.style.display = 'block';
+      }
+
+      if (progressText) {
+        progressText.innerHTML = '⏳ Preparando comprovantes...';
+      }
+
       setStatus('', '⏳ Gerando arquivo ZIP dos comprovantes...');
 
       const pedidos = linksGerados
-        .map(item =>
-          item.nunota ||
-          item.NUNOTA
-        )
+        .map(item => getNunota(item))
         .filter(Boolean);
 
       if (!pedidos.length) {
         setStatus('erro', '❌ Nenhum pedido válido.');
+        if (progressBox) {
+          progressBox.style.display = 'none';
+        }
         return;
+      }
+
+      if (progressText) {
+        progressText.innerHTML = `📦 Buscando ${pedidos.length} comprovante(s)...`;
       }
 
       const response = await fetch('/api/baixar-comprovantes', {
         method: 'POST',
         credentials: 'same-origin',
+        cache: 'no-store',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -304,17 +320,19 @@ document.addEventListener('keydown', function (e) {
       });
 
       if (response.status === 401) {
-        alert('Sessão expirada.');
+        alert('Sessão expirada. Faça login novamente.');
         window.location.href = '/login.html';
         return;
       }
 
       if (!response.ok) {
         const erro = await response.text();
-
         console.error('Erro ZIP:', erro);
-
         throw new Error('Erro ao gerar ZIP dos comprovantes.');
+      }
+
+      if (progressText) {
+        progressText.innerHTML = '⬇️ Baixando arquivo ZIP...';
       }
 
       const blob = await response.blob();
@@ -324,28 +342,42 @@ document.addEventListener('keydown', function (e) {
       }
 
       const url = window.URL.createObjectURL(blob);
-
       const a = document.createElement('a');
 
       a.href = url;
-
-      a.download =
-        `Comprovantes_Comercial_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `Comprovantes_Comercial_${new Date().toISOString().slice(0, 10)}.zip`;
 
       document.body.appendChild(a);
-
       a.click();
-
       a.remove();
 
       window.URL.revokeObjectURL(url);
 
+      if (progressText) {
+        progressText.innerHTML = '✅ ZIP gerado com sucesso.';
+      }
+
       setStatus('ok', `✅ ZIP gerado com ${pedidos.length} comprovante(s).`);
+
+      setTimeout(() => {
+        if (progressBox) {
+          progressBox.style.display = 'none';
+        }
+      }, 2500);
 
     } catch (err) {
       console.error(err);
-
       setStatus('erro', `❌ ${err.message}`);
+
+      if (progressText) {
+        progressText.innerHTML = `❌ ${err.message}`;
+      }
+
+      setTimeout(() => {
+        if (progressBox) {
+          progressBox.style.display = 'none';
+        }
+      }, 4000);
     }
   }
 
