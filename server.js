@@ -36,9 +36,11 @@ const ADMIN_SESSION_COOKIE = 'topcestas_admin_session';
 const ADMIN_SESSION_TTL = 8 * 60 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_BLOCK_TIME = 5 * 60 * 1000;
+const COMERCIAL_TICKET_TTL = 2 * 60 * 1000;
 
 const adminSessions = new Map();
 const loginAttempts = new Map();
+const comercialTickets = new Map();
 
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url}`);
@@ -120,6 +122,12 @@ function limparSessoesExpiradas() {
       adminSessions.delete(token);
     }
   }
+
+  for (const [ticket, item] of comercialTickets.entries()) {
+    if (!item || item.expiresAt <= now) {
+      comercialTickets.delete(ticket);
+    }
+  }
 }
 
 function getAdminSession(req) {
@@ -150,6 +158,8 @@ function requireAdminPage(req, res, next) {
     return res.redirect('/login.html');
   }
 
+  req.adminSession = session;
+
   next();
 }
 
@@ -161,6 +171,44 @@ function requireAdminApi(req, res, next) {
       erro: 'Sessão administrativa expirada. Faça login novamente.'
     });
   }
+
+  req.adminSession = session;
+
+  next();
+}
+
+function criarTicketGeradorComercial(session) {
+  const ticket = crypto.randomBytes(32).toString('hex');
+
+  comercialTickets.set(ticket, {
+    usuario: session.usuario,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + COMERCIAL_TICKET_TTL,
+    usado: false
+  });
+
+  return ticket;
+}
+
+function requireGeradorComercialTicket(req, res, next) {
+  limparSessoesExpiradas();
+
+  const ticket = String(req.query.ticket || '').trim();
+
+  if (!ticket) {
+    return res.redirect('/login.html');
+  }
+
+  const item = comercialTickets.get(ticket);
+
+  if (!item || item.usado || item.expiresAt <= Date.now()) {
+    comercialTickets.delete(ticket);
+
+    return res.redirect('/login.html');
+  }
+
+  item.usado = true;
+  comercialTickets.delete(ticket);
 
   next();
 }
@@ -234,8 +282,6 @@ function montarMapaNomeParc(lista) {
   return mapa;
 }
 
-
-
 async function validarLoginSankhya(usuario, senha) {
   const payload = {
     serviceName: 'MobileLoginSP.login',
@@ -300,8 +346,6 @@ async function validarLoginSankhya(usuario, senha) {
 
   return true;
 }
-
-
 
 async function login() {
   const now = Date.now();
@@ -422,7 +466,16 @@ app.get('/gerador.html', requireAdminPage, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'gerador.html'));
 });
 
-app.get('/geradorcomercial.html', requireAdminPage, (req, res) => {
+app.post('/api/gerador-comercial-ticket', requireAdminApi, (req, res) => {
+  const ticket = criarTicketGeradorComercial(req.adminSession);
+
+  res.json({
+    ok: true,
+    url: `/geradorcomercial.html?ticket=${ticket}`
+  });
+});
+
+app.get('/geradorcomercial.html', requireAdminPage, requireGeradorComercialTicket, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'geradorcomercial.html'));
 });
 
@@ -531,36 +584,20 @@ app.use(express.static(PUBLIC_DIR));
 
 app.post('/api/gerar-links', requireAdminApi, async (req, res) => {
   try {
-    const {
-      cnpj,
-      ordemCarga,
-      data,
-      pedidos,
-      nfes
-    } = req.body;
+    const { cnpj, ordemCarga, data, pedidos, nfes } = req.body;
 
     const documento = (cnpj || '').replace(/\D/g, '');
-
-    const ordem =
-      ordemCarga
-        ? String(ordemCarga)
-        : null;
+    const ordem = ordemCarga ? String(ordemCarga) : null;
 
     let listaPedidos = [];
     let listaNfes = [];
 
     if (pedidos) {
-      listaPedidos = String(pedidos)
-        .split(',')
-        .map(p => p.trim())
-        .filter(Boolean);
+      listaPedidos = String(pedidos).split(',').map(p => p.trim()).filter(Boolean);
     }
 
     if (nfes) {
-      listaNfes = String(nfes)
-        .split(',')
-        .map(n => n.trim())
-        .filter(Boolean);
+      listaNfes = String(nfes).split(',').map(n => n.trim()).filter(Boolean);
     }
 
     let tipoFiltro = null;
@@ -647,10 +684,7 @@ app.post('/api/gerar-links', requireAdminApi, async (req, res) => {
 
 app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
   try {
-    const {
-      cnpj,
-      periodoPap
-    } = req.body;
+    const { cnpj, periodoPap } = req.body;
 
     const documento = (cnpj || '').replace(/\D/g, '');
     const periodo = String(periodoPap || '').trim();
@@ -673,10 +707,7 @@ app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
       });
     }
 
-    if (
-      documento.length !== 11 &&
-      documento.length !== 14
-    ) {
+    if (documento.length !== 11 && documento.length !== 14) {
       return res.status(400).json({
         erro: 'CPF/CNPJ inválido'
       });
@@ -714,10 +745,7 @@ app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
 
 app.get('/api/pedido', async (req, res) => {
   try {
-    const {
-      nunota,
-      token
-    } = req.query;
+    const { nunota, token } = req.query;
 
     if (!nunota || !token) {
       return res.status(400).json({
@@ -760,10 +788,7 @@ app.get('/api/pedido', async (req, res) => {
     let lista = [];
 
     if (rec) {
-      lista =
-        Array.isArray(rec)
-          ? rec
-          : [rec];
+      lista = Array.isArray(rec) ? rec : [rec];
     }
 
     const pedido = lista.find(
@@ -804,10 +829,7 @@ app.get('/api/pedido', async (req, res) => {
 
 app.get('/api/comprovante/imagem', async (req, res) => {
   try {
-    const {
-      nunota,
-      token
-    } = req.query;
+    const { nunota, token } = req.query;
 
     const nunotaNum = Number(nunota);
 
@@ -851,10 +873,7 @@ app.get('/api/comprovante/imagem', async (req, res) => {
 
 app.get('/api/comprovante/pdf', async (req, res) => {
   try {
-    const {
-      nunota,
-      token
-    } = req.query;
+    const { nunota, token } = req.query;
 
     const nunotaNum = Number(nunota);
 

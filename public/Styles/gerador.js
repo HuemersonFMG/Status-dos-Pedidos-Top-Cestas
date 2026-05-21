@@ -375,8 +375,38 @@ function abrir(link) {
 // =========================
 // 🔗 ABRIR GERADOR COMERCIAL
 // =========================
-function abrirGeradorComercial() {
-  window.open('/geradorcomercial.html', '_blank');
+async function abrirGeradorComercial() {
+  try {
+    const response = await fetch('/api/gerador-comercial-ticket', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store'
+    });
+
+    if (response.status === 401) {
+      alert('Sessão expirada. Faça login novamente.');
+      window.location.href = '/login.html';
+      return;
+    }
+
+    let json = {};
+
+    try {
+      json = await response.json();
+    } catch {
+      json = {};
+    }
+
+    if (!response.ok || !json.url) {
+      throw new Error(json.erro || 'Erro ao abrir Gerador Comercial.');
+    }
+
+    window.open(json.url, '_blank');
+
+  } catch (err) {
+    console.error('❌ ERRO GERADOR COMERCIAL:', err);
+    alert('❌ Erro ao abrir Gerador Comercial.');
+  }
 }
 
 function abrirgeradorcomercial() {
