@@ -115,6 +115,36 @@ function tratarSessaoExpirada(response) {
   return false;
 }
 
+function montarResumoFiltro() {
+  const documento = limparDoc(cnpjInput.value);
+  const ordem = ordemInput.value.trim();
+  const pedidos = pedidosInput.value.trim();
+  const nfes = nfesInput ? nfesInput.value.trim() : '';
+  const data = dataInput.value;
+
+  if (documento) {
+    return `CPF/CNPJ: ${documento}`;
+  }
+
+  if (ordem) {
+    return `Ordem de Carga: ${ordem}`;
+  }
+
+  if (pedidos) {
+    return `Pedidos: ${pedidos}`;
+  }
+
+  if (nfes) {
+    return `NF-e: ${nfes}`;
+  }
+
+  if (data) {
+    return `Data: ${data}`;
+  }
+
+  return 'Filtro não identificado';
+}
+
 // =========================
 // 🎯 ELEMENTOS
 // =========================
@@ -350,6 +380,66 @@ async function gerar() {
       setStatus('erro', `❌ ${err.message}`);
     }
   }
+}
+
+// =========================
+// 💾 SALVAR LISTA INTERNA
+// =========================
+async function salvarListaLinks() {
+  if (!linksGerados.length) {
+    alert('⚠️ Nenhum link gerado para salvar.');
+    return;
+  }
+
+  try {
+    setStatus('', '💾 Salvando lista interna de links...');
+
+    const payload = {
+      tipo: 'GERADOR',
+      filtroResumo: montarResumoFiltro(),
+      links: linksGerados
+    };
+
+    const json = await fetchSeguro('/api/salvar-lista-links', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!json.url) {
+      throw new Error('Lista salva, mas URL não retornada.');
+    }
+
+    const abrirAgora = confirm(
+      `✅ Lista salva com ${json.total || linksGerados.length} link(s).\n\nDeseja abrir a página da lista agora?`
+    );
+
+    try {
+      await navigator.clipboard.writeText(json.url);
+      setStatus('ok', `✅ Lista salva. URL copiada: <a href="${json.url}" target="_blank">${json.url}</a>`);
+    } catch {
+      setStatus('ok', `✅ Lista salva: <a href="${json.url}" target="_blank">${json.url}</a>`);
+    }
+
+    if (abrirAgora) {
+      window.open(json.url, '_blank');
+    }
+
+  } catch (err) {
+    console.error('❌ ERRO SALVAR LISTA:', err);
+    setStatus('erro', `❌ ${err.message}`);
+  }
+}
+
+// compatibilidade com nomes alternativos de botão
+function salvarLista() {
+  salvarListaLinks();
+}
+
+function salvarLinks() {
+  salvarListaLinks();
 }
 
 // =========================

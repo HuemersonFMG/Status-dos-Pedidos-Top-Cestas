@@ -60,17 +60,6 @@ function classeStatus(status) {
   return mapa[st] || "";
 }
 
-function classeStatus(status) {
-  const mapa = {
-    "AGUARDANDO ROTA": "warn",
-    "NOTA EMITIDA": "nota-emitida",
-    "ENTREGANDO": "ok",
-    "ENTREGUE": "ok"
-  };
-
-  return mapa[status] || "";
-}
-
 // =========================
 // 🛡️ FETCH
 // =========================

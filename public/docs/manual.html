@@ -239,6 +239,42 @@
             color: #d63384; /* Cor do texto */
             font-size: 14px; /* Tamanho da fonte */
         }
+
+        /*Botao Topo*/
+        #scrollToTopBtn{
+            display:none;
+            position:fixed;
+            bottom:25px;
+            right:25px;
+            z-index:9999;
+
+            width:25px;
+            height:25px;
+
+            border:none;
+            border-radius:50%;
+
+            background:linear-gradient(to right,rgb(243, 98, 54),rgb(199, 50, 44));
+
+            color:white;
+            font-size:24px;
+            font-weight:bold;
+
+            cursor:pointer;
+
+            box-shadow:0 4px 12px rgba(0,0,0,0.25);
+
+            transition:all 0.25s ease;
+        }
+
+        #scrollToTopBtn:hover{
+            transform:translateY(-3px);
+            opacity:0.92;
+        }
+
+        #scrollToTopBtn::before{
+            content:"↑";
+        }
     </style>
 </head>
 
@@ -252,11 +288,33 @@
           <h1>Top Cestas - Manual do Usuário</h1>
           <span>Sistema de Rastreamento de Pedidos e Entregas - v1.6.0</span>
         </div>
-      </header>
+    </header>
 
     <div class="container">
         <section class="card">
-            <h3>📘 Visão Geral do Sistema</h3>
+            <h4>Indece:</h4>
+            <ul>
+                <li><a href="#Visão Geral do Sistema">Visão Geral do Sistema</a></li>
+                <li><a href="#Login Administrativo">Login Administrativo</a></li>
+                <li><a href="#Módulo Gerador de Links">Módulo Gerador de Links</a></li>
+                <li><a href="#automação">Sugestões para tornar os envios automáticos pelo Sankhya</a></li>
+                <li><a href="#Gerar links de pedidos">Gerarando links de pedidos</a></li>
+                <li><a href="#Gerador Comercial">Modulo espeicial - Gerador Comercial - Lote PAP</a></li>
+                <li><a href="#Página de Rastreamento do Cliente">Página de Rastreamento do Cliente - <strong>Tracking</strong></a></li>
+                <li><a href="#Download de Comprovantes em ZIP">Download de Comprovantes de entrega: <strong>Arquvio ZIP</strong></a></li>
+                <li><a href="#Funcionamento Técnico da API">Funcionamento Técnico da API - Manutenção</a></li>
+                <li><a href="#Segurança e Controle de Acesso">Segurança e Controle de Acesso</a></li>
+                <li><a href="#Pontos alinhados com a LGPD">Pontos alinhados com a LGPD</a></li>
+                <li><a href="#Informaçoes de implementaçoes - Versão">Informaçoes de implementaçoes - Versão</a></li>
+                <li><a href="#Conclusão">Conclusão</a></li>
+            </ul>
+        </section>
+
+    </div>
+
+    <div class="container">
+        <section class="card">
+            <h3 id="Visão Geral do Sistema">📘 Visão Geral do Sistema</h3>
             <p>O sistema de rastreamento da <strong>Top Alimentos</strong> foi desenvolvido para permitir o acompanhamento dos pedidos realizados pelos clientes, exibindo o status atualizado da entrega diretamente a partir do ERP Sankhya.</p>
             <div class="highlight2">
                 <h2>O sistema possui quatro módulos principais:</h2>
@@ -277,7 +335,7 @@
         </section>
 
         <section class="card">
-            <h2>🔐 Login Administrativo</h2>
+            <h2 id="Login Administrativo">🔐 Login Administrativo</h2>
             <p>Antes de acessar o <strong>gerador.html</strong> ou o <strong>geradorcomercial.html</strong>, o usuário interno deve informar usuário e senha do Sankhya.</p>
 
             <h3>📌 Objetivo</h3>
@@ -292,6 +350,7 @@
                 <li>Se o login estiver correto, o sistema libera o acesso ao gerador.</li>
                 <li>Se a senha estiver incorreta, o sistema permanece na tela de login.</li>
                 <li>Após várias tentativas inválidas, o login pode ficar bloqueado temporariamente.</li>
+                <li><a href="#Status Possíveis"></a>Sobre os <strong>Status Possíveis</strong> para os pedidos</li>
             </ul>
 
             <div class="card2">
@@ -300,7 +359,7 @@
         </section>
 
         <section class="card">
-            <h2>🔗 Módulo Gerador de Links</h2>
+            <h2 id="Módulo Gerador de Links">🔗 Módulo Gerador de Links</h2>
             <p>O arquivo <strong>gerador.html</strong> é utilizado pela equipe da Top Alimentos para gerar links individuais ou em lote para os clientes.</p>
 
             <h3>📌 Objetivo</h3>
@@ -333,13 +392,32 @@
                     <td>Busca pedidos pela data de liberação dos pedidos <span  class="txmsombras">Fluxo PCP</span>. Seria como dizer que está buscando pela data de Produção, neste caso serão listados tanto entregas diretas no Cliente como as entregas em residência.</td>
                 </tr>
             </table>
-            <div class="highlight2">
+            <div class="highlight2" id="automação">
                 <p><strong>É importante observar que o rastreamento de um pedido deve   iniciar a partir da informação de que o produto foi produzido (Cesta, Kit Higine ou outros), na Top Cestas identificamos esta data como sendo a data de <span   class="txmsombras">liberação dos Pedidos no PCP</span>, o que gera uma Nota Temporária.</strong></p>
                 <hr>
                 <p>Ainda está em análise o processo de <strong>automação</strong>, ou seja, a intenção é que os links de rastreio sejam enviados ao cliente de forma totalmente automática, e esta automação dever ser previsata no <strong>fluxo</strong>. Desta forma para <span class="txmsombras">Entregas Diretas</span> e <span class="txmsombras">Auto Distribuição</span> seria a partir do momento em que o pedido é confirmado gerando a Nota de Venda (<strong>Temporária</strong>). Para as <span class="txmsombras">Multi Entregas</span> e <strong class="txmsombras">Porta a Porta</strong> este link deve ser gerdo assim que o reultado do Planejamento de entregas for cofirmado, ou seja na confirmação das <strong>remessas</strong>.</p>
+                <div  class="highlight2">
+                    <h2>Regras sugeridas:</h2>
+                    <ul><h4>O ponto correto para disparar é quando o documento já representa entrega real.</h4>
+                        <li><strong>ED / RT / AD:</strong>
+                            Gerar link quando o fluxo transformar pedido de venda em nota de venda com TOP onde AD_FUSION = 'S'.</li>
+                        <li><strong>ME:</strong>
+                            Gerar link para as notas/remessas que aparecem na rota, não para a nota de cobrança se ela não sobe para rota.
+                            </li>
+                        <li><strong>PAP:</strong>
+                            Gerar link para as remessas/pedidos TOP 1004 quando AD_FUSION = 'S' e vinculadas aos contatos participantes do planejamento.
+                            </li>
+                        <li><strong>Refrenicas de ontatos:</strong>
+                            Usar TGFCAB.CODCONTATO + TGFCAB.CODPARC para buscar TGFCTT, validando se é o contato correto/participante do planejamento.</li>
+                    </ul>
+                    <p>A <strong>API Node</strong> não deve “<span class="txmsombras">adivinhar</span> ” tudo varrendo 30.000 registros sem controle. O Sankhya ou uma rotina agendada deve apenas registrar os documentos elegíveis na fila. Depois o Node processa em lote, gera os links e envia e-mail/WhatsApp de acordo com o cadastro de contatos dos parceiros.</p>
+                    <div class="highlight3">
+                        <p><strong>Ponto importante:</strong> não colocar envio de WhatsApp/e-mail dentro da confirmação/faturamento. Isso pode travar o fluxo. O correto seria Gravar fila e processar posteriormente.</p>
+                    </div>
+                </div>
             </div>
 
-            <h3>⚙️ Como Utilizar</h3>
+            <h3 id="Gerar links de pedidos">⚙️ Como Utilizar - Gerar links de pedidos</h3>
             <ul>
                 <li>Abra o módulo Gerador de Links.</li>
                 <li>Informe usuário e senha do Sankhya, caso solicitado.</li>
@@ -372,7 +450,7 @@
 
         <section class="card">
             <div class="highlight2">
-                <h2>👨‍💼 Gerador Comercial</h2>
+                <h2 id="Gerador Comercial">👨‍💼 Gerador Comercial</h2>
                 <p>A tela <strong>Gerador Comercial</strong> é utilizada para geração de links em lote com foco em operações comerciais, campanhas e principalmente entregas PAP, onde o pedido deve conter além do CNPJ/CPF a informação de Período de Entrega.</p>
             </div>
 
@@ -416,7 +494,7 @@
 
         <section class="card">
             <div class="highlight2">
-                <h2>📦 Página de Rastreamento do Cliente</h2>
+                <h2 id="Página de Rastreamento do Cliente">📦 Página de Rastreamento do Cliente</h2>
                 <p>A página <strong>Status do Pedido</strong> cujo link foi devidamente gerado, é acessada diretamente pelo cliente para o qual o link foi enviado, no momento este envio será feito manualmente mas já estamos trabalhando em um processo de automação. Por segurança o link possui o numero do Pedido e uma <code class="codeA">Hash SHA-256 do pedido</code> que valida acesso ao pedido, protege o link e impede acesso direto apenas pelo número do pedido evitando que um cliente consiga abrir o rastreador de outro cliente.</p>
             </div>
 
@@ -433,7 +511,7 @@
                 <li>Comprovante da Entrega - Quando Canhoto da NFe ou CTE da Transpotadora não possui dados Pessoais, mas no <strong>Comprovante PAP</strong> já teremos <strong style="color: #721c24;">Dados Pessoais.</strong></li>
             </ul>
 
-            <h3>📍 Status Possíveis</h3>
+            <h3 id="Status Possíveis">📍 Status Possíveis</h3>
             <p><span class="tag erro">Aguardando rota</span>🧺 Sua cesta foi produzida e aguarda transporte..</p>
             <p><span class="tag warn">Emtregamdo</span>🚚 Sua Cesta foi entregue a Transportadora.</p>
             <p><span class="tag warn">Nota Emitida</span>🧾 Sua Nota Fiscal foi emitida e o pedido está pronto para entrega.</p>
@@ -453,7 +531,7 @@
         </section>
 
         <section class="card">
-            <h2>📁 Download de Comprovantes em ZIP</h2>
+            <h2 id="Download de Comprovantes em ZIP">📁 Download de Comprovantes em ZIP</h2>
             <p>O sistema atual permite baixar todos os comprovantes disponíveis da lista gerada em um único arquivo ZIP.</p>
 
             <h3>📌 Como Funciona</h3>
@@ -487,7 +565,7 @@ Comprovante_543013_MARIA_APARECIDA.jpg
         </section>
 
         <section class="card">
-            <h2>⚙️ Funcionamento Técnico da API || Para avaliação e supote TI.</h2>
+            <h2 id="Funcionamento Técnico da API">⚙️ Funcionamento Técnico da API || Para avaliação e supote TI.</h2>
             <h3>📡 Backend</h3>
             <p>O backend foi desenvolvido em:</p>
 
@@ -558,7 +636,7 @@ Comprovante_543013_MARIA_APARECIDA.jpg
         </section>
 
         <section class="card">
-            <h2>🔐 Segurança e Controle de Acesso || Para avaliação e suporte TI.</h2>
+            <h2 id="Segurança e Controle de Acesso">🔐 Segurança e Controle de Acesso || Para avaliação e suporte TI.</h2>
             <h3>✅ Pontos Fortes</h3>
             <ul>
                 <li>Uso de tokens SHA-256 para proteção dos links dos clientes.</li>
@@ -596,7 +674,7 @@ Comprovante_543013_MARIA_APARECIDA.jpg
         </section>
 
         <section class="card">
-            <h2>Pontos alinhados com a LGPD</h2>
+            <h2 id="Pontos alinhados com a LGPD">Pontos alinhados com a LGPD</h2>
             <ul><h3>A aplicação manipula:</h3>
                 <li>Nome do cliente</li>
                 <li>CPF/CNPJ</li>
@@ -698,7 +776,7 @@ Comprovante_543013_MARIA_APARECIDA.jpg
         </section>
 
         <section class="card2">
-            <h2 class="container">📚 Informaçoes de implementaçoes - Versão</h2>
+            <h2 class="container" id="Informaçoes de implementaçoes - Versão">📚 Informaçoes de implementaçoes - Versão</h2>
             <div class="highlight3">
                 <div class="container">
                     <ul>
@@ -759,7 +837,7 @@ Comprovante_543013_MARIA_APARECIDA.jpg
         </section>
 
         <section class="highlight3">
-            <h2>✅ Conclusão</h2>
+            <h2 id="Conclusão">✅ Conclusão</h2>
             <p>O sistema de rastreamento da Top Alimentos fornece uma solução moderna e eficiente para acompanhamento de pedidos em tempo real utilizando integração direta com o ERP Sankhya.</p>
             <p>A arquitetura atual atende o processo operacional de geração de links, acompanhamento de entregas, visualização de comprovantes e download em lote.</p>
             <p>As melhorias recentes aumentaram a segurança e a usabilidade do projeto, principalmente com login administrativo Sankhya, Gerador Comercial, download ZIP e nomenclatura dos comprovantes com pedido e parceiro.</p>
@@ -767,5 +845,61 @@ Comprovante_543013_MARIA_APARECIDA.jpg
     </div>
 
     <footer>Top Cestas Track © 2026 - Sistema de rastreamento integrado Sankhya ERP</footer>
+    <div class="BotaoTopo">
+        <!-- Botão flutuante -->
+        <button id="scrollToTopBtn" title="Voltar ao topo"></button>
+    </div>
+    <script>
+        // =========================
+        // 🔝 BOTÃO VOLTAR AO TOPO
+        // =========================
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const scrollToTopBtn =
+                document.getElementById('scrollToTopBtn');
+
+            // segurança caso o botão não exista
+            if (!scrollToTopBtn) {
+                console.warn('Botão scrollToTopBtn não encontrado.');
+                return;
+            }
+
+            // inicia oculto
+            scrollToTopBtn.style.display = 'none';
+
+            // mostra/esconde botão ao rolar
+            window.addEventListener('scroll', () => {
+
+                const scrollAtual =
+                    window.pageYOffset ||
+                    document.documentElement.scrollTop;
+
+                if (scrollAtual > 250) {
+
+                    scrollToTopBtn.style.display = 'flex';
+
+                } else {
+
+                    scrollToTopBtn.style.display = 'none';
+                }
+            });
+
+            // ação do botão
+            scrollToTopBtn.addEventListener('click', () => {
+
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+
+        });
+
+        // =========================
+        // ❌ REMOVIDO
+        // run-button inexistente
+        // =========================
+    </script>
 </body>
 </html>
