@@ -484,7 +484,7 @@ async function baixarTodos() {
 }
 
 //-----------------------------------------------
-// ABRIR MANUALMENTE
+// ABRIR MANUALMENTE pa
 //-----------------------------------------------
 function abrirManual() {
   window.open('/docs/manual.html', '_blank');
