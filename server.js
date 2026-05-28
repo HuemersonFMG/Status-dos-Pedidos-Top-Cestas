@@ -981,18 +981,29 @@ app.post('/api/gerar-links', requireAdminApi, async (req, res) => {
 
 app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
   try {
-    const { cnpj, periodoPap } = req.body;
+    const { cnpj, cnpjs, periodoPap } = req.body;
 
-    const documento = (cnpj || '').replace(/\D/g, '');
+    const documentos = Array.isArray(cnpjs)
+      ? cnpjs
+      : String(cnpj || '').split(/[;,
+
+	]+/);
+
+    const documentosLimpos = [...new Set(
+      documentos
+        .map(doc => String(doc || '').replace(/\D/g, ''))
+        .filter(Boolean)
+    )];
+
     const periodo = String(periodoPap || '').trim();
 
-    if (!documento && !periodo) {
+    if (!documentosLimpos.length && !periodo) {
       return res.status(400).json({
         erro: 'Informe CPF/CNPJ e Período PAP'
       });
     }
 
-    if (!documento) {
+    if (!documentosLimpos.length) {
       return res.status(400).json({
         erro: 'Informe CPF/CNPJ'
       });
@@ -1004,11 +1015,15 @@ app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
       });
     }
 
-    if (documento.length !== 11 && documento.length !== 14) {
+    const documentosInvalidos = documentosLimpos.filter(doc => doc.length !== 11 && doc.length !== 14);
+
+    if (documentosInvalidos.length) {
       return res.status(400).json({
-        erro: 'CPF/CNPJ inválido'
+        erro: `CPF/CNPJ inválido: ${documentosInvalidos.join(', ')}`
       });
     }
+
+    const documentosSet = new Set(documentosLimpos);
 
     const cookie = await login();
     const lista = await carregarViewLight(cookie);
@@ -1018,7 +1033,7 @@ app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
       const periodoRegistro = String(r.AD_PERIODO_PAP?.$ || '').trim();
 
       return (
-        doc === documento &&
+        documentosSet.has(doc) &&
         periodoRegistro === periodo
       );
     });
@@ -1028,6 +1043,7 @@ app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
 
     res.json({
       total: links.length,
+      documentos: documentosLimpos,
       links
     });
 
@@ -1378,4 +1394,4 @@ app.listen(
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📱 Local: http://localhost:${PORT}`);
   }
-);
+); 

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual Técnico - Etiquetas de Cestas</title>
+
+  <style>
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      font-family:Arial,sans-serif;
+      background:#f4f6f8;
+      color:#222;
+      line-height:1.6;
+    }
+
+    header{
+      background:linear-gradient(to right,rgb(243,54,54),orange);
+      color:white;
+      padding:20px 30px;
+      box-shadow:0 2px 10px rgba(0,0,0,.15);
+    }
+
+    header h1{
+      margin:0;
+      font-size:26px;
+    }
+
+    header span{
+      font-size:14px;
+      opacity:.9;
+    }
+
+    .container{
+      width:94%;
+      margin:35px auto;
+      background:white;
+      border-radius:14px;
+      padding:30px;
+      box-shadow:0 0 18px rgba(0,0,0,.08);
+    }
+
+    h2{
+      color:#234b72;
+      border-left:8px solid orange;
+      padding-left:14px;
+      margin-top:35px;
+    }
+
+    h3{
+      color:#ff6600;
+      margin-top:25px;
+    }
+
+    .highlight{
+      background:#e9ecfa;
+      border:4px solid #7d93f5;
+      border-radius:12px;
+      padding:15px;
+      margin:20px 0;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin:20px 0;
+    }
+
+    th{
+      background:#234b72;
+      color:white;
+      text-align:left;
+      padding:12px;
+    }
+
+    td{
+      border-bottom:1px solid #ddd;
+      padding:10px;
+    }
+
+    code,
+    .code{
+      display:block;
+      background:#1e1e1e;
+      color:#00ff88;
+      padding:15px;
+      border-radius:8px;
+      margin:15px 0;
+      font-family:Consolas,monospace;
+      white-space:pre-wrap;
+    }
+
+    .fluxo{
+      background:#f8f9fb;
+      border-left:6px solid #4a87fa;
+      padding:18px;
+      border-radius:8px;
+      margin:20px 0;
+    }
+
+    .etiqueta-demo{
+      width:430px;
+      max-width:100%;
+      border:2px solid red;
+      padding:8px;
+      margin:25px auto;
+      background:white;
+      color:#000;
+      font-size:11px;
+    }
+
+    .linha-topo{
+      display:grid;
+      grid-template-columns:80px 1fr 60px;
+      border-bottom:1px solid red;
+      gap:6px;
+      align-items:center;
+    }
+
+    .logo-demo{
+      font-weight:bold;
+      color:white;
+      background:#d00;
+      border-radius:50%;
+      text-align:center;
+      padding:10px 0;
+    }
+
+    .titulo-demo{
+      text-align:center;
+      font-weight:bold;
+      color:red;
+      font-size:13px;
+    }
+
+    .grid-demo{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      border-bottom:1px solid red;
+    }
+
+    .campo-demo{
+      border-right:1px solid red;
+      padding:3px;
+      min-height:28px;
+    }
+
+    .campo-demo:last-child{
+      border-right:none;
+    }
+
+    .campo-demo span{
+      display:block;
+      color:red;
+      font-size:9px;
+    }
+
+    .modelo-demo{
+      text-align:center;
+      font-size:30px;
+      font-weight:bold;
+      padding:10px;
+    }
+
+    .descricao-demo{
+      text-align:center;
+      font-weight:bold;
+      font-size:16px;
+    }
+
+    footer{
+      background:linear-gradient(to right,rgb(243,54,54),orange);
+      color:white;
+      text-align:center;
+      padding:15px;
+      margin-top:30px;
+      font-size:13px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Módulo de Etiquetas de Cestas acabadas - Implementação via API</h1>
+  <span>Mapeamento de dados Sankhya para geração de etiquetas de produção e separação</span>
+</header>
+
+<div class="container">
+
+  <section>
+    <h2>1. Objetivo</h2>
+    <p>
+      Este documento descreve o mapeamento técnico necessário para criação do módulo
+      web de geração de etiquetas de cestas, substituindo a aplicação desktop atual e
+      eliminando a necessidade de servidor local.
+    </p>
+
+    <div class="highlight">
+      <strong>Resumo:</strong>
+      Gerar etiquetas de controle de produção e separação a partir do número único do pedido,
+      buscando os dados diretamente no Sankhya ERP, eliminando ao máximo a entrada de dados manualmente
+      e eliminando a aplicação desktop com servidor local. Com a finalidade de implementação via API
+      para um servidor em nuvem que atenda a demanda para todas as unidades sem precisar intalação direto
+      nas máqunas locais, melhorando o processo de manutenção e atualizações.
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Mapeamento recomendado</h2>
+
+    <table>
+      <tr>
+        <th>Informação</th>
+        <th>Origem Sankhya</th>
+        <th>Observação</th>
+      </tr>
+      <tr>
+        <td>Composição / Modelo</td>
+        <td>TGFPRO.CODPROD</td>
+        <td>Código do produto/cesta usado como modelo da etiqueta.</td>
+      </tr>
+      <tr>
+        <td>Total de Cestas</td>
+        <td>TGFCAB.QTDVOL</td>
+        <td>Quantidade total de volumes/cestas do pedido.</td>
+      </tr>
+      <tr>
+        <td>Cestas por Palete</td>
+        <td>Tela adicional / campo customizado</td>
+        <td>Informação operacional necessária para quebrar as etiquetas por palete.</td>
+      </tr>
+      <tr>
+        <td>Descrição da Cesta</td>
+        <td>TGFPRO.DESCRPROD</td>
+        <td>Descrição do produto/modelo da cesta.</td>
+      </tr>
+      <tr>
+        <td>Peso</td>
+        <td>TGFCAB.PESOBRUTO</td>
+        <td>Peso bruto total do pedido.</td>
+      </tr>
+      <tr>
+        <td>Valor</td>
+        <td>TGFCAB.VLRNOTA</td>
+        <td>Valor total da nota/pedido.</td>
+      </tr>
+      <tr>
+        <td>Data de Transferência</td>
+        <td>Tela adicional / campo customizado</td>
+        <td>Data operacional definida pela produção/logística.</td>
+      </tr>
+      <tr>
+        <td>Data de Entrega</td>
+        <td>Data transferência + 1</td>
+        <td>Campo calculado automaticamente, mas editável pelo usuário.</td>
+      </tr>
+      <tr>
+        <td>Conferente</td>
+        <td>Tela adicional / campo customizado</td>
+        <td>Responsável pela conferência.</td>
+      </tr>
+      <tr>
+        <td>Transporte</td>
+        <td>Tela adicional / campo customizado</td>
+        <td>Responsável pelo transporte ou carregamento.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. Regra de geração das linhas</h2>
+
+    <p>
+      O sistema deve gerar automaticamente as linhas de etiquetas com base no total de cestas
+      e na quantidade de cestas por palete.
+    </p>
+
+    <div class="code">
+TOTAL_PALETES = CEIL(TOTAL_CESTAS / CESTAS_POR_PALETE)
+
+Exemplo:
+TOTAL_CESTAS = 60
+CESTAS_POR_PALETE = 29
+
+TOTAL_PALETES = 3
+
+Linha 1 = 29 cestas
+Linha 2 = 29 cestas
+Linha 3 = 2 cestas
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Comportamento esperado da tela</h2>
+
+    <div class="fluxo">
+      Usuário informa NUNOTA<br>
+      ↓<br>
+      Sistema busca dados no Sankhya<br>
+      ↓<br>
+      Sistema preenche composição, descrição, peso, valor e total de cestas<br>
+      ↓<br>
+      Usuário informa ou ajusta cestas por palete, data, conferente e transporte<br>
+      ↓<br>
+      Usuário clica em Gerar<br>
+      ↓<br>
+      Sistema gera as linhas por palete<br>
+      ↓<br>
+      Usuário imprime as etiquetas
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Modelo visual da etiqueta impressa</h2>
+
+    <p>
+      A parte gráfica em vermelho já vem impressa pela gráfica. O sistema deve apenas preencher
+      os campos variáveis nas posições correspondentes.
+    </p>
+
+    <div class="etiqueta-demo">
+      <div class="linha-topo">
+        <div class="logo-demo">TOP</div>
+        <div class="titulo-demo">CONTROLE DE CESTAS</div>
+        <div><strong>Nº:</strong></div>
+      </div>
+
+      <div class="grid-demo">
+        <div class="campo-demo">
+          <span>Modelo</span>
+          123456
+        </div>
+        <div class="campo-demo">
+          <span>Total Cestas</span>
+          60
+        </div>
+        <div class="campo-demo">
+          <span>Palete</span>
+          1 de 3
+        </div>
+        <div class="campo-demo">
+          <span>Cestas por Palete</span>
+          29
+        </div>
+      </div>
+
+      <div class="grid-demo">
+        <div class="campo-demo">
+          <span>Data Transf.</span>
+          25/05/2026
+        </div>
+        <div class="campo-demo">
+          <span>Data Entrega</span>
+          26/05/2026
+        </div>
+        <div class="campo-demo">
+          <span>Transporte</span>
+          ALDENIR
+        </div>
+        <div class="campo-demo">
+          <span>Conferente</span>
+          DANIELA
+        </div>
+      </div>
+
+      <div class="modelo-demo">123456</div>
+      <div class="descricao-demo">CESTA MODELO</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. View sugerida</h2>
+
+    <p>
+      Recomenda-se criar uma View leve, consultada sempre por NUNOTA.
+    </p>
+
+    <div class="code">
+        CREATE OR REPLACE VIEW VW_ETIQUETAS_CESTAS AS
+SELECT
+    1 AS DON,
+    CAB.NUNOTA,
+    CAB.NUMNOTA,
+    CAB.CODPARC,
+    PAR.NOMEPARC,
+    I.CODPROD AS CODPROD_COMPOSICAO,
+    P.DESCRPROD AS COMPOSICAO,
+    CAB.QTDVOL AS TOTAL_CESTAS,
+    CAB.PESOBRUTO AS PESO,
+    CAB.VLRNOTA AS VALOR,
+    CAB.DTNEG,
+    CAB.CODTIPOPER,
+    CAB.DHTIPOPER
+FROM TGFCAB CAB
+INNER JOIN TGFPAR PAR
+    ON PAR.CODPARC = CAB.CODPARC
+LEFT JOIN TGFITE I
+    ON I.NUNOTA = CAB.NUNOTA
+   AND I.USOPROD = 'V'
+LEFT JOIN TGFPRO P
+    ON P.CODPROD = I.CODPROD
+WHERE 1 = 1
+AND CAB.QTDVOL > 0;
+    </div>
+  </section>
+
+  <section>
+    <h2>7. Campos pendentes de definição</h2>
+
+    <table>
+      <tr>
+        <th>Campo</th>
+        <th>Recomendação</th>
+      </tr>
+      <tr>
+        <td>Cestas por Palete</td>
+        <td>Criar campo adicional ou tabela auxiliar de configuração operacional.</td>
+      </tr>
+      <tr>
+        <td>Data de Transferência</td>
+        <td>Campo editável na tela web ou origem em tabela adicional.</td>
+      </tr>
+      <tr>
+        <td>Conferente</td>
+        <td>Lista fixa, cadastro auxiliar ou campo adicional.</td>
+      </tr>
+      <tr>
+        <td>Transporte</td>
+        <td>Lista fixa, cadastro auxiliar ou campo adicional.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>8. Recomendação de implementação</h2>
+
+    <div class="highlight">
+      <p>
+        A primeira versão deve apenas consultar o Sankhya, gerar as linhas e imprimir as etiquetas.
+        Não é recomendado gravar ou alterar dados fiscais, financeiros, estoque ou pedido nesta fase.
+      </p>
+    </div>
+
+    <div class="code">
+Arquivos sugeridos:
+
+etiquetas.html
+Styles/etiquetas.js
+
+Rotas sugeridas:
+
+POST /api/etiquetas/buscar-pedido
+POST /api/etiquetas/gerar-linhas
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Top Cestas Track © 2026 - Manual Técnico de Etiquetas
+</footer>
+
+</body>
+</html>

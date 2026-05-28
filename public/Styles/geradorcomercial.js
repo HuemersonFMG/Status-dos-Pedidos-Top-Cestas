@@ -27,6 +27,17 @@ function limparDoc(valor) {
   return (valor || '').replace(/\D/g, '');
 }
 
+function limparDocs(valor) {
+  return String(valor || '')
+    .split(/[;,\n\r\t]+/)
+    .map(v => v.replace(/\D/g, ''))
+    .filter(Boolean);
+}
+
+function formatarListaDocs(docs) {
+  return docs && docs.length ? docs.join(', ') : '-';
+}
+
 function extrairValor(valor) {
   if (valor && typeof valor === 'object' && '$' in valor) {
     return valor.$ || '';
@@ -145,10 +156,10 @@ function tratarSessaoExpirada(response) {
 }
 
 function montarResumoFiltroComercial() {
-  const documento = limparDoc(cnpjInput.value);
+  const documentos = limparDocs(cnpjInput.value);
   const periodoPap = periodoPapInput.value.trim();
 
-  return `CPF/CNPJ: ${documento || '-'} | Período PAP: ${periodoPap || '-'}`;
+  return `CPF/CNPJ: ${formatarListaDocs(documentos)} | Período PAP: ${periodoPap || '-'}`;
 }
 
 async function fetchSeguro(url, options = {}) {
@@ -206,16 +217,16 @@ function limpar() {
 async function gerar() {
   limparResultado();
 
-  const documento = limparDoc(cnpjInput.value);
+  const documentos = limparDocs(cnpjInput.value);
   const periodoPap = periodoPapInput.value.trim();
 
-  if (!documento && !periodoPap) {
-    setStatus('erro', '❌ Informe o CPF/CNPJ e o Período PAP');
+  if (!documentos.length && !periodoPap) {
+    setStatus('erro', '❌ Informe o(s) CPF/CNPJ e o Período PAP');
     return;
   }
 
-  if (!documento) {
-    setStatus('erro', '❌ Informe o CPF/CNPJ');
+  if (!documentos.length) {
+    setStatus('erro', '❌ Informe ao menos um CPF/CNPJ');
     return;
   }
 
@@ -224,8 +235,10 @@ async function gerar() {
     return;
   }
 
-  if (documento.length !== 11 && documento.length !== 14) {
-    setStatus('erro', '❌ CPF/CNPJ inválido');
+  const documentosInvalidos = documentos.filter(doc => doc.length !== 11 && doc.length !== 14);
+
+  if (documentosInvalidos.length) {
+    setStatus('erro', `❌ CPF/CNPJ inválido: ${documentosInvalidos.join(', ')}`);
     return;
   }
 
@@ -233,7 +246,8 @@ async function gerar() {
 
   try {
     const payload = {
-      cnpj: documento,
+      cnpj: documentos.join(','),
+      cnpjs: documentos,
       periodoPap: periodoPap
     };
 
