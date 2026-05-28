@@ -983,14 +983,12 @@ app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
   try {
     const { cnpj, cnpjs, periodoPap } = req.body;
 
-    const documentos = Array.isArray(cnpjs)
+    const documentosOrigem = Array.isArray(cnpjs)
       ? cnpjs
-      : String(cnpj || '').split(/[;,
-
-	]+/);
+      : String(cnpj || '').split(/[;,\n\r\t]+/);
 
     const documentosLimpos = [...new Set(
-      documentos
+      documentosOrigem
         .map(doc => String(doc || '').replace(/\D/g, ''))
         .filter(Boolean)
     )];
@@ -1394,4 +1392,4 @@ app.listen(
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📱 Local: http://localhost:${PORT}`);
   }
-); 
+);
