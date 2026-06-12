@@ -310,9 +310,6 @@ async function salvarLinkPedidoCrud(cookie, seq, nunota, link) {
         includePresentationFields: 'N',
         dataRow: {
           localFields: {
-            SEQ: {
-              $: String(seq)
-            },
             NUNOTA: {
               $: String(nunota)
             },
@@ -371,13 +368,7 @@ async function gravarLinksPedidos(cookie, links) {
       continue;
     }
 
-    let seq = await buscarSeqLinkPedido(cookie, nunota);
-
-    if (!seq) {
-      seq = await buscarProximaSeqLinkPedido(cookie);
-    }
-
-    await salvarLinkPedidoCrud(cookie, seq, nunota, link);
+    await salvarLinkPedidoCrud(cookie, null, nunota, link);
 
     totalGravado++;
   }
