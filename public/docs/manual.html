@@ -66,6 +66,21 @@
             transition: 0.2s;
         }
 
+        .btn-manual-full{
+            flex-basis:100%;
+            display:flex;
+            justify-content:flex-end;
+            gap:20px;
+        }
+
+        .btn-manual {
+            background: #fa7b13;
+            color: #ffffff;
+        }
+
+        .btn-manual:hover {
+            background: #964401;
+        }
 
         /* CONTAINER */
         .container{
@@ -198,6 +213,17 @@
                         -2px -2px 4px rgba(17, 0, 255, 0.5);
         }
 
+        .highlight {
+            background-color: #c2ccf7;
+            padding: 10px;
+            padding-left: 10px;
+            padding-right: 10px;
+            border-left: 4px solid #012203 ;
+            border-right: 4px solid #012203;
+            margin: 0.5px 0;
+            border-radius: 15px;
+        }
+
         .highlight2 {
             background-color: #e9ecfa;
             padding: 10px;
@@ -286,8 +312,12 @@
           </a>
 
           <h1>Top Cestas - Manual do Usuário</h1>
-          <span>Sistema de Rastreamento de Pedidos e Entregas - v1.6.0</span>
+          <span>Sistema de Rastreamento de Pedidos e Entregas - v1.6.2</span>
         </div>
+
+        <div class="header-actions">
+            <button class="btn-manual" onclick="voltarGerador()">Iniciar Gerador de links</button>
+          </div>
     </header>
 
     <div class="container">
@@ -299,7 +329,8 @@
                 <li><a href="#Módulo Gerador de Links">Módulo Gerador de Links</a></li>
                 <li><a href="#automação">Sugestões para tornar os envios automáticos pelo Sankhya</a></li>
                 <li><a href="#Gerar links de pedidos">Gerarando links de pedidos</a></li>
-                <li><a href="#Gerador Comercial">Modulo espeicial - Gerador Comercial - Lote PAP</a></li>
+                <li><a href="#Gerador Comercial">Modulo especial - Gerador Comercial - Lote PAP</a></li>
+                <li><a href="#Gerador de lista">Modulo especial - Gerador de lista de links - Lote PAP</a></li>
                 <li><a href="#Página de Rastreamento do Cliente">Página de Rastreamento do Cliente - <strong>Tracking</strong></a></li>
                 <li><a href="#Download de Comprovantes em ZIP">Download de Comprovantes de entrega: <strong>Arquvio ZIP</strong></a></li>
                 <li><a href="#Funcionamento Técnico da API">Funcionamento Técnico da API - Manutenção</a></li>
@@ -324,6 +355,10 @@
                     <li><strong>Gerador de Links</strong>: Utilizado pela equipe interna para gerar links de rastreamento de pedidos de entrega direta no cliente, por: CPF/CNPJ, ordem de carga, pedidos, NF-e ou data de produção. Neste caso gerar via CNPJ_CPF é indicado para clientes Simples descarga.</li>
                     <li><strong>Gerador Comercial</strong>: utilizado para gerar links de pedidos Porta a Porta onde o volume de remessas é muito alto e o que destaca neste processo é a informação de (Período de Entregas), possuindo os filtros combinados por CPF/CNPJ e Período PAP.</li>
                     <li><strong>Página do Cliente</strong>: onde o cliente acompanha o status do pedido sem precisar de login.</li>
+                    <div class="highlight">
+                        <h2 style="font-size: 1.3rem;">Modulo complementar: <strong>Lista</strong> - Gera um link a partir do filtro já aplicado.</h2>
+                        <span>A aplicação conta com um <strong>modulo de lista</strong>, o usuário pode gerar um link com uma lista de <strong>vários links filhos</strong> para envio direto ao <span class="txmsombras">RH do Cliente</span>, este modulo é mais apropriado para as entregas em residênica. Desta forma para as entregas <code class="codeA">Porta a Porta</code> o RH Cliente terá listado todos os comprovantes de entrega já com o <strong>nome de cada colaborador</strong> em cada link e com a opção de baixar todos os comprovantes em lote que serão salvos em um <code class="codeA">arquivo Zip</code>, cada comprovante também receberá o <span class="txmsombras">nome do seu colaborador</span>.</span>
+                    </div>
                 </ul>
             </div>
 
@@ -411,6 +446,13 @@
                             Usar TGFCAB.CODCONTATO + TGFCAB.CODPARC para buscar TGFCTT, validando se é o contato correto/participante do planejamento.</li>
                     </ul>
                     <p>A <strong>API Node</strong> não deve “<span class="txmsombras">adivinhar</span> ” tudo varrendo 30.000 registros sem controle. O Sankhya ou uma rotina agendada deve apenas registrar os documentos elegíveis na fila. Depois o Node processa em lote, gera os links e envia e-mail/WhatsApp de acordo com o cadastro de contatos dos parceiros.</p>
+
+                    <div class="highlight3">
+                        <h4>Sobre período de busca:</h4>
+                        <p>Por padrão o sistema já vem configurado para um período máximo de aproximadamente <strong>60 dias</strong>, mas este prazo pode ser alterado na tela preferênicas <code class="codeA">DIASTRACING</code>, de acordo com a necessidade de atendimento ao Cliente. Caso tenha a necessidade de alteração deste período o correto é depois de finalizada a consulta voltar o valor para o padrão de <strong>60 dias</strong>.</p>
+                        <p>Este período foi escolhido com base em segurança de dados ( <strong>Expirar links antigos</strong> ) e para evitar sobrecargas no sistema ( <strong>Sankhya</strong> ). Também atendendo uma norma da LGPD.</p>
+                    </div>
+
                     <div class="highlight3">
                         <p><strong>Ponto importante:</strong> não colocar envio de WhatsApp/e-mail dentro da confirmação/faturamento. Isso pode travar o fluxo. O correto seria Gravar fila e processar posteriormente.</p>
                     </div>
@@ -489,6 +531,13 @@
             <div class="flow">
                 <p><strong>Para consultar o CNPJ e Período corretos para a utilização correta nesta tela, pode ser utilizado o Relatório de Comprovantes gerados ou a partir de uma consulta direta no Portal de vendas a partir do numero de um dos pedidos.</strong></p>
                 <p><strong>No Gerador Comercial, CPF/CNPJ e Período PAP devem ser usados juntos. Se um dos campos não for informado, o sistema solicita o preenchimento antes da consulta.</strong></p>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="highlight2">
+                <h2 id="Gerador de lista">👨‍💼 Gerador de lista de links</h2>
+                <p>A tela <strong>Gerador de lista</strong> é utilizada para geração de links aproveitando os filtros já elaborados nas telas anteriores, neste caso será gerada uma lista com os links dos filtros e com segurança, e esta lista pode ser enviada por exemplo para o RH do Cliente.</p>
             </div>
         </section>
 
@@ -832,6 +881,11 @@ Comprovante_543013_MARIA_APARECIDA.jpg
                         <td>Reiniciar/login</td>
                         <td>v1.6.0</td>
                     </tr>
+
+                    <tr>
+                        <td>Ajustes no nome do cliente/Ajustes no parâmetro de dias de consulta</td>
+                        <td>v1.6.2</td>
+                    </tr>
                 </table>
             </div>
         </section>
@@ -850,6 +904,13 @@ Comprovante_543013_MARIA_APARECIDA.jpg
         <button id="scrollToTopBtn" title="Voltar ao topo"></button>
     </div>
     <script>
+        //==========================
+        //Botão Iniciar Gerador
+        //==========================
+        function voltarGerador() {
+            window.location.href = 'https://pedidos.topstatus.online/gerador.html';
+        }
+
         // =========================
         // 🔝 BOTÃO VOLTAR AO TOPO
         // =========================

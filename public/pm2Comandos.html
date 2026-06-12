@@ -1,10 +1,170 @@
->>RECARREGAR ATUALIZAR:
-pm2 reload all
-pm2 list
-pm2 reload StatusPedidos
-pm2 restart StatusPedidos
-pm2 restart 0
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
 
-TESTAR:
-pm2 status
->status │ online
+    <style>
+        .grade {
+            background:#2809da;
+            color:white;
+            padding:6px;
+            text-align:left;
+            border-radius: 10PX;
+        }
+
+        .pm2-table{
+            width:100%;
+            border-collapse:collapse;
+            font-family:Arial,sans-serif;
+            font-size:14px;
+            margin:20px 0;
+        }
+
+        .pm2-table th{
+            background:#234b72;
+            color:white;
+            padding:12px;
+            text-align:left;
+        }
+
+        .pm2-table td{
+            border:1px solid #ddd;
+            padding:10px;
+            vertical-align:top;
+        }
+
+        .pm2-table tr:nth-child(even){
+            background:#f8f9fb;
+        }
+
+        .pm2-table code{
+            background:#1e1e1e;
+            color:#00ff88;
+            padding:4px 7px;
+            border-radius:5px;
+            display:inline-block;
+        }
+        </style>
+
+</head>
+<body>
+    <div>
+        <h3 class="grade"></h3class>>>>RECARREGAR ATUALIZAR:</h3>
+        <ul>
+            <li>pm2 reload all</li>
+            <li>pm2 list</li>
+            <li>pm2 reload StatusPedidos</li>
+            <li>pm2 restart StatusPedidos</li>
+            <li>pm2 restart 0</li>
+            <li>pm2 status</li>
+        </ul>
+    </div>
+    <div>
+        <h4  class="grade">>>>LISTA GERAL DE COMANDOS:</h4>
+        <table class="pm2-table">
+            <tr>
+                <th>Comando</th>
+                <th>O que faz</th>
+            </tr>
+            <tr>
+                <td><code>pm2 start server.js --name StatusPedidos</code></td>
+                <td>Inicia a aplicação Node.js com nome definido.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 list</code></td>
+                <td>Lista todos os processos gerenciados pelo PM2.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 status</code></td>
+                <td>Mostra status, CPU, memória, reinícios e modo de execução.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 logs StatusPedidos</code></td>
+                <td>Exibe logs em tempo real da aplicação.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 logs StatusPedidos --lines 100</code></td>
+                <td>Mostra as últimas 100 linhas de log.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 restart StatusPedidos</code></td>
+                <td>Reinicia a aplicação.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 restart StatusPedidos --update-env</code></td>
+                <td>Reinicia aplicando variáveis de ambiente atualizadas.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 reload StatusPedidos</code></td>
+                <td>Recarrega a aplicação com menor interrupção possível.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 stop StatusPedidos</code></td>
+                <td>Para a aplicação, mas mantém registrada no PM2.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 delete StatusPedidos</code></td>
+                <td>Remove a aplicação da lista do PM2.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 show StatusPedidos</code></td>
+                <td>Mostra detalhes completos do processo.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 describe StatusPedidos</code></td>
+                <td>Alternativa ao show, exibe configurações e caminhos de log.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 monit</code></td>
+                <td>Abre painel de monitoramento com CPU, memória e logs.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 flush</code></td>
+                <td>Limpa os logs de todos os processos.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 save</code></td>
+                <td>Salva a lista atual de processos para restaurar após reboot.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 resurrect</code></td>
+                <td>Restaura processos salvos anteriormente com pm2 save.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 startup</code></td>
+                <td>Configura o PM2 para iniciar junto com o Windows/servidor.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 kill</code></td>
+                <td>Encerra o daemon do PM2 e todos os processos gerenciados.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 ping</code></td>
+                <td>Verifica se o daemon do PM2 está ativo.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 env 0</code></td>
+                <td>Mostra variáveis de ambiente do processo pelo ID.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 reset StatusPedidos</code></td>
+                <td>Zera contador de reinicializações do processo.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 restart all</code></td>
+                <td>Reinicia todos os processos PM2.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 stop all</code></td>
+                <td>Para todos os processos PM2.</td>
+            </tr>
+            <tr>
+                <td><code>pm2 delete all</code></td>
+                <td>Remove todos os processos do PM2.</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

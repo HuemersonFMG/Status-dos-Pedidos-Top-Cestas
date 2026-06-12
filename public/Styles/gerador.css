@@ -71,13 +71,6 @@ header {
     white-space:nowrap;
 }
 
-.btn-manual-full{
-    flex-basis:100%;
-    display:flex;
-    justify-content:flex-end;
-    gap:20px;
-}
-
 .btn-download {
 
     background: #28a745;
@@ -87,6 +80,13 @@ header {
 .btn-download:hover {
 
     background: #218838;
+}
+
+.btn-manual-full{
+    flex-basis:100%;
+    display:flex;
+    justify-content:flex-end;
+    gap:20px;
 }
 
 .btn-manual {

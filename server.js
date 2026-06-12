@@ -170,7 +170,6 @@ function requireAdminPage(req, res, next) {
   }
 
   req.adminSession = session;
-
   next();
 }
 
@@ -184,7 +183,6 @@ function requireAdminApi(req, res, next) {
   }
 
   req.adminSession = session;
-
   next();
 }
 
@@ -214,7 +212,6 @@ function requireGeradorComercialTicket(req, res, next) {
 
   if (!item || item.usado || item.expiresAt <= Date.now()) {
     comercialTickets.delete(ticket);
-
     return res.redirect('/login.html');
   }
 
@@ -251,13 +248,16 @@ function escaparHtml(valor) {
     .replace(/'/g, '&#039;');
 }
 
+function escapeSql(valor) {
+  return String(valor || '').replace(/'/g, "''");
+}
+
 function gerarIdLista() {
   return crypto.randomBytes(12).toString('hex');
 }
 
 function caminhoLista(id) {
   const idSeguro = String(id || '').replace(/[^a-zA-Z0-9_-]/g, '');
-
   return path.join(LISTAS_DIR, `${idSeguro}.json`);
 }
 
@@ -286,6 +286,96 @@ function validarItemLista(item) {
     periodoPap: String(item.periodoPap || item.AD_PERIODO_PAP || ''),
     AD_PERIODO_PAP: String(item.AD_PERIODO_PAP || item.periodoPap || ''),
     link: String(link)
+  };
+}
+
+async function executarUpdateSankhya(cookie, sql) {
+  const payload = {
+    serviceName: 'DbExplorerSP.executeUpdate',
+    requestBody: {
+      sql
+    }
+  };
+
+  const response = await fetch(
+    `${SERVICE_URL}?serviceName=DbExplorerSP.executeUpdate&outputType=json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  let json = {};
+
+  try {
+    json = await response.json();
+  } catch {
+    throw new Error('Erro ao interpretar retorno do Sankhya ao executar update.');
+  }
+
+  if (!response.ok || String(json.status || '') !== '1') {
+    throw new Error(
+      json.statusMessage ||
+      json.message ||
+      'Erro ao executar comando no Sankhya.'
+    );
+  }
+
+  return json;
+}
+
+async function gravarLinksPedidos(cookie, links) {
+  if (!Array.isArray(links) || !links.length) {
+    return {
+      totalRecebido: 0,
+      totalGravado: 0
+    };
+  }
+
+  let totalGravado = 0;
+
+  for (const item of links) {
+    const nunota = Number(item?.nunota || item?.NUNOTA);
+    const link = String(item?.link || item?.LINK || '').trim();
+
+    if (!nunota || isNaN(nunota) || !link) {
+      continue;
+    }
+
+    const linkSql = escapeSql(link);
+
+    await executarUpdateSankhya(cookie, `
+      DELETE FROM AD_LINKSPEDIDOS
+      WHERE NUNOTA = ${nunota}
+    `);
+
+    await executarUpdateSankhya(cookie, `
+      INSERT INTO AD_LINKSPEDIDOS (
+        SEQ,
+        NUNOTA,
+        LINK,
+        DHCAD
+      )
+      VALUES (
+        NVL((SELECT MAX(SEQ) + 1 FROM AD_LINKSPEDIDOS), 1),
+        ${nunota},
+        TO_CLOB('${linkSql}'),
+        SYSDATE
+      )
+    `);
+
+    totalGravado++;
+  }
+
+  console.log(`✅ Links gravados na AD_LINKSPEDIDOS: ${totalGravado}`);
+
+  return {
+    totalRecebido: links.length,
+    totalGravado
   };
 }
 
@@ -415,981 +505,3 @@ function montarHtmlLista(lista) {
 </html>
   `;
 }
-
-async function buscarNomeParcPorNunota(cookie, nunota) {
-  const nunotaNum = Number(nunota);
-
-  if (!nunota || isNaN(nunotaNum)) {
-    return 'CLIENTE';
-  }
-
-  const payload = {
-    serviceName: 'DbExplorerSP.executeQuery',
-    requestBody: {
-      sql: `
-        SELECT NOMEPARC
-        FROM VW_NOTAS_FUSION_LIGHT
-        WHERE NUNOTA = ${nunotaNum}
-      `
-    }
-  };
-
-  const response = await fetch(
-    `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookie
-      },
-      body: JSON.stringify(payload)
-    }
-  );
-
-  const json = await response.json();
-  const row = json?.responseBody?.rows?.[0];
-
-  return row?.[0] || 'CLIENTE';
-}
-
-function montarMapaNomeParc(lista) {
-  const mapa = new Map();
-
-  for (const r of lista || []) {
-    const nunota = String(r.NUNOTA?.$ || '').trim();
-    const nomeParc = String(r.NOMEPARC?.$ || '').trim();
-
-    if (nunota) {
-      mapa.set(nunota, nomeParc || 'CLIENTE');
-    }
-  }
-
-  return mapa;
-}
-
-async function validarLoginSankhya(usuario, senha) {
-  const payload = {
-    serviceName: 'MobileLoginSP.login',
-    requestBody: {
-      NOMUSU: {
-        $: usuario
-      },
-      INTERNO: {
-        $: senha
-      }
-    }
-  };
-
-  const response = await fetch(
-    `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    }
-  );
-
-  const rawCookie = response.headers.get('set-cookie') || '';
-  const cookie = rawCookie.split(';')[0];
-
-  let json = {};
-
-  try {
-    const text = await response.text();
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    return false;
-  }
-
-  const statusOk =
-    String(json?.status || '') === '1';
-
-  const temErro =
-    String(json?.statusMessage || '')
-      .toLowerCase()
-      .includes('erro') ||
-    String(json?.statusMessage || '')
-      .toLowerCase()
-      .includes('inválid') ||
-    String(json?.statusMessage || '')
-      .toLowerCase()
-      .includes('invalid');
-
-  if (!response.ok || !cookie || !statusOk || temErro) {
-    console.warn('❌ Login admin Sankhya negado:', {
-      usuario,
-      status: json?.status,
-      statusMessage: json?.statusMessage
-    });
-
-    return false;
-  }
-
-  console.log('✅ Login admin Sankhya validado:', usuario);
-
-  return true;
-}
-
-async function login() {
-  const now = Date.now();
-
-  if (cachedCookie && (now - cookieTime < 5 * 60 * 1000)) {
-    return cachedCookie;
-  }
-
-  const payload = {
-    serviceName: 'MobileLoginSP.login',
-    requestBody: {
-      NOMUSU: {
-        $: USER
-      },
-      INTERNO: {
-        $: PASS
-      }
-    }
-  };
-
-  const response = await fetch(
-    `${SERVICE_URL}?serviceName=MobileLoginSP.login&outputType=json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    }
-  );
-
-  const rawCookie = response.headers.get('set-cookie') || '';
-  const cookie = rawCookie.split(';')[0];
-
-  if (!cookie) {
-    throw new Error('Erro ao autenticar no Sankhya');
-  }
-
-  cachedCookie = cookie;
-  cookieTime = now;
-
-  console.log('✅ Login Sankhya OK');
-
-  return cookie;
-}
-
-function gerarToken(nunota) {
-  return crypto
-    .createHash('sha256')
-    .update(String(nunota) + SECRET)
-    .digest('hex');
-}
-
-function parseDataBR(dataStr) {
-  if (!dataStr) {
-    return null;
-  }
-
-  try {
-    const [data] = dataStr.split(' ');
-    const [dia, mes, ano] = data.split('/');
-
-    return new Date(`${ano}-${mes}-${dia}`);
-  } catch {
-    return null;
-  }
-}
-
-async function carregarViewLight(cookie) {
-  const payload = {
-    serviceName: 'CRUDServiceProvider.loadView',
-    requestBody: {
-      query: {
-        viewName: 'VW_NOTAS_FUSION_LIGHT'
-      }
-    }
-  };
-
-  const response = await fetch(
-    `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookie
-      },
-      body: JSON.stringify(payload)
-    }
-  );
-
-  const json = await response.json();
-  const rec = json?.responseBody?.records?.record;
-
-  if (!rec) {
-    return [];
-  }
-
-  return Array.isArray(rec)
-    ? rec
-    : [rec];
-}
-
-function montarLinks(filtrados, baseUrl) {
-  return filtrados.map(r => ({
-    nunota: r.NUNOTA?.$ || '',
-    NUNOTA: r.NUNOTA?.$ || '',
-    numNota: r.NUMNOTA?.$ || '',
-    NUMNOTA: r.NUMNOTA?.$ || '',
-    nomeParc: r.NOMEPARC?.$ || '',
-    NOMEPARC: r.NOMEPARC?.$ || '',
-    periodoPap: r.AD_PERIODO_PAP?.$ || '',
-    AD_PERIODO_PAP: r.AD_PERIODO_PAP?.$ || '',
-    link: `${baseUrl}/index.html?nunota=${r.NUNOTA?.$}&token=${gerarToken(r.NUNOTA?.$)}`
-  }));
-}
-
-app.get('/gerador.html', requireAdminPage, (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'gerador.html'));
-});
-
-app.post('/api/gerador-comercial-ticket', requireAdminApi, (req, res) => {
-  const ticket = criarTicketGeradorComercial(req.adminSession);
-
-  res.json({
-    ok: true,
-    url: `/geradorcomercial.html?ticket=${ticket}`
-  });
-});
-
-app.get('/geradorcomercial.html', requireAdminPage, requireGeradorComercialTicket, (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'geradorcomercial.html'));
-});
-
-app.post('/api/salvar-lista-links', requireAdminApi, (req, res) => {
-  try {
-    const {
-      tipo,
-      filtroResumo,
-      links
-    } = req.body;
-
-    if (!Array.isArray(links) || !links.length) {
-      return res.status(400).json({
-        erro: 'Nenhum link informado para salvar.'
-      });
-    }
-
-    const linksValidos = links
-      .map(validarItemLista)
-      .filter(Boolean);
-
-    if (!linksValidos.length) {
-      return res.status(400).json({
-        erro: 'Nenhum link válido informado.'
-      });
-    }
-
-    const id = gerarIdLista();
-    const dataGeracao = new Date().toISOString();
-
-    const lista = {
-      id,
-      tipo: String(tipo || 'GERADOR').toUpperCase(),
-      usuario: req.adminSession?.usuario || 'USUARIO',
-      filtroResumo: String(filtroResumo || ''),
-      dataGeracao,
-      total: linksValidos.length,
-      links: linksValidos
-    };
-
-    fs.writeFileSync(
-      caminhoLista(id),
-      JSON.stringify(lista, null, 2),
-      'utf8'
-    );
-
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const url = `${baseUrl}/lista.html?id=${id}`;
-
-    res.json({
-      ok: true,
-      id,
-      total: linksValidos.length,
-      url
-    });
-
-  } catch (err) {
-    console.error('❌ ERRO salvar-lista-links:', err);
-
-    res.status(500).json({
-      erro: err.message
-    });
-  }
-});
-
-app.get('/api/lista-links/:id', requireAdminApi, (req, res) => {
-  try {
-    const arquivo = caminhoLista(req.params.id);
-
-    if (!fs.existsSync(arquivo)) {
-      return res.status(404).json({
-        erro: 'Lista não encontrada.'
-      });
-    }
-
-    const lista = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
-
-    res.json(lista);
-
-  } catch (err) {
-    console.error('❌ ERRO api lista-links:', err);
-
-    res.status(500).json({
-      erro: err.message
-    });
-  }
-});
-
-app.get('/lista-links/:id', requireAdminPage, (req, res) => {
-  try {
-    const arquivo = caminhoLista(req.params.id);
-
-    if (!fs.existsSync(arquivo)) {
-      return res.status(404).send(`
-        <h2 style="font-family:Arial;text-align:center;margin-top:50px;color:red;">
-          Lista não encontrada.
-        </h2>
-      `);
-    }
-
-    const lista = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
-
-    res.send(montarHtmlLista(lista));
-
-  } catch (err) {
-    console.error('❌ ERRO lista-links page:', err);
-
-    res.status(500).send(`
-      <h2 style="font-family:Arial;text-align:center;margin-top:50px;color:red;">
-        Erro ao abrir lista.
-      </h2>
-    `);
-  }
-});
-
-app.post('/api/admin-login', async (req, res) => {
-  try {
-    const usuario = String(req.body.usuario || '').trim();
-    const senha = String(req.body.senha || '').trim();
-
-    if (!usuario || !senha) {
-      return res.status(400).json({
-        erro: 'Informe usuário e senha'
-      });
-    }
-
-    const loginKey = getClientKey(req, usuario);
-
-    if (isLoginBlocked(loginKey)) {
-      const item = loginAttempts.get(loginKey);
-      const segundos = Math.ceil((item.blockedUntil - Date.now()) / 1000);
-
-      return res.status(429).json({
-        erro: `Muitas tentativas inválidas. Tente novamente em ${segundos} segundos.`
-      });
-    }
-
-    const loginOk = await validarLoginSankhya(usuario, senha);
-
-    if (!loginOk) {
-      const tentativa = registerFailedLogin(loginKey);
-      const restantes = Math.max(0, MAX_LOGIN_ATTEMPTS - tentativa.count);
-
-      if (tentativa.blockedUntil && tentativa.blockedUntil > Date.now()) {
-        return res.status(429).json({
-          erro: 'Muitas tentativas inválidas. Aguarde alguns minutos e tente novamente.'
-        });
-      }
-
-      return res.status(401).json({
-        erro: `Usuário ou senha inválidos. Tentativas restantes: ${restantes}`
-      });
-    }
-
-    clearFailedLogin(loginKey);
-
-    const sessionToken = crypto.randomBytes(32).toString('hex');
-
-    adminSessions.set(sessionToken, {
-      usuario,
-      createdAt: Date.now(),
-      lastAccess: Date.now(),
-      expiresAt: Date.now() + ADMIN_SESSION_TTL
-    });
-
-    res.setHeader(
-      'Set-Cookie',
-      `${ADMIN_SESSION_COOKIE}=${sessionToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${ADMIN_SESSION_TTL / 1000}`
-    );
-
-    res.json({
-      ok: true,
-      usuario
-    });
-
-  } catch (err) {
-    console.error('❌ ERRO admin-login:', err);
-
-    res.status(500).json({
-      erro: err.message
-    });
-  }
-});
-
-app.post('/api/admin-logout', (req, res) => {
-  const token = getCookie(req, ADMIN_SESSION_COOKIE);
-
-  if (token) {
-    adminSessions.delete(token);
-  }
-
-  res.setHeader(
-    'Set-Cookie',
-    `${ADMIN_SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`
-  );
-
-  res.json({
-    ok: true
-  });
-});
-
-app.get('/api/admin-status', (req, res) => {
-  const session = getAdminSession(req);
-
-  if (!session) {
-    return res.status(401).json({
-      autenticado: false
-    });
-  }
-
-  res.json({
-    autenticado: true,
-    usuario: session.usuario
-  });
-});
-
-app.use(express.static(PUBLIC_DIR));
-
-app.post('/api/gerar-links', requireAdminApi, async (req, res) => {
-  try {
-    const { cnpj, ordemCarga, data, pedidos, nfes } = req.body;
-
-    const documento = (cnpj || '').replace(/\D/g, '');
-    const ordem = ordemCarga ? String(ordemCarga) : null;
-
-    let listaPedidos = [];
-    let listaNfes = [];
-
-    if (pedidos) {
-      listaPedidos = String(pedidos).split(',').map(p => p.trim()).filter(Boolean);
-    }
-
-    if (nfes) {
-      listaNfes = String(nfes).split(',').map(n => n.trim()).filter(Boolean);
-    }
-
-    let tipoFiltro = null;
-
-    if (listaPedidos.length) {
-      tipoFiltro = 'PEDIDOS';
-    } else if (listaNfes.length) {
-      tipoFiltro = 'NFES';
-    } else if (documento) {
-      tipoFiltro = 'DOCUMENTO';
-    } else if (ordem) {
-      tipoFiltro = 'ORDEM';
-    } else if (data) {
-      tipoFiltro = 'DATA';
-    }
-
-    if (!tipoFiltro) {
-      return res.status(400).json({
-        erro: 'Informe um filtro'
-      });
-    }
-
-    const cookie = await login();
-    const lista = await carregarViewLight(cookie);
-
-    let inicio = null;
-    let fim = null;
-
-    if (tipoFiltro === 'DATA') {
-      inicio = new Date(data + 'T00:00:00');
-      fim = new Date(data + 'T23:59:59');
-    }
-
-    const filtrados = lista.filter(r => {
-      const doc = (r.CGC_CPF?.$ || '').replace(/\D/g, '');
-      const oc = r.ORDEMCARGA?.$ ? String(r.ORDEMCARGA.$) : '';
-      const nunota = String(r.NUNOTA?.$ || '');
-      const numNota = String(r.NUMNOTA?.$ || '');
-
-      switch (tipoFiltro) {
-        case 'PEDIDOS':
-          return listaPedidos.includes(nunota);
-
-        case 'NFES':
-          return listaNfes.includes(numNota);
-
-        case 'DOCUMENTO':
-          return doc === documento;
-
-        case 'ORDEM':
-          return oc === ordem;
-
-        case 'DATA': {
-          const dataPedido = parseDataBR(r.DTNEG?.$);
-
-          return (
-            dataPedido &&
-            dataPedido >= inicio &&
-            dataPedido <= fim
-          );
-        }
-
-        default:
-          return false;
-      }
-    });
-
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const links = montarLinks(filtrados, baseUrl);
-
-    res.json({
-      total: links.length,
-      links
-    });
-
-  } catch (err) {
-    console.error('❌ ERRO gerar-links:', err);
-
-    res.status(500).json({
-      erro: err.message
-    });
-  }
-});
-
-app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
-  try {
-    const { cnpj, cnpjs, periodoPap } = req.body;
-
-    const documentosOrigem = Array.isArray(cnpjs)
-      ? cnpjs
-      : String(cnpj || '').split(/[;,\n\r\t]+/);
-
-    const documentosLimpos = [...new Set(
-      documentosOrigem
-        .map(doc => String(doc || '').replace(/\D/g, ''))
-        .filter(Boolean)
-    )];
-
-    const periodo = String(periodoPap || '').trim();
-
-    if (!documentosLimpos.length && !periodo) {
-      return res.status(400).json({
-        erro: 'Informe CPF/CNPJ e Período PAP'
-      });
-    }
-
-    if (!documentosLimpos.length) {
-      return res.status(400).json({
-        erro: 'Informe CPF/CNPJ'
-      });
-    }
-
-    if (!periodo) {
-      return res.status(400).json({
-        erro: 'Informe Período PAP'
-      });
-    }
-
-    const documentosInvalidos = documentosLimpos.filter(doc => doc.length !== 11 && doc.length !== 14);
-
-    if (documentosInvalidos.length) {
-      return res.status(400).json({
-        erro: `CPF/CNPJ inválido: ${documentosInvalidos.join(', ')}`
-      });
-    }
-
-    const documentosSet = new Set(documentosLimpos);
-
-    const cookie = await login();
-    const lista = await carregarViewLight(cookie);
-
-    const filtrados = lista.filter(r => {
-      const doc = (r.CGC_CPF?.$ || '').replace(/\D/g, '');
-      const periodoRegistro = String(r.AD_PERIODO_PAP?.$ || '').trim();
-
-      return (
-        documentosSet.has(doc) &&
-        periodoRegistro === periodo
-      );
-    });
-
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const links = montarLinks(filtrados, baseUrl);
-
-    res.json({
-      total: links.length,
-      documentos: documentosLimpos,
-      links
-    });
-
-  } catch (err) {
-    console.error('❌ ERRO gerar-links-comercial:', err);
-
-    res.status(500).json({
-      erro: err.message
-    });
-  }
-});
-
-app.get('/api/pedido', async (req, res) => {
-  try {
-    const { nunota, token } = req.query;
-
-    if (!nunota || !token) {
-      return res.status(400).json({
-        erro: 'Parâmetros inválidos'
-      });
-    }
-
-    if (token !== gerarToken(nunota)) {
-      return res.status(403).json({
-        erro: 'Acesso negado'
-      });
-    }
-
-    const cookie = await login();
-
-    const payload = {
-      serviceName: 'CRUDServiceProvider.loadView',
-      requestBody: {
-        query: {
-          viewName: 'VW_NOTAS_FUSION'
-        }
-      }
-    };
-
-    const response = await fetch(
-      `${SERVICE_URL}?serviceName=CRUDServiceProvider.loadView&outputType=json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': cookie
-        },
-        body: JSON.stringify(payload)
-      }
-    );
-
-    const json = await response.json();
-    const rec = json?.responseBody?.records?.record;
-
-    let lista = [];
-
-    if (rec) {
-      lista = Array.isArray(rec) ? rec : [rec];
-    }
-
-    const pedido = lista.find(
-      r => String(r.NUNOTA?.$) === String(nunota)
-    );
-
-    if (!pedido) {
-      return res.json({
-        rows: []
-      });
-    }
-
-    const tipo = Number(pedido.TIPO_FOTO?.$ || 0);
-
-    res.json({
-      rows: [{
-        NUNOTA: pedido.NUNOTA?.$,
-        NUMNOTA: pedido.NUMNOTA?.$,
-        NOMEPARC: pedido.NOMEPARC?.$,
-        CGC_CPF: pedido.CGC_CPF?.$,
-        DTNEG: parseDataBR(pedido.DTNEG?.$),
-        ORDEMCARGA: pedido.ORDEMCARGA?.$,
-        TRANSPORTADORA: (pedido.TRANSPORTADORA?.$ || '').trim(),
-        ST_ENTREGAS: pedido.ST_ENTREGAS?.$,
-        TEM_FOTO: tipo === 1,
-        TEM_PDF: tipo === 2
-      }]
-    });
-
-  } catch (err) {
-    console.error('❌ ERRO pedido:', err);
-
-    res.status(500).json({
-      erro: err.message
-    });
-  }
-});
-
-app.get('/api/comprovante/imagem', async (req, res) => {
-  try {
-    const { nunota, token } = req.query;
-
-    const nunotaNum = Number(nunota);
-
-    if (!nunota || isNaN(nunotaNum)) {
-      return res.status(400).send('NUNOTA inválido');
-    }
-
-    if (token !== gerarToken(nunota)) {
-      return res.status(403).send('Acesso negado');
-    }
-
-    const cookie = await login();
-    const nomeParc = await buscarNomeParcPorNunota(cookie, nunotaNum);
-    const nomeArquivo = montarNomeComprovante(nunotaNum, nomeParc, 'jpg');
-
-    const url =
-      `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunotaNum}@SEQ=1.dbimage`;
-
-    const response = await fetch(url, {
-      headers: {
-        Cookie: cookie
-      }
-    });
-
-    if (!response.ok) {
-      return res.status(404).send('Imagem não encontrada');
-    }
-
-    res.setHeader('Content-Type', 'image/jpeg');
-    res.setHeader('Content-Disposition', `inline; filename="${nomeArquivo}"`);
-    res.setHeader('Cache-Control', 'no-store');
-
-    response.body.pipe(res);
-
-  } catch (err) {
-    console.error('❌ ERRO IMAGEM:', err);
-
-    res.status(500).send('Erro ao carregar imagem');
-  }
-});
-
-app.get('/api/comprovante/pdf', async (req, res) => {
-  try {
-    const { nunota, token } = req.query;
-
-    const nunotaNum = Number(nunota);
-
-    if (!nunota || isNaN(nunotaNum)) {
-      return res.status(400).send('NUNOTA inválido');
-    }
-
-    if (token !== gerarToken(nunota)) {
-      return res.status(403).send('Acesso negado');
-    }
-
-    const cookie = await login();
-    const nomeParc = await buscarNomeParcPorNunota(cookie, nunotaNum);
-    const nomeArquivo = montarNomeComprovante(nunotaNum, nomeParc, 'pdf');
-
-    const payload = {
-      serviceName: 'DbExplorerSP.executeQuery',
-      requestBody: {
-        sql: `
-          SELECT AD_COMPROVTRANSP
-          FROM TGFCAB
-          WHERE NUNOTA = ${nunotaNum}
-        `
-      }
-    };
-
-    const response = await fetch(
-      `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': cookie
-        },
-        body: JSON.stringify(payload)
-      }
-    );
-
-    const json = await response.json();
-    const registro = json?.responseBody?.rows?.[0];
-
-    if (!registro || !registro[0]) {
-      return res.status(404).send('PDF não encontrado');
-    }
-
-    const buffer = Buffer.from(registro[0], 'base64');
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${nomeArquivo}"`);
-
-    res.send(buffer);
-
-  } catch (err) {
-    console.error('❌ ERRO PDF:', err);
-
-    res.status(500).send('Erro ao processar PDF');
-  }
-});
-
-app.post('/api/baixar-comprovantes', requireAdminApi, async (req, res) => {
-  try {
-    const { pedidos } = req.body;
-
-    if (!Array.isArray(pedidos) || !pedidos.length) {
-      return res.status(400).json({
-        erro: 'Nenhum pedido informado'
-      });
-    }
-
-    const listaPedidos = pedidos
-      .map(p => Number(p))
-      .filter(p => p && !isNaN(p));
-
-    if (!listaPedidos.length) {
-      return res.status(400).json({
-        erro: 'Nenhum pedido válido informado'
-      });
-    }
-
-    const cookie = await login();
-    const listaLight = await carregarViewLight(cookie);
-    const mapaNomeParc = montarMapaNomeParc(listaLight);
-
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename=comprovantes.zip'
-    );
-
-    const archive = archiver('zip', {
-      zlib: {
-        level: 9
-      }
-    });
-
-    archive.on('error', err => {
-      console.error('❌ ERRO ARCHIVE:', err);
-
-      if (!res.headersSent) {
-        res.status(500).json({
-          erro: err.message
-        });
-      }
-    });
-
-    archive.pipe(res);
-
-    for (const nunota of listaPedidos) {
-      try {
-        console.log(`🔍 PROCESSANDO ${nunota}`);
-
-        const nomeParc =
-          mapaNomeParc.get(String(nunota)) ||
-          await buscarNomeParcPorNunota(cookie, nunota);
-
-        const imgUrl =
-          `${BASE_URL}/mge/AD_APPENTFOTO@FOTO@NUNOTA=${nunota}@SEQ=1.dbimage`;
-
-        const imgResponse = await fetch(
-          imgUrl,
-          {
-            headers: {
-              Cookie: cookie
-            }
-          }
-        );
-
-        if (imgResponse.ok) {
-          const arrayBuffer = await imgResponse.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-
-          if (buffer.length > 0) {
-            archive.append(buffer, {
-              name: montarNomeComprovante(nunota, nomeParc, 'jpg')
-            });
-
-            console.log(`✅ IMG ${nunota}`);
-
-            continue;
-          }
-        }
-
-        const payload = {
-          serviceName: 'DbExplorerSP.executeQuery',
-          requestBody: {
-            sql: `
-              SELECT AD_COMPROVTRANSP
-              FROM TGFCAB
-              WHERE NUNOTA = ${Number(nunota)}
-            `
-          }
-        };
-
-        const response = await fetch(
-          `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Cookie': cookie
-            },
-            body: JSON.stringify(payload)
-          }
-        );
-
-        const json = await response.json();
-        const registro = json?.responseBody?.rows?.[0];
-
-        if (registro && registro[0]) {
-          const buffer = Buffer.from(registro[0], 'base64');
-
-          if (buffer.length > 0) {
-            archive.append(buffer, {
-              name: montarNomeComprovante(nunota, nomeParc, 'pdf')
-            });
-
-            console.log(`✅ PDF ${nunota}`);
-          }
-        }
-
-      } catch (err) {
-        console.error(`❌ ERRO ${nunota}:`, err.message);
-      }
-    }
-
-    await archive.finalize();
-
-    console.log('✅ ZIP FINALIZADO');
-
-  } catch (err) {
-    console.error('❌ ERRO ZIP:', err);
-
-    if (!res.headersSent) {
-      res.status(500).json({
-        erro: err.message
-      });
-    }
-  }
-});
-
-app.listen(
-  PORT,
-  '0.0.0.0',
-  () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    console.log(`📱 Local: http://localhost:${PORT}`);
-  }
-);
