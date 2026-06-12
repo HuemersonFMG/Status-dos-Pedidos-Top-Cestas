@@ -335,7 +335,14 @@ async function salvarLinkPedidoCrud(cookie, seq, nunota, link) {
   const json = await response.json();
 
   if (!response.ok || String(json.status || '') !== '1') {
-    throw new Error(json.statusMessage || 'Erro ao salvar link na AD_LINKSPEDIDOS.');
+    console.error('❌ RETORNO SAVE RECORD AD_LINKSPEDIDOS:', JSON.stringify(json, null, 2));
+
+    throw new Error(
+      json.statusMessage ||
+      json.message ||
+      json?.responseBody?.statusMessage ||
+      'Erro ao salvar link na AD_LINKSPEDIDOS.'
+    );
   }
 
   return json;
@@ -1092,7 +1099,17 @@ app.post('/api/gerar-links', requireAdminApi, async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const links = montarLinks(filtrados, baseUrl);
 
-    const gravacao = await gravarLinksPedidos(cookie, links);
+    let gravacao = null;
+
+    try {
+      gravacao = await gravarLinksPedidos(cookie, links);
+    } catch (erroGravacao) {
+      console.error('⚠️ ERRO AO GRAVAR LINKS NA AD_LINKSPEDIDOS:', erroGravacao);
+      gravacao = {
+        erro: true,
+        mensagem: erroGravacao.message || 'Erro ao gravar links na AD_LINKSPEDIDOS.'
+      };
+    }
 
     res.json({
       total: links.length,
@@ -1169,7 +1186,17 @@ app.post('/api/gerar-links-comercial', requireAdminApi, async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const links = montarLinks(filtrados, baseUrl);
 
-    const gravacao = await gravarLinksPedidos(cookie, links);
+    let gravacao = null;
+
+    try {
+      gravacao = await gravarLinksPedidos(cookie, links);
+    } catch (erroGravacao) {
+      console.error('⚠️ ERRO AO GRAVAR LINKS NA AD_LINKSPEDIDOS:', erroGravacao);
+      gravacao = {
+        erro: true,
+        mensagem: erroGravacao.message || 'Erro ao gravar links na AD_LINKSPEDIDOS.'
+      };
+    }
 
     res.json({
       total: links.length,
