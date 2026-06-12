@@ -329,6 +329,10 @@ async function executarUpdateSankhya(cookie, sql) {
 }
 
 async function gravarLinksPedidos(cookie, links) {
+
+  console.log('ENTROU EM gravarLinksPedidos');
+  console.log('Quantidade recebida:', Array.isArray(links) ? links.length : 'links inválido');
+
   if (!Array.isArray(links) || !links.length) {
     return {
       totalRecebido: 0,
@@ -347,6 +351,8 @@ async function gravarLinksPedidos(cookie, links) {
     }
 
     const linkSql = escapeSql(link);
+
+    console.log('Gravando link para NUNOTA:', nunota);
 
     await executarUpdateSankhya(cookie, `
       MERGE INTO AD_LINKSPEDIDOS LNK
