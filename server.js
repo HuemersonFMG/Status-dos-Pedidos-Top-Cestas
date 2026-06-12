@@ -310,10 +310,15 @@ async function salvarLinkPedidoCrud(cookie, seq, nunota, link) {
         includePresentationFields: 'N',
         dataRow: {
           localFields: {
-            SEQ: { $: String(seq) },
-            NUNOTA: { $: String(nunota) },
-            LINK: { $: String(link) },
-            DHCAD: { $: new Date().toLocaleString('pt-BR') }
+            SEQ: {
+              $: String(seq)
+            },
+            NUNOTA: {
+              $: String(nunota)
+            },
+            LINK: {
+              $: String(link)
+            }
           }
         }
       }
