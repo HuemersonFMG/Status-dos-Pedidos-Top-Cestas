@@ -349,29 +349,38 @@ async function gravarLinksPedidos(cookie, links) {
     const linkSql = escapeSql(link);
 
     await executarUpdateSankhya(cookie, `
-      DELETE FROM AD_LINKSPEDIDOS
-      WHERE NUNOTA = ${nunota}
-    `);
-
-    await executarUpdateSankhya(cookie, `
-      INSERT INTO AD_LINKSPEDIDOS (
-        SEQ,
-        NUNOTA,
-        LINK,
-        DHCAD
-      )
-      VALUES (
-        NVL((SELECT MAX(SEQ) + 1 FROM AD_LINKSPEDIDOS), 1),
-        ${nunota},
-        TO_CLOB('${linkSql}'),
-        SYSDATE
-      )
+      MERGE INTO AD_LINKSPEDIDOS LNK
+      USING (
+        SELECT
+          ${nunota} AS NUNOTA,
+          TO_CLOB('${linkSql}') AS LINK,
+          SYSDATE AS DHCAD
+        FROM DUAL
+      ) SRC
+      ON (LNK.NUNOTA = SRC.NUNOTA)
+      WHEN MATCHED THEN
+        UPDATE SET
+          LNK.LINK = SRC.LINK,
+          LNK.DHCAD = SRC.DHCAD
+      WHEN NOT MATCHED THEN
+        INSERT (
+          SEQ,
+          NUNOTA,
+          LINK,
+          DHCAD
+        )
+        VALUES (
+          NVL((SELECT MAX(SEQ) + 1 FROM AD_LINKSPEDIDOS), 1),
+          SRC.NUNOTA,
+          SRC.LINK,
+          SRC.DHCAD
+        )
     `);
 
     totalGravado++;
   }
 
-  console.log(`✅ Links gravados na AD_LINKSPEDIDOS: ${totalGravado}`);
+  console.log(`✅ Links gravados/atualizados na AD_LINKSPEDIDOS: ${totalGravado}`);
 
   return {
     totalRecebido: links.length,
