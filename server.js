@@ -251,20 +251,14 @@ function escaparHtml(valor) {
     .replace(/'/g, '&#039;');
 }
 
-function escapeSql(valor) {
-  return String(valor || '').replace(/'/g, "''");
-}
-
-async function executarUpdateSankhya(cookie, sql) {
+async function executarQuerySankhya(cookie, sql) {
   const payload = {
-    serviceName: 'DbExplorerSP.executeUpdate',
-    requestBody: {
-      sql
-    }
+    serviceName: 'DbExplorerSP.executeQuery',
+    requestBody: { sql }
   };
 
   const response = await fetch(
-    `${SERVICE_URL}?serviceName=DbExplorerSP.executeUpdate&outputType=json`,
+    `${SERVICE_URL}?serviceName=DbExplorerSP.executeQuery&outputType=json`,
     {
       method: 'POST',
       headers: {
@@ -278,10 +272,70 @@ async function executarUpdateSankhya(cookie, sql) {
   const json = await response.json();
 
   if (!response.ok || String(json.status || '') !== '1') {
-    throw new Error(
-      json.statusMessage ||
-      'Erro ao executar update no Sankhya.'
-    );
+    throw new Error(json.statusMessage || 'Erro ao consultar Sankhya.');
+  }
+
+  return json;
+}
+
+async function buscarSeqLinkPedido(cookie, nunota) {
+  const json = await executarQuerySankhya(cookie, `
+    SELECT SEQ
+    FROM AD_LINKSPEDIDOS
+    WHERE NUNOTA = ${Number(nunota)}
+  `);
+
+  const row = json?.responseBody?.rows?.[0];
+
+  return row?.[0] ? Number(row[0]) : null;
+}
+
+async function buscarProximaSeqLinkPedido(cookie) {
+  const json = await executarQuerySankhya(cookie, `
+    SELECT NVL(MAX(SEQ), 0) + 1 AS PROXSEQ
+    FROM AD_LINKSPEDIDOS
+  `);
+
+  const row = json?.responseBody?.rows?.[0];
+
+  return row?.[0] ? Number(row[0]) : 1;
+}
+
+async function salvarLinkPedidoCrud(cookie, seq, nunota, link) {
+  const payload = {
+    serviceName: 'CRUDServiceProvider.saveRecord',
+    requestBody: {
+      dataSet: {
+        rootEntity: 'AD_LINKSPEDIDOS',
+        includePresentationFields: 'N',
+        dataRow: {
+          localFields: {
+            SEQ: { $: String(seq) },
+            NUNOTA: { $: String(nunota) },
+            LINK: { $: String(link) },
+            DHCAD: { $: new Date().toLocaleString('pt-BR') }
+          }
+        }
+      }
+    }
+  };
+
+  const response = await fetch(
+    `${SERVICE_URL}?serviceName=CRUDServiceProvider.saveRecord&outputType=json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookie
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const json = await response.json();
+
+  if (!response.ok || String(json.status || '') !== '1') {
+    throw new Error(json.statusMessage || 'Erro ao salvar link na AD_LINKSPEDIDOS.');
   }
 
   return json;
@@ -305,32 +359,18 @@ async function gravarLinksPedidos(cookie, links) {
       continue;
     }
 
-    const linkSql = escapeSql(link);
+    let seq = await buscarSeqLinkPedido(cookie, nunota);
 
-    await executarUpdateSankhya(cookie, `
-      DELETE FROM AD_LINKSPEDIDOS
-      WHERE NUNOTA = ${nunota}
-    `);
+    if (!seq) {
+      seq = await buscarProximaSeqLinkPedido(cookie);
+    }
 
-    await executarUpdateSankhya(cookie, `
-      INSERT INTO AD_LINKSPEDIDOS (
-        SEQ,
-        NUNOTA,
-        LINK,
-        DHCAD
-      )
-      VALUES (
-        NVL((SELECT MAX(SEQ) + 1 FROM AD_LINKSPEDIDOS), 1),
-        ${nunota},
-        TO_CLOB('${linkSql}'),
-        SYSDATE
-      )
-    `);
+    await salvarLinkPedidoCrud(cookie, seq, nunota, link);
 
     totalGravado++;
   }
 
-  console.log(`✅ Links gravados na AD_LINKSPEDIDOS: ${totalGravado}`);
+  console.log(`✅ Links gravados/atualizados na AD_LINKSPEDIDOS: ${totalGravado}`);
 
   return {
     totalRecebido: links.length,
